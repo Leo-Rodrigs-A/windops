@@ -8,9 +8,9 @@ Cada nova slice fica em uma pasta `NN-nome/`, com um `README.md` que define resu
 
 ## Slice atual
 
-- [ ] [01 — Fundação](01-fundacao/README.md): F01–F05 concluídas; referências visuais e interfaces iniciais seguem em andamento.
+- [ ] [01 — Fundação](01-fundacao/README.md): F01–F06 concluídas; telas e navegação autenticada seguem em andamento.
 
-Task atual: [F06 — Referências e componentes visuais](01-fundacao/06-design-system.md). F05 concluiu os guards de workspace e o bootstrap administrativo; o schema está em [`.agent/database.md`](../database.md), e F03 aplicou as migrações de identidade, desafios e memberships no banco local.
+Task atual: [F07 — Telas e navegação autenticada](01-fundacao/07-interfaces-iniciais.md). F05 concluiu os guards de workspace e o bootstrap administrativo; F06 estabeleceu e comparou visualmente os componentes e tokens; o schema está em [`.agent/database.md`](../database.md), e F03 aplicou as migrações de identidade, desafios e memberships no banco local.
 
 ## Convenção de execução
 

@@ -2,7 +2,7 @@
 
 ## Status
 
-Em andamento. F01–F05 concluídas; F06 é a próxima tarefa de implementação.
+Em andamento. F01–F06 concluídas; F07 é a próxima tarefa de implementação.
 
 - [ ] Slice concluída: todos os aceites das tasks abaixo comprovados.
 
@@ -25,7 +25,7 @@ O aceite é de desenvolvimento integrado e preparação segura para implantaçã
 - [x] [F03 — Schema e migrações da fundação](03-schema-migracoes.md). Concluída em 25/10/2026.
 - [x] [F04 — Autenticação e segunda etapa](04-autenticacao.md). Concluída em 25/10/2026.
 - [x] [F05 — Autorização e bootstrap](05-autorizacao-bootstrap.md). Concluída em 25/10/2026; depende de F03 e F04.
-- [ ] [F06 — Referências e componentes visuais](06-design-system.md). Documento externo acessível; pode avançar após F01 em paralelo ao backend.
+- [x] [F06 — Referências e componentes visuais](06-design-system.md). Concluída em 25/10/2026; tokens, componentes Shadcn e comparação visual desktop/mobile registrados.
 - [ ] [F07 — Telas e navegação autenticada](07-interfaces-iniciais.md). Depende de F04, F05 e F06.
 - [ ] [F08 — Validação integrada](08-validacao-integrada.md). Depende de F01–F07.
 
@@ -39,11 +39,13 @@ F01 produz o plano relacional; F03 cria somente o schema necessário à fundaç�
 
 Documento ativo em 24/10/2026: `G:\Meu Drive\01 - TRABALHO\08 - PENCIL WORKSPACES\WindOps.pen`. Caminho local observado, não dependência de build nem localização imutável. Reconfirmar pelo MCP antes de cada trabalho.
 
+F06 reconfirmou o documento ativo em 25/10/2026 e registrou inventário e propriedades em [design-reference.md](../../design-reference.md). O proprietário aprovou compor as telas de acesso ausentes, sidebar desktop na área autenticada e o uso da paleta Tailwind; a comparação do app em viewports desktop/mobile foi concluída via MCP. Ver [design-reference.md](../../design-reference.md) para as decisões. Tokens e componentes Shadcn comuns já estão no app.
+
 - `GhvhB`: Guia de Estilo; tipografia Inter e seções de cores claras/escuras.
 - `F4nqNr`: Componentes; há também variantes de botões em agrupamentos do canvas.
 - `QhQxw`: Home Screen Actions - dark mode; `FGvyG` é Homescreen - base, com variações de filtros, status, criação de chamado, sincronização e trabalho offline.
 - `get_app_state` não listou componentes reutilizáveis formais; `GetVariables()` retornou um mapa vazio. Extrair propriedades dos elementos, sem presumir tokens já cadastrados no aplicativo.
-- A inspeção estrutural não identificou telas explícitas de cadastro, login, código ou recuperação. F06 deve conferir visualmente e solicitar ao proprietário a referência/composição faltante antes da implementação final dessas telas.
+- A inspeção estrutural não identificou telas explícitas de cadastro, login, código ou recuperação. O proprietário autorizou composições baseadas nos modelos existentes; F07 implementa os fluxos.
 - O desenho usa “Aberto”, “Resolvendo” e “Concluído” e inclui filtro por data; a memória usa Pendente/Em andamento/Concluída e filtros por parque/turbina. Registrar essa divergência para decisão, sem alterar domínio ou ampliar escopo automaticamente.
 
 ## Aceite da slice

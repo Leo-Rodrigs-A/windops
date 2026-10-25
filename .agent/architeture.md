@@ -14,6 +14,8 @@ Pencil/pen.dev roda no Windows e Codex CLI no WSL2. Consultar os documentos pelo
 
 Monorepositório pnpm/TypeScript; um backend implantável. React/Vite + TanStack Router no frontend; Tailwind e ShadcnUI com design provisório. TanStack DB, adapter Electric e cliente Electric já declarados, ainda não ativados. Fastify + Zod Type Provider gera OpenAPI, apresentado pelo Scalar apenas fora de produção.
 
+Toda interface usa componentes Shadcn UI, inclusive primitives de formulário, feedback, navegação e sidebar. Compor padrões do produto a partir dos componentes Shadcn e usar Tailwind para tokens/estilos; não criar primitives visuais paralelos.
+
 Módulos:
 - identity: autenticação, verificação, vínculo de métodos, perfil e exclusão de conta.
 - workspaces: membros, cargos, convites e autorização por workspace.

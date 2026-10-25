@@ -8,6 +8,7 @@ import {
 import { Wind } from 'lucide-react';
 import { StrictMode, useState } from 'react';
 import { createRoot } from 'react-dom/client';
+import '@fontsource-variable/inter';
 import { Button } from './components/ui/button';
 import { getHealth } from './lib/api';
 import './styles.css';

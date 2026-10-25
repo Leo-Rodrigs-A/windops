@@ -17,9 +17,11 @@ Idioma inicial pt-BR. Layout mobile e design system são referências do proprie
 ## Organização das tasks — 24/10/2026
 
 - As 11 slices originais foram movidas para [tasks/00 - roadmap](tasks/00%20-%20roadmap/README.md), preservando números e objetivos como visão geral. Novas slices executáveis terão pastas próprias e arquivos de tasks detalhados com status, checkboxes, dependências, plano, testes e evidências, criados progressivamente.
-- Primeira slice: [01 — Fundação](tasks/01-fundacao/README.md), com oito tasks. F01–F05 concluídas; F06 referências visuais é a próxima. O schema e estado aplicado estão em [`.agent/database.md`](database.md).
+- Primeira slice: [01 — Fundação](tasks/01-fundacao/README.md), com oito tasks. F01–F06 concluídas; F07 telas e navegação autenticada é a próxima. O schema e estado aplicado estão em [`.agent/database.md`](database.md).
+- F06 concluída em 25/10/2026: documento Pencil e três referências selecionadas para a home reconfirmados; inventário, medidas, tokens e composições aprovadas em [`.agent/design-reference.md`](design-reference.md). Componentes Shadcn, sidebar desktop, navegação mobile e Inter local implementados e comparados visualmente em ambos os viewports. As telas de acesso ausentes estão autorizadas para composição com o design system; o primário usa Tailwind blue-600 por acessibilidade.
+- Preferência permanente de UI: usar Shadcn UI para todos os componentes/controles visuais; compor layouts com os componentes Shadcn e estilizar com Tailwind. Não criar primitives visuais paralelos.
 - Escopo da fundação: PostgreSQL com privilégios mínimos, schema de identidade/memberships, autenticação senha/Google com código obrigatório por e-mail, autorização e bootstrap explícito, componentes e telas iniciais. Convites, administração completa de membros, parques/issues, offline e push continuam para slices futuras; implantação de produção continua no roadmap 11.
-- Leitura estrutural via MCP confirmou guia claro/escuro, Inter, componentes e home escura com variantes. `GetVariables()` retornou vazio; nenhum componente reutilizável formal foi listado. Login/cadastro/código/recuperação não foram identificados como telas explícitas; F06 deve conferir screenshots e obter referências/composições aprovadas para o que faltar.
+- Leitura via MCP confirmou guia claro/escuro, Inter, componentes e home escura com variantes; `GetVariables()` retornou vazio e nenhum componente reutilizável formal foi listado. F06 registrou a composição aprovada para login/cadastro/código/recuperação ausentes e comparou visualmente os componentes em desktop e mobile.
 - Rótulos “Aberto/Resolvendo/Concluído” e filtro por data aparecem no desenho; não alteram automaticamente os estados e filtros da memória. Conciliar antes de implementar esses fluxos de produto.
 - A reorganização e os planos foram concluídos em etapa anterior; esta task implementou e validou schema/migrações da fundação, sem alterar os designs externos.
 - Validação documental conferiu 26 arquivos Markdown, os 11 arquivos movidos, oito tasks com checkboxes e links locais sem destinos inexistentes. `pnpm check` não executado nesta atualização documental.
@@ -112,7 +114,7 @@ Validação em 24/10/2026:
 
 ## Pendências externas
 
-Criar repositório GitHub, VPS, domínio/DNS, Neon, conta/domínio Resend, aplicação OAuth Google e chaves VAPID quando as slices exigirem. Nenhum desses serviços foi provisionado nesta entrega. Para F06/F07, reconfirmar o documento externo no Windows e resolver as referências faltantes de autenticação com o proprietário; o acesso ao documento consultado já foi validado, sem incorporá-lo ao repositório.
+Criar repositório GitHub, VPS, domínio/DNS, Neon, conta/domínio Resend, aplicação OAuth Google e chaves VAPID quando as slices exigirem. Nenhum desses serviços foi provisionado nesta entrega. Para F07, reconfirmar o documento externo no Windows como referência de desenvolvimento; não incorporar `.pen` ao repositório.
 
 ## Verificação local posterior — 24/10/2026
 
