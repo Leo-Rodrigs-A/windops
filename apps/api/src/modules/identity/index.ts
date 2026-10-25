@@ -5,7 +5,8 @@ import type {
   WorkspaceDirectoryPage,
 } from '@windops/contracts';
 import { fromNodeHeaders } from 'better-auth/node';
-import type { Pool } from 'pg';
+import type { Pool, PoolClient } from 'pg';
+import { ChallengeError } from './challenges.js';
 import type { IdentityProvider } from './provider.js';
 
 export interface DirectoryLookup {
@@ -15,10 +16,23 @@ export interface DirectoryLookup {
   search?: string;
 }
 
+export interface InvitationAcceptor {
+  user: AuthenticatedUser;
+  emailVerified: boolean;
+}
+export type InvitationEmailState = 'verified' | 'unverified' | 'mismatch' | 'missing';
+
 export interface IdentityService {
   resolveAuthenticatedUser(headers: IncomingHttpHeaders): Promise<AuthenticatedUser | null>;
+  resolveInvitationAcceptor(headers: IncomingHttpHeaders): Promise<InvitationAcceptor | null>;
+  validateInvitationEmail(
+    client: PoolClient,
+    userId: string,
+    invitedEmail: string,
+  ): Promise<InvitationEmailState>;
   getUsersByIds(userIds: string[]): Promise<AuthenticatedUser[]>;
   listVerifiedDirectoryAccounts(input: DirectoryLookup): Promise<WorkspaceDirectoryPage>;
+  consumeInvitationRateLimit(kind: 'accept' | 'delivery', principal: string): Promise<boolean>;
 }
 
 export function createIdentityService(identity: IdentityProvider, pool: Pool): IdentityService {
@@ -35,6 +49,29 @@ export function createIdentityService(identity: IdentityProvider, pool: Pool): I
         email: state.email,
         name: providerSession.user.name,
       };
+    },
+
+    async resolveInvitationAcceptor(headers) {
+      const user = await this.resolveAuthenticatedUser(headers);
+      if (!user) return null;
+      const result = await pool.query<{ emailVerified: boolean }>(
+        `SELECT email_verified AS "emailVerified" FROM public.auth_users WHERE id = $1`,
+        [user.id],
+      );
+      const account = result.rows[0];
+      return account ? { user, emailVerified: account.emailVerified } : null;
+    },
+
+    async validateInvitationEmail(client, userId, invitedEmail) {
+      const result = await client.query<{ email: string; emailVerified: boolean }>(
+        `SELECT email, email_verified AS "emailVerified"
+         FROM public.auth_users WHERE id = $1 FOR SHARE`,
+        [userId],
+      );
+      const account = result.rows[0];
+      if (!account) return 'missing';
+      if (!account.emailVerified) return 'unverified';
+      return account.email.trim().toLowerCase() === invitedEmail ? 'verified' : 'mismatch';
     },
 
     async getUsersByIds(userIds) {
@@ -77,6 +114,25 @@ export function createIdentityService(identity: IdentityProvider, pool: Pool): I
         items,
         nextCursor: hasMore ? (items.at(-1)?.id ?? null) : null,
       };
+    },
+
+    async consumeInvitationRateLimit(kind, principal) {
+      const policy =
+        kind === 'accept'
+          ? { scope: 'workspace-invitation-accept', max: 30, windowMs: 60_000 }
+          : { scope: 'workspace-invitation-delivery', max: 10, windowMs: 60 * 60_000 };
+      try {
+        await identity.challenges.consumeRateLimit(
+          policy.scope,
+          principal,
+          policy.max,
+          policy.windowMs,
+        );
+        return true;
+      } catch (error) {
+        if (error instanceof ChallengeError && error.reason === 'rate_limit') return false;
+        throw error;
+      }
     },
   };
 }

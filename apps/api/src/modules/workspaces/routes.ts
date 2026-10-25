@@ -1,8 +1,11 @@
 import {
+  acceptWorkspaceInvitationSchema,
+  createWorkspaceInvitationSchema,
   errorSchema,
   meSchema,
   workspaceContextSchema,
   workspaceDirectoryPageSchema,
+  workspaceInvitationSchema,
   workspaceListQuerySchema,
   workspaceMembersPageSchema,
   workspaceMembersQuerySchema,
@@ -12,6 +15,7 @@ import { z } from 'zod';
 import type { WorkspaceAuthorizationService } from './service.js';
 
 const workspaceParams = z.object({ workspaceId: z.uuid() });
+const invitationParams = z.object({ workspaceId: z.uuid(), invitationId: z.uuid() });
 
 export function registerWorkspaceRoutes(
   app: FastifyInstance,
@@ -96,6 +100,115 @@ export function registerWorkspaceRoutes(
       return reply.send(result.value);
     },
   );
+
+  app.post(
+    '/api/workspaces/:workspaceId/invitations',
+    {
+      schema: {
+        params: workspaceParams,
+        body: createWorkspaceInvitationSchema,
+        response: {
+          201: workspaceInvitationSchema,
+          401: errorSchema,
+          403: errorSchema,
+          409: errorSchema,
+          429: errorSchema,
+          502: errorSchema,
+        },
+      },
+    },
+    async (request, reply) => {
+      const { workspaceId } = workspaceParams.parse(request.params);
+      const input = createWorkspaceInvitationSchema.parse(request.body);
+      const result = await authorization.createInvitation(request.headers, workspaceId, input);
+      if (result.status !== 'ok') return operationError(reply, request, result.status);
+      return reply.code(201).send(result.value);
+    },
+  );
+
+  app.post(
+    '/api/workspaces/:workspaceId/invitations/:invitationId/resend',
+    {
+      schema: {
+        params: invitationParams,
+        response: {
+          200: workspaceInvitationSchema,
+          401: errorSchema,
+          403: errorSchema,
+          404: errorSchema,
+          409: errorSchema,
+          429: errorSchema,
+          502: errorSchema,
+        },
+      },
+    },
+    async (request, reply) => {
+      const { workspaceId, invitationId } = invitationParams.parse(request.params);
+      const result = await authorization.resendInvitation(
+        request.headers,
+        workspaceId,
+        invitationId,
+      );
+      if (result.status !== 'ok') return operationError(reply, request, result.status);
+      return reply.send(result.value);
+    },
+  );
+
+  app.post(
+    '/api/invitations/accept',
+    {
+      schema: {
+        body: acceptWorkspaceInvitationSchema,
+        response: {
+          200: workspaceContextSchema,
+          401: errorSchema,
+          403: errorSchema,
+          404: errorSchema,
+          409: errorSchema,
+          410: errorSchema,
+          422: errorSchema,
+          429: errorSchema,
+        },
+      },
+    },
+    async (request, reply) => {
+      const { token } = acceptWorkspaceInvitationSchema.parse(request.body);
+      const result = await authorization.acceptInvitation(request.headers, token, request.ip);
+      if (result.status !== 'ok') return operationError(reply, request, result.status);
+      return reply.send(result.value);
+    },
+  );
+}
+
+function operationError(
+  reply: FastifyReply,
+  request: FastifyRequest,
+  status:
+    | 'unauthenticated'
+    | 'forbidden'
+    | 'not_found'
+    | 'conflict'
+    | 'expired'
+    | 'email_mismatch'
+    | 'email_unverified'
+    | 'rate_limited'
+    | 'delivery_failed',
+) {
+  const errors = {
+    unauthenticated: [401, 'AUTHENTICATION_REQUIRED', 'Authentication required.'],
+    forbidden: [403, 'WORKSPACE_ACCESS_DENIED', 'Workspace access denied.'],
+    not_found: [404, 'INVITATION_NOT_FOUND', 'Invitation not found.'],
+    conflict: [409, 'INVITATION_CONFLICT', 'Invitation is no longer available.'],
+    expired: [410, 'INVITATION_EXPIRED', 'Invitation has expired.'],
+    email_mismatch: [422, 'INVITATION_EMAIL_MISMATCH', 'Sign in with the invited email.'],
+    email_unverified: [403, 'EMAIL_NOT_VERIFIED', 'Verify your email before accepting.'],
+    rate_limited: [429, 'RATE_LIMITED', 'Too many attempts. Try again later.'],
+    delivery_failed: [502, 'EMAIL_DELIVERY_FAILED', 'Invitation email could not be delivered.'],
+  } as const;
+  const [statusCode, code, message] = errors[status];
+  return reply.code(statusCode).send({
+    error: { code, message, requestId: request.id },
+  });
 }
 
 function authorizationError(

@@ -9,9 +9,9 @@ Cada nova slice fica em uma pasta `NN-nome/`, com um `README.md` que define resu
 ## Slice atual
 
 - [x] [01 — Fundação](01-fundacao/README.md): F01–F08 concluídas em 25/10/2026, com validação local e Android físico.
-- [ ] [02 — Equipe e acesso ao workspace](02-equipe-acesso/README.md): E01–E03 concluídas; E04–E07 planejadas.
+- [ ] [02 — Equipe e acesso ao workspace](02-equipe-acesso/README.md): E01–E04 concluídas; E05–E07 planejadas.
 
-Task atual: [E04 — Convites e aceite](02-equipe-acesso/04-convites-aceite.md). E01–E03 concluídas: admin configurado no banco dev, modelo de convites validado e endpoints de consulta administrativa implementados/testados. O diretório contém somente usuários verificados sem membership ativa em qualquer workspace; API e UI de convites são etapas seguintes.
+Task atual: [E05 — Cargos e revogação](02-equipe-acesso/05-cargos-revogacao.md). E01–E04 concluídas: admin dev, modelo, consultas administrativas e fluxo de convite/aceite. Migração `0002` aplicada ao banco dev; SMTP Mailpit e limites tenant foram validados. Interface de equipe e aceite ainda está planejada para E06.
 
 ## Convenção de execução
 

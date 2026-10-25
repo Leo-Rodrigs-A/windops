@@ -7,13 +7,14 @@ import { createEmailSender } from './platform/email.js';
 
 const env = loadEnvironment();
 const { pool } = createDatabase(env.DATABASE_URL);
+const emailSender = createEmailSender(env);
 const identity =
   env.AUTH_ENABLED && env.BETTER_AUTH_SECRET
     ? createIdentityProvider(
         pool,
         env.APP_ORIGIN,
         env.BETTER_AUTH_SECRET,
-        createEmailSender(env),
+        emailSender,
         env.GOOGLE_CLIENT_ID && env.GOOGLE_CLIENT_SECRET
           ? { clientId: env.GOOGLE_CLIENT_ID, clientSecret: env.GOOGLE_CLIENT_SECRET }
           : undefined,
@@ -25,9 +26,14 @@ const workspaceAuthorization = createWorkspaceAuthorizationService(
     ? createIdentityService(identity, pool)
     : {
         resolveAuthenticatedUser: async () => null,
+        resolveInvitationAcceptor: async () => null,
+        validateInvitationEmail: async () => 'missing',
         getUsersByIds: async () => [],
         listVerifiedDirectoryAccounts: async () => ({ items: [], nextCursor: null }),
+        consumeInvitationRateLimit: async () => true,
       },
+  emailSender,
+  env.APP_ORIGIN,
 );
 const app = buildApp({
   logger: true,

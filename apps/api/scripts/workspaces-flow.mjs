@@ -9,6 +9,7 @@ import { buildApp } from '../src/app.ts';
 import { createIdentityProvider, createIdentityService } from '../src/modules/identity/index.ts';
 import { createWorkspaceAuthorizationService } from '../src/modules/workspaces/index.ts';
 import { parseEnvironment } from '../src/platform/config.ts';
+import { createEmailSender } from '../src/platform/email.ts';
 
 const localEnvironment =
   config({
@@ -17,6 +18,9 @@ const localEnvironment =
     processEnv: {},
   }).parsed ?? {};
 const env = parseEnvironment({ ...localEnvironment, ...process.env });
+assert.ok(env.SMTP_URL, 'SMTP_URL is required for Mailpit invitation integration.');
+const smtpEmailSender = createEmailSender({ ...env, EMAIL_TRANSPORT: 'smtp' });
+const mailpitUrl = process.env.MAILPIT_URL ?? 'http://127.0.0.1:8025';
 const database = `windops_f05_workspace_${process.pid}`;
 const compose = ['compose', '-f', 'infra/compose.dev.yml'];
 const testSecret = randomBytes(48).toString('base64url');
@@ -36,6 +40,8 @@ const revokedPlusActive = {
 const unverified = { id: randomUUID(), email: `f05-unverified-${process.pid}@example.invalid` };
 const pendingUser = { id: randomUUID(), email: `f05-pending-${process.pid}@example.invalid` };
 const sessions = new Map();
+const trackedMailIds = new Set();
+const seenMailIds = new Set();
 let databaseCreated = false;
 let pool;
 let replicationPool;
@@ -227,6 +233,33 @@ function createSession(user, completed = true) {
      VALUES ('${id}', '${token}', '${user.id}', clock_timestamp() + interval '1 hour',
        clock_timestamp(), clock_timestamp(), ${marker})`,
   );
+  return { id, token };
+}
+
+async function waitForMail(subject, recipient) {
+  const until = Date.now() + 12_000;
+  while (Date.now() < until) {
+    const response = await fetch(`${mailpitUrl}/api/v1/messages?limit=100`);
+    assert.equal(response.status, 200, 'Mailpit API must be available');
+    const result = await response.json();
+    const message = result.messages
+      ?.filter(
+        (entry) =>
+          entry.Subject === subject &&
+          !seenMailIds.has(entry.ID) &&
+          JSON.stringify(entry.To).toLowerCase().includes(recipient.toLowerCase()),
+      )
+      .sort((left, right) => new Date(right.Created) - new Date(left.Created))[0];
+    if (message) {
+      trackedMailIds.add(message.ID);
+      seenMailIds.add(message.ID);
+      const detail = await fetch(`${mailpitUrl}/api/v1/message/${encodeURIComponent(message.ID)}`);
+      assert.equal(detail.status, 200, 'Mailpit message details must be readable');
+      return detail.json();
+    }
+    await new Promise((resolve) => setTimeout(resolve, 250));
+  }
+  throw new Error(`Timed out waiting for test email: ${subject}`);
 }
 
 function psqlCount(query) {
@@ -270,6 +303,16 @@ async function call(method, url, token, payload) {
     headers: requestHeaders(token),
     ...(payload === undefined ? {} : { payload }),
   });
+}
+
+function extractInvitationToken(message) {
+  const text = message?.text ?? message?.Text ?? '';
+  const url = text.match(/https?:\/\/\S+/)?.[0];
+  assert.ok(url, 'invitation email must contain a link');
+  const parsed = new URL(url);
+  assert.equal(parsed.origin, env.APP_ORIGIN, 'invitation links must use the configured origin');
+  assert.match(parsed.hash, /^#token=[A-Za-z0-9_-]{43}$/);
+  return parsed.hash.slice('#token='.length);
 }
 
 try {
@@ -404,14 +447,26 @@ try {
   createSession(workspaceBUser);
   createSession(orphan);
   createSession(unverified);
-  createSession(pendingUser, false);
+  const pendingSession = createSession(pendingUser, false);
+  createSession(revokedOnly);
+  createSession(revokedPlusActive);
 
-  const identity = createIdentityProvider(pool, env.APP_ORIGIN, testSecret, {
-    async send() {},
-  });
+  const sentInvitationEmails = [];
+  let failInvitationDelivery = false;
+  let sendViaMailpit = false;
+  const emailSender = {
+    async send(message) {
+      sentInvitationEmails.push(message);
+      if (failInvitationDelivery) throw new Error('simulated delivery failure');
+      if (sendViaMailpit) await smtpEmailSender.send(message);
+    },
+  };
+  const identity = createIdentityProvider(pool, env.APP_ORIGIN, testSecret, emailSender);
   const workspaceAuthorization = createWorkspaceAuthorizationService(
     pool,
     createIdentityService(identity, pool),
+    emailSender,
+    env.APP_ORIGIN,
   );
   app = buildApp({
     ready: async () => {},
@@ -653,6 +708,268 @@ try {
     'unknown and unauthorized workspaces must return the same denial',
   );
 
+  const createInvitation = (email, token = sessions.get(admin.id)) =>
+    call('POST', `/api/workspaces/${workspaceA}/invitations`, token, { email });
+  const duplicateInvites = await Promise.all([
+    createInvitation(technician.email),
+    createInvitation(technician.email),
+  ]);
+  assert.deepEqual(
+    duplicateInvites.map((response) => response.statusCode).sort(),
+    [201, 409],
+    'concurrent creates for one workspace/email must produce one invitation',
+  );
+  const existingMemberInvite = duplicateInvites.find((response) => response.statusCode === 201);
+  assert.ok(existingMemberInvite);
+  assert.equal(existingMemberInvite.json().role, 'technician');
+  assert.equal(existingMemberInvite.json().deliveryStatus, 'sent');
+  assert.equal(existingMemberInvite.json().status, 'pending');
+  assert.equal('token' in existingMemberInvite.json(), false);
+  const existingMemberToken = extractInvitationToken(sentInvitationEmails.at(-1));
+  assert.equal(
+    (
+      await call('POST', '/api/invitations/accept', sessions.get(technician.id), {
+        token: existingMemberToken,
+      })
+    ).statusCode,
+    409,
+    'accepting an invitation must not change the role of an active member',
+  );
+  assert.equal(
+    psqlCount(
+      `SELECT role FROM public.workspace_members
+       WHERE workspace_id = '${workspaceA}' AND user_id = '${technician.id}' AND revoked_at IS NULL`,
+    ),
+    'technician',
+  );
+  assert.equal(
+    (await createInvitation(orphan.email, sessions.get(technician.id))).statusCode,
+    403,
+    'technicians cannot issue invitations',
+  );
+  assert.equal(
+    (
+      await call('POST', `/api/workspaces/${workspaceA}/invitations`, sessions.get(admin.id), {
+        email: technician.email,
+        role: 'owner',
+      })
+    ).statusCode,
+    400,
+    'the request cannot forge an unsupported role',
+  );
+
+  const orphanInviteResponse = await createInvitation(orphan.email);
+  assert.equal(orphanInviteResponse.statusCode, 201, orphanInviteResponse.body);
+  assert.ok(
+    Math.abs(
+      Date.parse(orphanInviteResponse.json().expiresAt) -
+        Date.parse(orphanInviteResponse.json().createdAt) -
+        48 * 60 * 60 * 1000,
+    ) < 1000,
+    'issued invitations expire exactly 48 hours after creation',
+  );
+  const orphanInviteId = orphanInviteResponse.json().id;
+  const orphanInviteToken = extractInvitationToken(sentInvitationEmails.at(-1));
+  const tokenDigest = await pool.query(
+    'SELECT token_hash FROM public.workspace_invitations WHERE id = $1',
+    [orphanInviteId],
+  );
+  assert.deepEqual(
+    tokenDigest.rows[0]?.token_hash,
+    createHash('sha256').update(orphanInviteToken).digest(),
+    'database stores only the SHA-256 token digest',
+  );
+  assert.equal(
+    (
+      await call(
+        'GET',
+        `/api/invitations/accept?token=${orphanInviteToken}`,
+        sessions.get(orphan.id),
+      )
+    ).statusCode,
+    404,
+    'GET requests do not consume invitation tokens',
+  );
+  assert.equal(
+    psqlCount(
+      `SELECT count(*) FROM public.workspace_invitations
+       WHERE id = '${orphanInviteId}' AND accepted_at IS NULL`,
+    ),
+    '1',
+  );
+  assert.equal(
+    (await call('POST', '/api/invitations/accept', undefined, { token: orphanInviteToken }))
+      .statusCode,
+    401,
+  );
+  assert.equal(
+    (
+      await call('POST', '/api/invitations/accept', sessions.get(pendingUser.id), {
+        token: orphanInviteToken,
+      })
+    ).statusCode,
+    401,
+  );
+  assert.equal(
+    (
+      await call('POST', '/api/invitations/accept', sessions.get(unverified.id), {
+        token: orphanInviteToken,
+      })
+    ).statusCode,
+    403,
+    'an unverified account cannot accept an invitation',
+  );
+  assert.equal(
+    (
+      await call('POST', '/api/invitations/accept', sessions.get(admin.id), {
+        token: orphanInviteToken,
+      })
+    ).statusCode,
+    422,
+    'the signed-in email must match the invitation',
+  );
+  const orphanAccepted = await call('POST', '/api/invitations/accept', sessions.get(orphan.id), {
+    token: orphanInviteToken,
+  });
+  assert.equal(orphanAccepted.statusCode, 200, orphanAccepted.body);
+  assert.deepEqual(orphanAccepted.json(), {
+    workspace: { id: workspaceA, name: 'F05 Workspace' },
+    role: 'technician',
+  });
+  assert.equal(
+    (
+      await call('POST', '/api/invitations/accept', sessions.get(orphan.id), {
+        token: orphanInviteToken,
+      })
+    ).statusCode,
+    409,
+    'acceptance replay must fail',
+  );
+  assert.equal(
+    psqlCount(
+      `SELECT count(*) FROM public.workspace_members
+       WHERE workspace_id = '${workspaceA}' AND user_id = '${orphan.id}' AND revoked_at IS NULL`,
+    ),
+    '1',
+    'acceptance creates exactly one active membership',
+  );
+
+  const resendTargetInvite = await createInvitation(revokedPlusActive.email);
+  assert.equal(resendTargetInvite.statusCode, 201, resendTargetInvite.body);
+  const staleToken = extractInvitationToken(sentInvitationEmails.at(-1));
+  const resendPath = `/api/workspaces/${workspaceA}/invitations/${resendTargetInvite.json().id}/resend`;
+  const concurrentResends = await Promise.all([
+    call('POST', resendPath, sessions.get(admin.id)),
+    call('POST', resendPath, sessions.get(admin.id)),
+  ]);
+  assert.deepEqual(
+    concurrentResends.map((response) => response.statusCode).sort(),
+    [200, 409],
+    'concurrent resends must atomically supersede exactly one prior invitation',
+  );
+  const latestToken = extractInvitationToken(sentInvitationEmails.at(-1));
+  assert.equal(
+    (
+      await call('POST', '/api/invitations/accept', sessions.get(revokedPlusActive.id), {
+        token: staleToken,
+      })
+    ).statusCode,
+    409,
+    'a token from before resend must be unusable',
+  );
+  const resentAcceptance = await call(
+    'POST',
+    '/api/invitations/accept',
+    sessions.get(revokedPlusActive.id),
+    { token: latestToken },
+  );
+  assert.equal(resentAcceptance.statusCode, 200, resentAcceptance.body);
+
+  failInvitationDelivery = true;
+  const failedDelivery = await createInvitation(revokedOnly.email);
+  assert.equal(failedDelivery.statusCode, 502);
+  assert.equal(failedDelivery.json().error.code, 'EMAIL_DELIVERY_FAILED');
+  const failedToken = extractInvitationToken(sentInvitationEmails.at(-1));
+  const failedInvitationRow = await pool.query(
+    `SELECT id, delivery_status, revoked_at FROM public.workspace_invitations
+     WHERE email = $1 ORDER BY created_at DESC LIMIT 1`,
+    [revokedOnly.email],
+  );
+  assert.equal(failedInvitationRow.rows[0]?.delivery_status, 'failed');
+  assert.ok(failedInvitationRow.rows[0]?.revoked_at);
+  failInvitationDelivery = false;
+  const retriedDelivery = await createInvitation(revokedOnly.email);
+  assert.equal(retriedDelivery.statusCode, 201, retriedDelivery.body);
+  const retryToken = extractInvitationToken(sentInvitationEmails.at(-1));
+  assert.equal(
+    (
+      await call('POST', '/api/invitations/accept', sessions.get(revokedOnly.id), {
+        token: failedToken,
+      })
+    ).statusCode,
+    409,
+    'failed delivery tokens stay revoked after a retry',
+  );
+  const concurrentAcceptances = await Promise.all([
+    call('POST', '/api/invitations/accept', sessions.get(revokedOnly.id), { token: retryToken }),
+    call('POST', '/api/invitations/accept', sessions.get(revokedOnly.id), { token: retryToken }),
+  ]);
+  assert.deepEqual(
+    concurrentAcceptances.map((response) => response.statusCode).sort(),
+    [200, 409],
+    'simultaneous acceptance must reactivate one membership and consume once',
+  );
+  assert.equal(
+    psqlCount(
+      `SELECT count(*) FROM public.workspace_members
+       WHERE workspace_id = '${workspaceA}' AND user_id = '${revokedOnly.id}' AND revoked_at IS NULL`,
+    ),
+    '1',
+    'acceptance reactivates the existing membership without creating a duplicate',
+  );
+
+  sendViaMailpit = true;
+  const mailpitInvite = await createInvitation(pendingUser.email);
+  assert.equal(mailpitInvite.statusCode, 201, mailpitInvite.body);
+  const invitationEmail = await waitForMail('Convite para o Wind Ops', pendingUser.email);
+  const postOtpInviteToken = extractInvitationToken(invitationEmail);
+  await identity.challenges.issueForNewSession(pendingSession.id, pendingUser.email);
+  const otpEmail = await waitForMail('Seu código de acesso ao Wind Ops', pendingUser.email);
+  const otp = (otpEmail.Text ?? '').match(/\b\d{8}\b/)?.[0];
+  assert.ok(otp, 'the Mailpit second-step message must include its code');
+  await identity.challenges.verify(pendingSession.id, otp);
+  const acceptedAfterOtp = await call(
+    'POST',
+    '/api/invitations/accept',
+    sessions.get(pendingUser.id),
+    { token: postOtpInviteToken },
+  );
+  assert.equal(acceptedAfterOtp.statusCode, 200, acceptedAfterOtp.body);
+
+  const expiryTestInvite = await createInvitation(pendingUser.email);
+  assert.equal(expiryTestInvite.statusCode, 201, expiryTestInvite.body);
+  const expiryEmail = await waitForMail('Convite para o Wind Ops', pendingUser.email);
+  const expiryTestToken = extractInvitationToken(expiryEmail);
+  await pool.query(
+    `UPDATE public.workspace_invitations SET expires_at = clock_timestamp() WHERE id = $1`,
+    [expiryTestInvite.json().id],
+  );
+  assert.equal(
+    (
+      await call('POST', '/api/invitations/accept', sessions.get(pendingUser.id), {
+        token: expiryTestToken,
+      })
+    ).statusCode,
+    410,
+    'expiry at the database clock boundary rejects acceptance',
+  );
+  sendViaMailpit = false;
+  const deliveryThrottled = await createInvitation(`rate-limited-${process.pid}@example.invalid`);
+  assert.equal(
+    deliveryThrottled.statusCode,
+    429,
+    'admin invitation delivery is limited to ten attempts per hour',
+  );
   runAdminSql(`UPDATE public.workspace_members SET revoked_at = clock_timestamp()
     WHERE workspace_id = '${workspaceA}' AND user_id = '${technician.id}'`);
   assert.equal(
@@ -665,6 +982,15 @@ try {
     (await call('GET', '/api/me', sessions.get(technician.id))).json().workspaces,
     [],
   );
+  assert.equal(
+    (
+      await call('POST', '/api/invitations/accept', sessions.get(technician.id), {
+        token: existingMemberToken,
+      })
+    ).statusCode,
+    409,
+    'an invite issued before removal cannot restore the revoked membership',
+  );
   runAdminSql(`UPDATE public.workspace_members SET revoked_at = clock_timestamp()
     WHERE workspace_id = '${workspaceA}' AND user_id = '${admin.id}'`);
   assert.equal(
@@ -673,8 +999,21 @@ try {
     403,
     'an admin whose membership was revoked must lose directory access immediately',
   );
+  const invalidTokenStatuses = [];
+  for (let attempt = 0; attempt < 35; attempt++) {
+    const response = await call('POST', '/api/invitations/accept', sessions.get(pendingUser.id), {
+      token: randomBytes(32).toString('base64url'),
+    });
+    invalidTokenStatuses.push(response.statusCode);
+  }
+  assert.ok(invalidTokenStatuses.includes(404), 'unknown token attempts are indistinguishable');
+  assert.equal(
+    invalidTokenStatuses.at(-1),
+    429,
+    'invitation acceptance attempts are limited per client IP',
+  );
   console.log(
-    'Workspace integration passed: invitations, member/directory access, pagination, identity field minimization, tenant isolation, API restart and membership revocation.',
+    'Workspace integration passed: invitation delivery/acceptance, Mailpit second step, expiry, rate limits, concurrency, member/directory access and tenant isolation.',
   );
 } finally {
   if (app) await app.close();
@@ -693,5 +1032,10 @@ try {
       'windops',
       database,
     ]);
+  }
+  for (const id of trackedMailIds) {
+    await fetch(`${mailpitUrl}/api/v1/messages/${encodeURIComponent(id)}`, {
+      method: 'DELETE',
+    }).catch(() => undefined);
   }
 }
