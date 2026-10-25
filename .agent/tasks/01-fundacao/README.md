@@ -2,7 +2,7 @@
 
 ## Status
 
-Planejada. Preparação documental concluída em 24/10/2026; implementação ainda não iniciada nesta slice.
+Em andamento. F01–F03 concluídas; F04 é a próxima tarefa de implementação.
 
 - [ ] Slice concluída: todos os aceites das tasks abaixo comprovados.
 
@@ -10,19 +10,19 @@ Planejada. Preparação documental concluída em 24/10/2026; implementação ain
 
 Aplicação executável no WSL2 com PostgreSQL persistente, schema de identidade e memberships migrado, privilégios mínimos e usuários autenticados por senha ou Google, sempre com segunda etapa obrigatória por e-mail. Membros acessam uma home protegida; contas sem vínculo recebem uma tela própria sem acesso operacional. Layouts iniciais seguem as referências externas do pen.dev.
 
-O aceite é de desenvolvimento integrado e preparação segura para implantação. Provisionamento Neon/VPS, domínio e liberação de produção continuam na [etapa 11](../roadmap/11-production.md). Login Google real exige credenciais de desenvolvimento; ausência delas bloqueia sua validação final, não autoriza declarar o fluxo completo entregue.
+O aceite é de desenvolvimento integrado e preparação segura para implantação. Provisionamento Neon/VPS, domínio e liberação de produção continuam na [etapa 11](<../00 - roadmap/11-production.md>). Login Google real exige credenciais de desenvolvimento; ausência delas bloqueia sua validação final, não autoriza declarar o fluxo completo entregue.
 
 ## Estado de partida
 
 - Existem Compose, cliente PostgreSQL/Drizzle, migração de `workspaces`, health checks e testes básicos. O builder Better Auth não está montado; frontend tem somente uma landing provisória.
-- Nesta sessão, PostgreSQL/Electric/Mailpit foram observados saudáveis; o banco contém `public.workspaces` e `drizzle.__drizzle_migrations`, com `wal_level=logical`. Isso não comprova privilégios mínimos, conteúdo do journal, teste completo de integração ou recuperação após reinício.
-- A configuração dev ainda usa a mesma credencial PostgreSQL administrativa na aplicação e no Electric. Separar funções e provar os limites faz parte desta slice.
+- PostgreSQL/Electric/Mailpit foram observados saudáveis. F02 validou papéis, restart/restore e shape; F03 aplicou `0001_auth_core` no banco local e provou upgrade/reaplicação em bancos descartáveis.
+- A configuração inicial compartilhava credenciais. F02 separou os papéis no volume existente; `windops` é usado somente como bootstrap administrativo.
 
 ## Tasks e ordem
 
-- [ ] [F01 — Modelagem do banco](01-modelagem-banco.md). Sem dependência; primeira task.
-- [ ] [F02 — PostgreSQL e privilégios](02-postgres-seguro.md). Depende de F01.
-- [ ] [F03 — Schema e migrações da fundação](03-schema-migracoes.md). Depende de F01 e F02.
+- [x] [F01 — Modelagem do banco](01-modelagem-banco.md). Concluída; `.agent/database.md` revisado. Nenhum DDL aplicado.
+- [x] [F02 — PostgreSQL e privilégios](02-postgres-seguro.md). Concluída em 25/10/2026; papéis locais aplicados e verificados.
+- [x] [F03 — Schema e migrações da fundação](03-schema-migracoes.md). Concluída em 25/10/2026.
 - [ ] [F04 — Autenticação e segunda etapa](04-autenticacao.md). Depende de F03.
 - [ ] [F05 — Autorização e bootstrap](05-autorizacao-bootstrap.md). Depende de F03 e F04.
 - [ ] [F06 — Referências e componentes visuais](06-design-system.md). Documento externo acessível; pode avançar após F01 em paralelo ao backend.
@@ -58,6 +58,6 @@ Documento ativo em 24/10/2026: `G:\Meu Drive\01 - TRABALHO\08 - PENCIL WORKSPACE
 
 ## Evidências da preparação
 
-Roadmap reorganizado e oito planos criados. MCP do Windows consultado somente para leitura de estado, instruções, variáveis e estrutura/textos do documento. Nenhum design, schema ou código de aplicação foi alterado nesta preparação; nenhuma task de implementação está concluída.
+Preparação concluída em 24/10/2026: roadmap reorganizado e oito planos criados; referência pen.dev consultada sem escrita.
 
-Validação documental: 26 arquivos Markdown conferidos, 11 etapas presentes em `roadmap`, oito tasks com plano/checklist/evidências, links locais válidos e nenhum arquivo numerado remanescente na raiz de `tasks`. Nenhuma task marcada como implementada. `pnpm check` não executado: mudanças somente documentais.
+F01 concluída em 25/10/2026: modelo `.agent/database.md` criado e Better Auth 1.7.12 validado. F02 concluída em 25/10/2026: papéis provisionados no volume existente, isolamento, restart/restore e Electric validados. F03 concluiu migrações e schema da fundação; autenticação e autorização seguem para F04/F05. Neon permanece pendente.

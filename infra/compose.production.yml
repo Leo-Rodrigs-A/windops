@@ -42,8 +42,7 @@ services:
     image: ${API_IMAGE:?Set an immutable API image reference}
     profiles: [tools]
     environment:
-      <<: *api_environment
-      DATABASE_URL: ${MIGRATION_DATABASE_URL:?Set direct database owner URL}
+      MIGRATION_DATABASE_URL: ${MIGRATION_DATABASE_URL:?Set direct database migrator URL}
     command: [node, dist/platform/database/migrate.js]
     networks: [private]
     read_only: true
@@ -58,6 +57,7 @@ services:
       DATABASE_URL: ${ELECTRIC_DATABASE_URL:?Set direct Neon replication URL}
       ELECTRIC_SECRET: ${ELECTRIC_SECRET:?Set random secret}
       ELECTRIC_STORAGE_DIR: /var/lib/electric/persistent
+      ELECTRIC_MANUAL_TABLE_PUBLISHING: "true"
     volumes: [electric_data:/var/lib/electric]
     restart: unless-stopped
     networks: [private]

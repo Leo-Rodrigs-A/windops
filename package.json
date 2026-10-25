@@ -15,10 +15,15 @@
     "format": "biome check --write .",
     "test": "vitest run",
     "check": "pnpm lint && pnpm typecheck && pnpm test && pnpm build",
-    "infra:up": "docker compose -f infra/compose.dev.yml up -d --wait",
+    "infra:up": "docker compose -f infra/compose.dev.yml up -d --wait postgres mailpit && pnpm db:provision && docker compose -f infra/compose.dev.yml --profile sync up -d --wait electric",
     "infra:down": "docker compose -f infra/compose.dev.yml down",
+    "db:provision": "docker compose -f infra/compose.dev.yml exec -T postgres sh /docker-entrypoint-initdb.d/20-provision-roles.sh",
+    "db:setup": "pnpm infra:up && pnpm db:migrate && pnpm db:provision",
+    "db:restore-check": "sh infra/postgres/verify-restore.sh",
+    "db:empty-check": "node apps/api/scripts/empty-database.mjs",
     "db:generate": "pnpm --filter @windops/api db:generate",
     "db:migrate": "pnpm --filter @windops/api db:migrate",
+    "db:permissions": "node apps/api/scripts/permissions.mjs",
     "test:integration": "pnpm --filter @windops/api test:integration"
   },
   "devDependencies": {

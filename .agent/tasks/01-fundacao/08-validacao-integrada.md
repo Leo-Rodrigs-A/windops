@@ -21,7 +21,7 @@ Comprovar que banco, autenticação, autorização e interfaces funcionam juntos
 - [ ] Validar a configuração de produção com variáveis fictícias, cookies/TLS/origens e build de imagens. Registrar separadamente Neon, Resend real, domínio e deploy não exercitados; manter deploy desabilitado.
 - [ ] Comparar UI com as referências confirmadas, validar mobile Android/iPhone e desktop, teclado e leitor de tela. Emulação não substitui evidência de aparelho real; registrar indisponibilidade sem marcar esse aceite como concluído.
 - [ ] Rodar `pnpm check`, `pnpm test:integration`, validações Compose, build/checagens das imagens e testes de fluxo adicionados. Conferir que build/CI não exigem MCP, drive Windows nem `.pen`.
-- [ ] Atualizar README, memória, modelo de dados e status das tasks/roadmap com comportamento realmente entregue e pendências. O roadmap 04 continua parcial enquanto convites/gestão de membros não existirem; etapas 05–11 não são concluídas por esta slice.
+- [ ] Atualizar README, memória, modelo de dados e status das tasks em `00 - roadmap` com comportamento realmente entregue e pendências. O roadmap 04 continua parcial enquanto convites/gestão de membros não existirem; etapas 05–11 não são concluídas por esta slice.
 
 ## Aceite de encerramento
 

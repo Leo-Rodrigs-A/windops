@@ -10,7 +10,10 @@ try {
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
-    await client.query("INSERT INTO workspaces(name) VALUES ('Integration check')");
+    const existing = await client.query('SELECT id FROM workspaces LIMIT 1');
+    if (existing.rowCount === 0) {
+      await client.query("INSERT INTO workspaces(name) VALUES ('Integration check')");
+    }
     let rejected = false;
     try {
       await client.query("INSERT INTO workspaces(name) VALUES ('Second workspace')");
@@ -37,7 +40,9 @@ try {
     await setTimeout(1000);
   }
   if (!synced) throw new Error('Electric shape did not become available');
-  console.log('Database migration, singleton constraint and Electric shape verified.');
+  console.log(
+    'Database migration, existing-data-safe singleton constraint and Electric shape verified.',
+  );
 } finally {
   await pool.end();
 }

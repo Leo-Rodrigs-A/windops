@@ -22,17 +22,19 @@ jobs:
       - run: pnpm check
       - run: cp .env.example .env
       - run: docker compose -f infra/compose.dev.yml config --quiet
-      - run: pnpm infra:up
+      - run: pnpm db:setup
+      - run: pnpm db:empty-check
       - run: pnpm db:migrate
-      - run: pnpm db:migrate
+      - run: pnpm db:provision
       - run: pnpm test:integration
+      - run: pnpm db:permissions
       - run: bash -n scripts/deploy.sh scripts/deploy-ssh-entrypoint.sh
       - run: docker build -f infra/Dockerfile.api -t windops-api:ci .
       - run: docker build -f infra/Dockerfile.web -t windops-web:ci .
       - name: Verify migration packaged in runtime image
         run: >-
           docker run --rm --network windops-dev_default --env-file .env
-          -e DATABASE_URL=postgresql://windops:windops_dev@postgres:5432/windops
+          -e MIGRATION_DATABASE_URL=postgresql://windops_migrator:windops_migrator_dev@postgres:5432/windops
           -e ELECTRIC_URL=http://electric:3000
           windops-api:ci node dist/platform/database/migrate.js
       - name: Validate Caddy runtime image

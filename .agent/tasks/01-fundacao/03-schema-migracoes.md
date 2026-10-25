@@ -2,9 +2,9 @@
 
 ## Status e dependências
 
-Planejada. Depende de [F01](01-modelagem-banco.md) e [F02](02-postgres-seguro.md).
+- [x] Task concluída em 25/10/2026. Depende de [F01](01-modelagem-banco.md) e [F02](02-postgres-seguro.md).
 
-- [ ] Task concluída.
+- [x] Task concluída.
 
 ## Objetivo e escopo
 
@@ -12,23 +12,23 @@ Implementar o dicionário aprovado da fundação: tabelas de identidade e desafi
 
 ## Plano de implementação
 
-- [ ] Gerar o schema compatível com a versão instalada e a configuração planejada do Better Auth em local descartável; revisar antes de incorporá-lo ao módulo `identity`. Usar Drizzle/SQL versionado como único processo de migração da aplicação, sem auto-DDL em startup nem um segundo histórico concorrente.
-- [ ] Implementar em `workspaces` a membership N:N com cargo Administrador/Técnico e os campos, índices e constraints definidos em F01. Preservar a tabela existente e seu limite singleton; não converter cargo em atributo global do usuário.
-- [ ] Materializar somente os objetos adicionais de desafio/sessão aprovados em F01, sem duplicar estruturas de segurança que o Better Auth já fornece. Definir as operações atômicas que F04 usará para consumo/reenvio e persistência entre reinícios.
-- [ ] Manter ownership dos módulos e agregar a infraestrutura sem imports privados entre módulos. Adicionar FKs SQL entre módulos conforme F01, revisadas e verificadas contra os snapshots do Drizzle.
-- [ ] Criar novas migrações incrementais após `0000_workspace_foundation.sql`; não reescrever a migração já aplicada. Atualizar journal/snapshots e revisar SQL gerado, privilégios e índices conforme o dicionário.
-- [ ] Aplicar migrações com credencial dedicada e serialização documentada contra execução concorrente. Encerrar conexões em sucesso/falha e não iniciar runtime com DDL pendente silenciosamente.
-- [ ] Adaptar o teste de integração atual, que pressupõe `workspaces` vazio: usar banco descartável/fixtures isoladas e transações, sem colidir com workspace real nem deixar registros de teste. Preparar fixture multi-tenant que remove o singleton somente no banco de teste, sem relaxar a migração de produção.
-- [ ] Documentar evolução/rollback compatível: backup antes de mudanças destrutivas futuras, proibição de rollback automático de schema e verificação do schema empacotado na imagem de runtime.
+- [x] Gerar o schema compatível com Better Auth 1.7.12 e configuração explícita em `identity`; revisar os nomes e campos emitidos. Drizzle/SQL versionado segue como via única, sem auto-DDL em startup.
+- [x] Implementar em `workspaces` a membership N:N com cargo Administrador/Técnico e os campos, índices e constraints definidos em F01. Preservar a tabela existente e seu limite singleton; não converter cargo em atributo global do usuário.
+- [x] Materializar somente o desafio adicional aprovado em F01, sem duplicar tabelas Better Auth. Campos e limites persistentes dão suporte às transações de consumo/reenvio que F04 implementará.
+- [x] Manter ownership dos módulos sem imports privados. A FK cruzada `workspace_members.user_id → auth_users.id` foi adicionada em SQL revisado, fora do schema privado de `identity`.
+- [x] Criar `0001_auth_core.sql` após `0000_workspace_foundation.sql`, sem alterar a migração aplicada; atualizar journal/snapshot e revisar SQL gerado, privilégios e índices.
+- [x] Aplicar migrações com credencial dedicada e lock consultivo PostgreSQL na mesma conexão. Encerrar conexão em sucesso/falha; runtime permanece sem DDL automático.
+- [x] Adaptar o teste de integração atual para validar singleton com ou sem workspace preexistente e rollback transacional. O teste descartável de upgrade remove o índice singleton somente nessa base e verifica múltiplas memberships/workspaces.
+- [x] Documentar evolução/rollback: backup antes de mudanças destrutivas futuras e sem rollback automático; imagem/runtime validada.
 
 ## Testes e aceite
 
-- [ ] Aplicação de todas as migrações em banco vazio e atualização a partir de `0000` com workspace existente; segunda execução sem mudanças adicionais ou perda de dados.
-- [ ] Constraints rejeitam membership duplicada, cargo inválido, usuário/workspace inexistente e duplicidades de identidade definidas em F01.
-- [ ] Testar IDs e relacionamentos usados pelo provedor, datas/expiração e integridade do journal; não basta verificar a presença das tabelas.
-- [ ] Executar migração pela imagem da API e comprovar que o runtime sem DDL consegue operar o schema após os grants.
-- [ ] `pnpm check`, testes de migração e integração PostgreSQL/Electric aprovados; atualizar `.agent/database.md` com a distinção entre schema criado e domínios ainda planejados.
+- [x] Aplicação em banco vazio e upgrade de `0000` com workspace existente; migração concorrente e reaplicação sem perda de dados.
+- [x] Constraints rejeitam membership duplicada, cargo inválido, usuário/workspace inexistente, desafio duplicado/limites inválidos e identidade externa duplicada.
+- [x] Testar UUIDs, FK de sessão/desafio/membership, timestamps de expiração e journal.
+- [x] Executar migração pela imagem da API; runtime opera por DML após grants e replicação não lê tabelas privadas.
+- [x] `pnpm check`, testes de migração/PostgreSQL/Electric aprovados; `.agent/database.md` distingue schema implementado de domínios planejados.
 
 ## Evidências
 
-Pendente. Registrar migrações adicionadas, versão/configuração do schema gerado, cenários de upgrade/reaplicação, testes de constraints e rollback operacional documentado. Não montar rotas de autenticação nesta task.
+Concluída em 25/10/2026. Adicionados `identity/schema.ts`, `workspace_members`, a migração `0001_auth_core.sql`, mapeamento Better Auth 1.7.12 e serialização por advisory lock. Sem rotas de autenticação. `pnpm check` passou (lint, limites, types, 9 testes e builds); `drizzle-kit check` aprovou journal/snapshots. `pnpm db:empty-check` passou com instalação vazia, execuções concorrentes, upgrade de `0000` preservando workspace, fixture multi-tenant descartável, constraints, restart e grants. A imagem `windops-api:f03` foi construída e executou o migrador contra o banco local; o banco existente recebeu a migração aditiva e foi reprovisionado. Replicação não tem SELECT em auth/challenge/memberships. Não habilitados Better Auth routes, Neon ou OAuth real. Rollback de schema é operacional por backup/restauração, nunca automático.

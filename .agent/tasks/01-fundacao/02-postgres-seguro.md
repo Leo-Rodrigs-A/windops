@@ -2,9 +2,7 @@
 
 ## Status e dependências
 
-Planejada. Depende de [F01](01-modelagem-banco.md).
-
-- [ ] Task concluída.
+- [x] Task concluída em 25/10/2026. Depende de [F01](01-modelagem-banco.md); implementação local e evidências abaixo.
 
 ## Objetivo e escopo
 
@@ -12,27 +10,27 @@ Tornar a configuração local reproduzível e persistente sem usar a conta admin
 
 ## Estado atual
 
-Compose usa PostgreSQL 17 com volume, portas loopback e replicação lógica. API, migração local e Electric compartilham a credencial de desenvolvimento. Produção já prevê URLs separadas no exemplo e no serviço de migração, mas não comprova grants nem papéis reais.
+Antes da F02, API, migração e Electric compartilhavam o superusuário `windops`. O Compose mantém esse usuário como bootstrap para compatibilidade do volume existente. F02 provisionou `windops_app`, `windops_migrator` e `windops_replication` no PostgreSQL local; apenas o bootstrap conserva privilégios administrativos. Neon continua sem provisionamento.
 
 ## Plano de implementação
 
-- [ ] Implementar provisionamento explícito e repetível dos papéis administrativos, de migração, runtime e replicação definidos em F01. Runtime sem superuser, criação de papéis, criação de banco ou DDL; migrador com privilégios de DDL necessários; replicação apenas com requisitos documentados do Electric e acesso às tabelas publicadas.
-- [ ] Cobrir tanto instalação vazia quanto volume já inicializado: scripts de init da imagem não rodam novamente em volumes existentes. Fornecer procedimento administrativo de atualização que preserve `workspaces` e journal; nunca exigir `down -v` para desenvolvimento normal.
-- [ ] Separar `DATABASE_URL`, `MIGRATION_DATABASE_URL` e `ELECTRIC_DATABASE_URL` no ambiente dev e nos comandos. O migrador deve selecionar a credencial de migração explicitamente; em produção não aceitar fallback silencioso para runtime.
-- [ ] Configurar grants presentes e default privileges para objetos futuros, ownership e permissões no schema/journal. Restringir criação no schema público e validar que autenticação não é acessível ao papel de replicação. Documentar operações de provisionamento que não pertencem a migrações da aplicação.
-- [ ] Manter volumes PostgreSQL/Electric e portas locais em loopback. Garantir que a API pública/Caddy não exponha Electric; a rota de sync da aplicação segue bloqueada enquanto seu proxy autorizado não for implementado.
-- [ ] Atualizar parsing e exemplos de ambiente sem segredos reais; validar TLS com certificado para Neon em produção e documentar URLs diretas de migração/replicação. Evitar dependências de SMTP/OAuth apenas para executar tarefas administrativas de banco.
-- [ ] Atualizar health/readiness, shutdown do pool, Compose, comandos de desenvolvimento e CI para as credenciais separadas. Credenciais administrativas não entram no container de runtime.
-- [ ] Documentar backup/restauração local e requisitos futuros do Neon. Exercitar restauração em banco/volume descartável, sem sobrescrever o banco do proprietário.
+- [x] Implementar provisionamento idempotente dos papéis de runtime e migração, mantendo `windops` como bootstrap administrativo. Runtime sem superuser/DDL; migrador com DDL sem gestão de roles, banco ou replicação; replicação com `REPLICATION` e acesso explícito.
+- [x] Cobrir instalação vazia por provisionador e `pnpm db:empty-check`, além de volume existente por comando repetível `pnpm db:provision`; procedimentos mantêm dados ativos sem `down -v`.
+- [x] Separar `DATABASE_URL`, `MIGRATION_DATABASE_URL` e `ELECTRIC_DATABASE_URL`. Migração exige explicitamente a URL própria em dev e produção, sem fallback para runtime.
+- [x] Configurar grants e default privileges, ownership da aplicação, schema/journal e publicação manual Electric. A allowlist atual contém somente `public.workspaces`; tabelas de identidade futuras não recebem grant de replicação.
+- [x] Preservar volumes e portas loopback. Electric permanece interno; a rota pública de sync continua bloqueada. Manual publication reduz permissões do Electric.
+- [x] Atualizar exemplos de ambiente e Compose. URLs de produção mantêm TLS `verify-full`; Neon e suas grants ainda não foram provisionados.
+- [x] Atualizar comandos, migrador e CI; o serviço API de produção recebe somente `DATABASE_URL` de runtime, e o serviço de migração recebe somente `MIGRATION_DATABASE_URL`.
+- [x] Documentar e automatizar backup/restauração em banco descartável por `pnpm db:restore-check`, sem sobrescrever o banco ativo.
 
 ## Testes e aceite
 
-- [ ] Em ambiente descartável, subir stack vazia e aplicar provisionamento duas vezes sem erro nem escalada de privilégios.
-- [ ] Runtime consegue DML autorizado e não consegue `CREATE TABLE`, alterar schema, gerenciar roles ou ler dados fora das concessões. Replicação não lê tabelas de autenticação e continua atendendo um shape permitido.
-- [ ] Reiniciar PostgreSQL mantém registros de teste e journal; restaurar backup descartável preserva os dados esperados. Não confundir restart de contêiner com teste de persistência offline do navegador.
-- [ ] Falha de conexão devolve readiness 503 sem URL/credenciais; configuração inválida falha antes de servir tráfego.
-- [ ] Executar `pnpm check`, validação Compose e integração/container checks afetados. Não declarar produção segura a partir apenas dos testes locais.
+- [x] Em banco descartável, provisionador executado duas vezes, migração aplicada e permissões verificadas sem escalada de privilégios.
+- [x] Runtime consegue DML autorizado e falha em criar/alterar tabelas, gerenciar roles ou criar banco. Migrador executa DDL, sem superuser/roles/database/replication. Replicação falha ao ler tabela privada ou executar DDL e atende o shape permitido. Tabelas auth ainda não existem; a allowlist explícita evita grants futuros a elas.
+- [x] Restart de PostgreSQL preserva uma workspace de teste e o journal. `db:restore-check` restaura dump em database descartável e confirma workspaces e migrations sem tocar no banco original. Não confundir restart de contêiner com persistência offline do navegador.
+- [x] Testes existentes verificam readiness 503 sem URL/credenciais e falha de configuração inválida sem revelar valores.
+- [x] `pnpm check`, Compose e integração PostgreSQL/Electric passaram. Produção Neon continua pendente e não é declarada segura.
 
 ## Evidências
 
-Pendente. Registrar matriz efetiva de grants, comandos/resultados sem senhas, teste de reinício/restauração, compatibilidade com volume existente e limites de validação Neon.
+Concluída em 25/10/2026. O provisionador idempotente separou papéis; `pnpm db:setup` preservou o volume ativo, aplicou migrations usando `MIGRATION_DATABASE_URL`, reconciliou a publicação manual, e iniciou o Electric após provisionar as credenciais. `pnpm db:empty-check` criou database isolada, provisionou duas vezes, aplicou a migração, gravou uma workspace, reiniciou PostgreSQL, confirmou workspace/journal, reaplicou grants e testou os limites. No banco existente passaram `db:permissions`, a migration repetida e o shape Electric. `db:restore-check` comparou contagens após restauração (`workspaces:migrations=0:1`). `pnpm check` completo passou: lint, limites, typechecks, 9 testes e builds. Compose dev/produção, sintaxe shell/Node e `git diff --check` passaram. Tabelas auth ainda não existem; acesso foi verificado por tabela privada de prova e a publicação só lista `public.workspaces`. `.env` local (ignorado) usa URLs e senhas descartáveis. Neon/VPS não provisionados nem testados.

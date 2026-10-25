@@ -6,20 +6,27 @@ services:
       POSTGRES_USER: windops
       POSTGRES_PASSWORD: windops_dev
       POSTGRES_DB: windops
+      WINDOPS_APP_PASSWORD: ${WINDOPS_APP_PASSWORD:-windops_app_dev}
+      WINDOPS_MIGRATOR_PASSWORD: ${WINDOPS_MIGRATOR_PASSWORD:-windops_migrator_dev}
+      WINDOPS_REPLICATION_PASSWORD: ${WINDOPS_REPLICATION_PASSWORD:-windops_replication_dev}
     command: [postgres, -c, wal_level=logical, -c, max_replication_slots=10, -c, max_wal_senders=10]
     ports: ["127.0.0.1:5432:5432"]
-    volumes: [postgres_data:/var/lib/postgresql/data]
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./postgres/provision-roles.sh:/docker-entrypoint-initdb.d/20-provision-roles.sh:ro
     healthcheck:
       test: [CMD-SHELL, "pg_isready -U windops -d windops"]
       interval: 5s
       timeout: 5s
       retries: 15
   electric:
+    profiles: [sync]
     image: electricsql/electric:1.8.1
     environment:
-      DATABASE_URL: postgresql://windops:windops_dev@postgres:5432/windops
+      DATABASE_URL: postgresql://windops_replication:${WINDOPS_REPLICATION_PASSWORD:-windops_replication_dev}@postgres:5432/windops
       ELECTRIC_SECRET: windops-development-only
       ELECTRIC_STORAGE_DIR: /var/lib/electric/persistent
+      ELECTRIC_MANUAL_TABLE_PUBLISHING: "true"
     ports: ["127.0.0.1:3001:3000"]
     volumes: [electric_data:/var/lib/electric]
     depends_on:

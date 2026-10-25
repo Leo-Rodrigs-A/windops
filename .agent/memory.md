@@ -16,12 +16,12 @@ Idioma inicial pt-BR. Layout mobile e design system são referências do proprie
 
 ## Organização das tasks — 24/10/2026
 
-- As 11 slices originais foram movidas para [tasks/roadmap](tasks/roadmap/README.md), preservando números e objetivos como visão geral. Novas slices executáveis terão pastas próprias e arquivos de tasks detalhados com status, checkboxes, dependências, plano, testes e evidências, criados progressivamente.
-- Primeira slice: [01 — Fundação](tasks/01-fundacao/README.md), com oito tasks. Começar por F01, que produzirá o modelo relacional em `.agent/database.md`; esse modelo e as novas migrações ainda não foram implementados.
+- As 11 slices originais foram movidas para [tasks/00 - roadmap](tasks/00%20-%20roadmap/README.md), preservando números e objetivos como visão geral. Novas slices executáveis terão pastas próprias e arquivos de tasks detalhados com status, checkboxes, dependências, plano, testes e evidências, criados progressivamente.
+- Primeira slice: [01 — Fundação](tasks/01-fundacao/README.md), com oito tasks. F01–F03 modelaram e aplicaram localmente o schema inicial registrado em [`.agent/database.md`](database.md); F04 é a próxima task.
 - Escopo da fundação: PostgreSQL com privilégios mínimos, schema de identidade/memberships, autenticação senha/Google com código obrigatório por e-mail, autorização e bootstrap explícito, componentes e telas iniciais. Convites, administração completa de membros, parques/issues, offline e push continuam para slices futuras; implantação de produção continua no roadmap 11.
 - Leitura estrutural via MCP confirmou guia claro/escuro, Inter, componentes e home escura com variantes. `GetVariables()` retornou vazio; nenhum componente reutilizável formal foi listado. Login/cadastro/código/recuperação não foram identificados como telas explícitas; F06 deve conferir screenshots e obter referências/composições aprovadas para o que faltar.
 - Rótulos “Aberto/Resolvendo/Concluído” e filtro por data aparecem no desenho; não alteram automaticamente os estados e filtros da memória. Conciliar antes de implementar esses fluxos de produto.
-- Reorganização e planos concluídos, todas as tasks de implementação permanecem desmarcadas. Nenhum código da aplicação, schema ou design foi alterado nesta etapa documental.
+- A reorganização e os planos foram concluídos em etapa anterior; esta task implementou e validou schema/migrações da fundação, sem alterar os designs externos.
 - Validação documental conferiu 26 arquivos Markdown, os 11 arquivos movidos, oito tasks com checkboxes e links locais sem destinos inexistentes. `pnpm check` não executado nesta atualização documental.
 
 ## Identidade e empresa
@@ -84,11 +84,17 @@ Idioma inicial pt-BR. Layout mobile e design system são referências do proprie
 
 Frontend/backend/Electric na mesma VPS Hostinger, Postgres local dev e Neon produção. GitHub Actions após main; Docker Compose; Caddy; Resend externo. Sem homologação inicialmente, mas configuração por ambiente. Dashboards e métricas individuais adiados.
 
-RNFs originais: carregamento <2s e SLA 99,5% são metas ainda sem medição/SLO operacional; não declarar atendidos no bootstrap. Registrar protocolo de medição e manutenção na [etapa 11 do roadmap](tasks/roadmap/11-production.md).
+RNFs originais: carregamento <2s e SLA 99,5% são metas ainda sem medição/SLO operacional; não declarar atendidos no bootstrap. Registrar protocolo de medição e manutenção na [etapa 11 do roadmap](tasks/00%20-%20roadmap/11-production.md).
 
 ## Situação da entrega
 
 Base criada com apps, contratos, configuração ShadcnUI, adaptadores não ativados, health checks, schema inicial, Compose e CI/CD bloqueado por variável. Autenticação, PWA, persistência, sync autorizada, issues e notificações ainda planejadas. Builder Better Auth não é login completo.
+
+Modelo do banco — 25/10/2026: F01 documentou identidade Better Auth, desafios, workspaces e memberships; F02 separou papéis locais; F03 aplicou `0001_auth_core` com schema de identidade e memberships. F04 implementará autenticação/segunda etapa; rotas continuam desativadas.
+
+F02 — PostgreSQL e privilégios — 25/10/2026: provisionador idempotente aplicado no volume WSL existente; `windops_app`, `windops_migrator` e `windops_replication` separados, migração exige URL própria e publicação manual do Electric inclui somente `workspaces`. Instalação vazia, grants, restart/restore e shape passaram. `.env` local foi atualizado sem commit. Neon/VPS não provisionados.
+
+F03 — Schema e migrações — 25/10/2026: adicionada migração `0001_auth_core` com tabelas Better Auth, challenges e memberships. Migração local aplicada; testes descartáveis cobrem instalação vazia, concorrência/reaplicação, upgrade preservando workspace, constraints, timestamps, grants, restart e membership em múltiplos workspaces com singleton removido apenas na fixture. Imagem de runtime executou migrador. `pnpm check` (9 testes e builds) e `drizzle-kit check` passaram. Rotas auth continuam desativadas; F04 é a próxima task.
 
 Validação em 24/10/2026:
 - 9 testes em 3 arquivos passaram (contratos, configuração e API).
@@ -108,4 +114,4 @@ Criar repositório GitHub, VPS, domínio/DNS, Neon, conta/domínio Resend, aplic
 
 ## Verificação local posterior — 24/10/2026
 
-Esta observação atualiza o bloqueio de Docker do registro histórico acima: `docker compose -f infra/compose.dev.yml ps` mostrou PostgreSQL, Electric e Mailpit ativos/saudáveis no WSL. Consulta de metadados confirmou `public.workspaces`, `drizzle.__drizzle_migrations` e `wal_level=logical`. Não foram executados nessa consulta migração do zero/reaplicação, teste de shape, grants, restauração ou build de imagens. Essas validações continuam em F02/F03/F08; containers saudáveis não comprovam o banco completo ou autenticação funcionando.
+Esta observação de 24/10 atualizou o bloqueio de Docker do registro histórico: `docker compose -f infra/compose.dev.yml ps` mostrou PostgreSQL, Electric e Mailpit ativos/saudáveis no WSL. Naquele momento, migração do zero/reaplicação, shape, grants, restauração e build ainda não tinham sido executados; F02 agora cobre as validações de privilégios locais. Containers saudáveis não comprovam autenticação funcionando.

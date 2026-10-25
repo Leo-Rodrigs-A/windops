@@ -79,6 +79,21 @@ try {
     `SELECT * FROM public.${probe}`,
     'replication access to private table',
   );
+  for (const table of [
+    'auth_users',
+    'auth_sessions',
+    'auth_accounts',
+    'auth_verifications',
+    'auth_rate_limits',
+    'auth_login_challenges',
+    'workspace_members',
+  ]) {
+    await expectDenied(
+      replication,
+      `SELECT * FROM public.${table}`,
+      `replication access to ${table}`,
+    );
+  }
   await expectDenied(
     replication,
     `CREATE TABLE public.${probe}_ddl (id integer)`,

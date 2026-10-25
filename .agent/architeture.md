@@ -27,25 +27,25 @@ Cada módulo é dono de seus dados. Chamadas entre módulos usam serviços públ
 
 ## Dados e isolamento
 
-O plano executável começa em [F01 — Modelagem do banco](tasks/01-fundacao/01-modelagem-banco.md), que produzirá `.agent/database.md` antes de novas migrações. A [slice 01 — Fundação](tasks/01-fundacao/README.md) implementará apenas identidade, desafios de autenticação, workspaces e memberships; relações com os demais domínios serão modeladas sem criar antecipadamente todo o schema. O modelo ainda não foi produzido.
+O modelo relacional está registrado em [`.agent/database.md`](database.md), definido em F01 e implementado em F03 com Better Auth 1.7.12. `0001_auth_core` adiciona identidade, challenges e memberships; o banco WSL local já recebeu a migração. F02 separou e verificou os papéis; `windops` continua bootstrap administrativo, enquanto API, migrador e Electric usam papéis próprios. Neon não está provisionado. F04/F05 implementam fluxos de autenticação e autorização sobre essa base.
 
-Drizzle controla schema e migrações SQL versionadas. Migração inicial cria workspaces com UUID e índice singleton. Remover esse limite exige migração futura; workspace_id continua obrigatório em todos os dados de negócio. Usuários são globais; memberships será N:N com cargo por workspace. Não haverá endpoint de criação pública de workspace no piloto.
+Drizzle controla schema e migrações SQL versionadas. Migrações criam workspaces com UUID e índice singleton, identidade Better Auth, desafios de segunda etapa e `workspace_members` com cargo por workspace. Remover o limite singleton exige migração futura; workspace_id continua obrigatório em todos os dados de negócio. Não haverá endpoint de criação pública de workspace no piloto.
 
 Administrador vê membros do workspace e contas sem vínculo algum; não vê usuários exclusivos de outro workspace. Acesso a issues, histórico, convites, notificações e shapes sempre valida membership no servidor. Nunca confiar em workspace_id do cliente sem autorização. Cache e fila locais separados por conta e workspace.
 
-A tabela de usuários e o schema completo de Better Auth serão introduzidos em [F03 — Schema e migrações](tasks/01-fundacao/03-schema-migracoes.md), gerados conforme a versão instalada e as decisões de F01. Preparar bootstrap manual documentado do primeiro workspace/administrador após essa migração; nunca transformar automaticamente o primeiro cadastro em administrador.
+O schema Better Auth é configurado no builder não montado em [F03 — Schema e migrações](tasks/01-fundacao/03-schema-migracoes.md), com OAuth tokens criptografados e marcador da segunda etapa server-only. Rotas permanecem desativadas até os testes obrigatórios de F04. Bootstrap do primeiro workspace/administrador nunca promove automaticamente o primeiro cadastro.
 
 ## API e autenticação
 
 Contratos atuais: GET /api/health/live, GET /api/health/ready; erros estruturados em error {code,message,requestId}; /api/docs apenas local; GET /api/sync/:collection devolve 503 enquanto não implementado. Sem rota pública funcional de auth.
 
-Better Auth é uma fundação não montada. Login Google e senha convergem por e-mail cuja titularidade foi verificada. Não vincular contas apenas porque um provedor declara um e-mail não verificado. Toda nova sessão online exige código por e-mail válido por 15 minutos; reenvio invalida o anterior. Nenhuma sessão com acesso de negócio antes de completar a segunda etapa, inclusive OAuth. Validar hooks disponíveis em F01 e testar esse fluxo em [F04 — Autenticação](tasks/01-fundacao/04-autenticacao.md), que detalha a etapa 03 do roadmap. As rotas permanecem desabilitadas até os testes críticos passarem.
+Better Auth é uma fundação não montada. Login Google e senha convergem por e-mail cuja titularidade foi verificada. Não vincular contas apenas porque um provedor declara um e-mail não verificado. Toda nova sessão online exige código por e-mail válido por 15 minutos; reenvio invalida o anterior. Nenhuma sessão com acesso de negócio antes de completar a segunda etapa, inclusive OAuth. F01 validou o schema gerado e limites do plugin; testar hooks e fluxo integrado em [F04 — Autenticação](tasks/01-fundacao/04-autenticacao.md), que detalha a etapa 03 do roadmap. As rotas permanecem desabilitadas até os testes críticos passarem.
 
 Usar cookies HttpOnly/Secure em produção, origem confiável e proteção CSRF. Não copiar tokens de sessão para armazenamento JavaScript como estratégia offline. Metadados de acesso local e dados persistidos permitem reabrir o dispositivo já autenticado; sessão expirada permite trabalho local, mas upload exige autenticação renovada. Definir descarte de cache na saída sem apagar silenciosamente pendências; oferecer exportação.
 
 ## Local-first e sincronização planejada
 
-Não basta instalar TanStack DB. A [etapa 07 do roadmap](tasks/roadmap/07-offline.md) deve integrar persistência durável das coleções e outbox de comandos antes de declarar offline pronto. Escolher a API suportada de persistência TanStack após prova em Safari/iPhone e Chrome/Android. Validar IndexedDB/SQLite conforme compatibilidade; documentar a decisão antes da implementação final.
+Não basta instalar TanStack DB. A [etapa 07 do roadmap](<tasks/00 - roadmap/07-offline.md>) deve integrar persistência durável das coleções e outbox de comandos antes de declarar offline pronto. Escolher a API suportada de persistência TanStack após prova em Safari/iPhone e Chrome/Android. Validar IndexedDB/SQLite conforme compatibilidade; documentar a decisão antes da implementação final.
 
 Gravação: UI -> armazenamento local + comando durável -> Fastify -> transação PostgreSQL contendo mudança, evento e trabalho de notificação -> confirmação -> réplica Electric -> reconciliação. Identificadores gerados no cliente, chave idempotente por comando, versão esperada por registro. Não apagar comando antes da confirmação; retries não duplicam issues, eventos ou notificações. Não interpretar atualização otimista em memória como persistência.
 
@@ -61,13 +61,13 @@ PWA guarda app shell e dados para reabertura offline. Não prometer envio com ap
 
 Resend é SaaS, chamado pelo servidor com API key e remetente de domínio verificado. Sem servidor Resend na VPS. Desenvolvimento usa SMTP/Mailpit. Somente convites, códigos e recuperação de senha inicialmente; eventos de issue não geram e-mail. Plano gratuito requer limites de envio, tentativas, cooldown e erro recuperável.
 
-Web Push usa VAPID; chave privada exclusiva do backend. Implementar subscrições, autorização, remoção de endpoints expirados e deduplicação por evento na [etapa 09 do roadmap](tasks/roadmap/09-notifications.md). Um push por criação, sem agrupar; demais eventos somente campainha. Banco transacional terá outbox de entregas processada por worker do mesmo monólito, sem Redis inicialmente. Adaptador atual apenas transporta mensagens; não implementa esses fluxos.
+Web Push usa VAPID; chave privada exclusiva do backend. Implementar subscrições, autorização, remoção de endpoints expirados e deduplicação por evento na [etapa 09 do roadmap](<tasks/00 - roadmap/09-notifications.md>). Um push por criação, sem agrupar; demais eventos somente campainha. Banco transacional terá outbox de entregas processada por worker do mesmo monólito, sem Redis inicialmente. Adaptador atual apenas transporta mensagens; não implementa esses fluxos.
 
 ## Infraestrutura
 
 Desenvolvimento: PostgreSQL com wal_level=logical, Electric e Mailpit no Compose; portas somente loopback. Node/pnpm executam apps no host. PostgreSQL dev usa credencial descartável explícita; não reutilizar em produção.
 
-A configuração dev atual compartilha a credencial administrativa entre os consumidores. [F02 — PostgreSQL seguro](tasks/01-fundacao/02-postgres-seguro.md) separará runtime, migração e replicação, com testes de grants e atualização sem apagar o volume existente. Não declarar privilégios mínimos implementados antes dessa validação.
+A configuração local usa `windops_app`, `windops_migrator` e `windops_replication`, com grants e publicação verificados em F02. O volume existente foi preservado e passou restart, restore e shape. A configuração equivalente no Neon continua pendente; não declarar produção pronta.
 
 Produção: uma VPS Hostinger com Docker Compose e Caddy (frontend estático + proxy HTTPS), API e Electric internos. Caddy opera sem root em portas internas altas; host publica 80/443. Caddy não pode acessar diretamente endpoints Electric públicos porque não existe rota para isso. Usuários veem uma origem única. API com usuário node, filesystem somente leitura e privilégios reduzidos. Volumes Caddy armazenam certificados; Electric precisa de armazenamento persistente explícito.
 

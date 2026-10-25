@@ -2,19 +2,19 @@
 
 As 11 etapas originais foram movidas para esta pasta, preservando sua numeração e escopo. Números em `Dependências` destes arquivos referem-se a outras etapas deste roadmap, não às novas tasks executáveis.
 
-| Etapa | Referência |
-| --- | --- |
-| 01 | [Base executável e infraestrutura](01-base.md) |
-| 02 | [Design system e estrutura visual](02-design.md) |
-| 03 | [Autenticação e conta órfã](03-identity.md) |
-| 04 | [Workspace, membros e convites](04-workspaces.md) |
-| 05 | [Parques e turbinas](05-parks.md) |
-| 06 | [Registro e atendimento](06-issues.md) |
-| 07 | [Persistência e sincronização](07-offline.md) |
-| 08 | [Conclusão, reabertura, arquivos e logs](08-lifecycle.md) |
-| 09 | [Campainha e Web Push](09-notifications.md) |
-| 10 | [Filtros e histórico de consulta](10-query.md) |
-| 11 | [Validação móvel e produção](11-production.md) |
+| Etapa | Referência                                                |
+| ----- | --------------------------------------------------------- |
+| 01    | [Base executável e infraestrutura](01-base.md)            |
+| 02    | [Design system e estrutura visual](02-design.md)          |
+| 03    | [Autenticação e conta órfã](03-identity.md)               |
+| 04    | [Workspace, membros e convites](04-workspaces.md)         |
+| 05    | [Parques e turbinas](05-parks.md)                         |
+| 06    | [Registro e atendimento](06-issues.md)                    |
+| 07    | [Persistência e sincronização](07-offline.md)             |
+| 08    | [Conclusão, reabertura, arquivos e logs](08-lifecycle.md) |
+| 09    | [Campainha e Web Push](09-notifications.md)               |
+| 10    | [Filtros e histórico de consulta](10-query.md)            |
+| 11    | [Validação móvel e produção](11-production.md)            |
 
 ## Execução atual
 
