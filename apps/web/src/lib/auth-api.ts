@@ -29,7 +29,7 @@ export class ApiRequestError extends Error {
   }
 }
 
-async function requestJson(path: string, init: RequestInit = {}): Promise<unknown> {
+export async function requestJson(path: string, init: RequestInit = {}): Promise<unknown> {
   let response: Response;
   try {
     response = await fetch(path, {

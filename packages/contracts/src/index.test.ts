@@ -57,7 +57,12 @@ it('bounds team directory pagination and search', () => {
 
 it('bounds member pagination and rejects sensitive fields in directory DTOs', () => {
   expect(workspaceMembersQuerySchema.parse({})).toEqual({ limit: 25 });
+  expect(workspaceMembersQuerySchema.parse({ search: '  leo@example.com ' })).toEqual({
+    limit: 25,
+    search: 'leo@example.com',
+  });
   expect(workspaceMembersQuerySchema.safeParse({ cursor: 'invalid' }).success).toBe(false);
+  expect(workspaceMembersQuerySchema.safeParse({ search: ' ' }).success).toBe(false);
   expect(workspaceListQuerySchema.safeParse({ limit: 10, search: '   ' }).success).toBe(false);
   const account = {
     id: 'c65e443d-9003-4e89-877c-11b42ea693dd',

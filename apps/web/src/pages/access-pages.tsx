@@ -4,6 +4,7 @@ import { type FormEvent, useEffect, useRef, useState } from 'react';
 import { useAuth } from '../auth/auth-context';
 import { AccessLayout } from '../components/access-layout';
 import { SignOutButton } from '../components/sign-out-button';
+import { ThemeToggle } from '../components/theme-toggle';
 import { Button } from '../components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
 import { Feedback, LoadingState } from '../components/ui/feedback';
@@ -67,6 +68,7 @@ export function LandingPage() {
           <span className="font-semibold tracking-tight">Wind Ops</span>
         </Link>
         <div className="flex items-center gap-2">
+          <ThemeToggle />
           {orphan ? (
             <>
               <span className="max-w-48 truncate px-2 text-sm font-medium" title={accountName}>
@@ -90,18 +92,18 @@ export function LandingPage() {
       </header>
       <section className="mx-auto grid w-full max-w-7xl flex-1 items-center gap-12 py-12 lg:grid-cols-[1.05fr_0.95fr] lg:py-20">
         <div className="max-w-2xl space-y-7">
-          <p className="inline-flex items-center gap-2 rounded-full border border-blue-400/25 bg-blue-500/10 px-3 py-1.5 text-xs font-medium text-blue-200">
+          <p className="inline-flex items-center gap-2 rounded-full border border-blue-400/20 bg-blue-500/10 px-3 py-1.5 text-xs font-medium text-brand">
             <ShieldCheck aria-hidden="true" className="size-4" /> Operação de campo, com contexto
           </p>
           <h1 className="text-4xl font-semibold leading-[1.08] tracking-tight sm:text-6xl">
-            O registro começa <span className="text-blue-400">no campo.</span>
+            O registro começa <span className="text-brand">no campo.</span>
           </h1>
           <p className="max-w-xl text-base leading-relaxed text-muted-foreground sm:text-lg">
             Wind Ops organiza o registro e o acompanhamento de problemas nos elevadores de torres
             eólicas, conectando o trabalho de campo à equipe de operação.
           </p>
           {orphan ? (
-            <Card className="max-w-xl border-blue-400/20 bg-card/80">
+            <Card className="max-w-xl bg-card/80">
               <CardHeader className="pb-2">
                 <CardTitle className="text-base">Sua sessão continua ativa</CardTitle>
                 <CardDescription>
@@ -128,8 +130,8 @@ export function LandingPage() {
                 </Button>
               </div>
               <p className="flex items-center gap-2 text-sm text-muted-foreground">
-                <KeyRound aria-hidden="true" className="size-4 text-blue-300" /> Acesso protegido
-                por verificação de e-mail.
+                <KeyRound aria-hidden="true" className="size-4 text-brand" /> Acesso protegido por
+                verificação de e-mail.
               </p>
             </>
           )}
@@ -139,10 +141,10 @@ export function LandingPage() {
             aria-hidden="true"
             className="absolute -inset-8 -z-10 rounded-full bg-blue-500/10 blur-3xl"
           />
-          <Card className="overflow-hidden border-white/10 bg-card/90 shadow-2xl shadow-blue-950/30">
-            <CardHeader className="border-b border-border/80">
+          <Card className="overflow-hidden bg-card/90 shadow-2xl shadow-blue-950/30">
+            <CardHeader className="border-b border-border">
               <div className="flex items-center gap-3">
-                <span className="grid size-9 place-items-center rounded-lg bg-blue-500/15 text-blue-300">
+                <span className="grid size-9 place-items-center rounded-lg bg-blue-500/15 text-brand">
                   <Wind aria-hidden="true" className="size-5" />
                 </span>
                 <div>
@@ -151,13 +153,13 @@ export function LandingPage() {
                 </div>
               </div>
             </CardHeader>
-            <CardContent className="grid gap-4 p-6 sm:grid-cols-[0.85fr_1.15fr]">
+            <CardContent className="grid gap-4 p-5 sm:grid-cols-[0.85fr_1.15fr]">
               <div className="space-y-3 rounded-xl border border-border bg-background/60 p-4">
                 <p className="text-xs font-medium text-muted-foreground">Fluxo de trabalho</p>
                 {['Registrar no local', 'Contextualizar a equipe', 'Acompanhar atendimento'].map(
                   (item) => (
                     <div className="flex items-center gap-2 text-sm" key={item}>
-                      <CheckCircle2 aria-hidden="true" className="size-4 shrink-0 text-blue-300" />
+                      <CheckCircle2 aria-hidden="true" className="size-4 shrink-0 text-brand" />
                       <span>{item}</span>
                     </div>
                   ),
@@ -179,7 +181,7 @@ export function LandingPage() {
           </Card>
         </div>
       </section>
-      <footer className="mx-auto flex w-full max-w-7xl items-center justify-between border-t border-border/70 py-5 text-xs text-muted-foreground">
+      <footer className="mx-auto flex w-full max-w-7xl items-center justify-between border-t border-border py-5 text-xs text-muted-foreground">
         <span>Wind Ops · Operação em campo</span>
         <span>Desenvolvido para equipes de manutenção eólica</span>
       </footer>
@@ -276,7 +278,7 @@ export function SignInPage() {
         />
       )}
       {error && <ErrorNotice key={error} message={error} />}
-      <form className="space-y-4" onSubmit={submit}>
+      <form className="flex flex-col gap-4" onSubmit={submit}>
         <TextField
           autoComplete="email"
           label="E-mail"
@@ -369,7 +371,7 @@ export function SignUpPage() {
       heading="Criar sua conta"
     >
       {error && <ErrorNotice key={error} message={error} />}
-      <form className="space-y-4" onSubmit={submit}>
+      <form className="flex flex-col gap-4" onSubmit={submit}>
         <TextField
           autoComplete="name"
           label="Nome"
@@ -426,7 +428,7 @@ export function VerifyEmailPage() {
       formTitle={verified ? 'Confirmação concluída' : 'Confirme seu endereço'}
       heading={verified ? 'E-mail confirmado' : 'Confira seu e-mail'}
     >
-      <div className="grid size-12 place-items-center rounded-xl border border-blue-400/20 bg-blue-500/10 text-blue-200">
+      <div className="grid size-12 place-items-center rounded-xl border border-blue-400/15 bg-blue-500/10 text-brand">
         {verified ? (
           <CheckCircle2 aria-hidden="true" className="size-6" />
         ) : (
@@ -577,7 +579,7 @@ export function SecondStepPage() {
       heading="Confirme seu acesso"
     >
       <div className="flex items-start gap-3 rounded-lg border border-border bg-background/50 p-3 text-sm">
-        <ShieldCheck aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-blue-300" />
+        <ShieldCheck aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-brand" />
         <p className="text-muted-foreground">
           O código expira às{' '}
           {new Date(pending.expiresAt).toLocaleTimeString('pt-BR', {
@@ -589,7 +591,7 @@ export function SecondStepPage() {
       </div>
       {notice && <Feedback message={notice} tone="success" />}
       {error && <ErrorNotice key={error} message={error} />}
-      <form className="space-y-4" onSubmit={submit}>
+      <form className="flex flex-col gap-4" onSubmit={submit}>
         <TextField
           autoComplete="one-time-code"
           autoFocus
@@ -670,7 +672,7 @@ export function RecoverPasswordPage() {
           </Button>
         </>
       ) : (
-        <form className="space-y-4" onSubmit={submit}>
+        <form className="flex flex-col gap-4" onSubmit={submit}>
           {error && <ErrorNotice key={error} message={error} />}
           <TextField
             autoComplete="email"
@@ -746,7 +748,7 @@ export function ResetPasswordPage() {
           </Button>
         </>
       ) : (
-        <form className="space-y-4" onSubmit={submit}>
+        <form className="flex flex-col gap-4" onSubmit={submit}>
           <TextField
             autoComplete="new-password"
             label="Nova senha"

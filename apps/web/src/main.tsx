@@ -11,12 +11,15 @@ import '@fontsource-variable/inter';
 import { AppRoot } from './app-root';
 import { AuthProvider } from './auth/auth-context';
 import './styles.css';
+import { ThemeProvider } from './theme/theme-context';
 
 function RootLayout() {
   return (
-    <AuthProvider>
-      <AppRoot />
-    </AuthProvider>
+    <ThemeProvider>
+      <AuthProvider>
+        <AppRoot />
+      </AuthProvider>
+    </ThemeProvider>
   );
 }
 
@@ -68,6 +71,16 @@ const appRoute = createRoute({
   path: '/app',
   component: lazyRouteComponent(workspacePages, 'WorkspaceHomePage'),
 });
+const teamRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/equipe',
+  component: lazyRouteComponent(workspacePages, 'TeamManagementPage'),
+});
+const invitationAcceptRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/convite/aceitar',
+  component: lazyRouteComponent(workspacePages, 'InvitationAcceptPage'),
+});
 const router = createRouter({
   routeTree: rootRoute.addChildren([
     indexRoute,
@@ -79,6 +92,8 @@ const router = createRouter({
     resetRoute,
     noWorkspaceRoute,
     appRoute,
+    teamRoute,
+    invitationAcceptRoute,
   ]),
 });
 declare module '@tanstack/react-router' {

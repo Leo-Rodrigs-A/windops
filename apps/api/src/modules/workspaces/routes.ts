@@ -8,6 +8,7 @@ import {
   workspaceContextSchema,
   workspaceDirectoryPageSchema,
   workspaceInvitationSchema,
+  workspaceInvitationsPageSchema,
   workspaceListQuerySchema,
   workspaceMemberMutationSchema,
   workspaceMembersPageSchema,
@@ -185,6 +186,31 @@ export function registerWorkspaceRoutes(
       const result = await authorization.createInvitation(request.headers, workspaceId, input);
       if (result.status !== 'ok') return operationError(reply, request, result.status);
       return reply.code(201).send(result.value);
+    },
+  );
+
+  app.get(
+    '/api/workspaces/:workspaceId/invitations',
+    {
+      schema: {
+        params: workspaceParams,
+        querystring: workspaceMembersQuerySchema,
+        response: {
+          200: workspaceInvitationsPageSchema,
+          401: errorSchema,
+          403: errorSchema,
+        },
+      },
+    },
+    async (request, reply) => {
+      const { workspaceId } = workspaceParams.parse(request.params);
+      const query = workspaceMembersQuerySchema.parse(request.query);
+      const result = await authorization.getInvitations(request.headers, workspaceId, query);
+      if (result.status === 'unauthenticated')
+        return authorizationError(reply, request, 401, 'AUTHENTICATION_REQUIRED');
+      if (result.status === 'forbidden')
+        return authorizationError(reply, request, 403, 'WORKSPACE_ACCESS_DENIED');
+      return reply.send(result.value);
     },
   );
 

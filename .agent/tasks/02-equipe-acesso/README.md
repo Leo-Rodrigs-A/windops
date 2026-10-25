@@ -2,7 +2,7 @@
 
 ## Status
 
-Em andamento. Depende da [slice 01 — Fundação](../01-fundacao/README.md), concluída. E01–E05 concluídas: acesso admin dev, modelo/contratos, consultas administrativas, fluxo de convites e cargos/revogação. Próxima: E06 — interfaces de equipe e convite. E07 segue planejada.
+Em andamento. Depende da [slice 01 — Fundação](../01-fundacao/README.md), concluída. E01–E06 concluídas: acesso admin dev, modelo/contratos, consultas administrativas, fluxo de convites, cargos/revogação e interfaces Shadcn. Próxima: E07 — validação integrada com duas contas e dispositivos.
 
 - [ ] Slice concluída: implementação e aceites comprovados.
 
@@ -28,10 +28,10 @@ Administrador é um cargo da membership no workspace, não um superadministrador
 - [x] E03 concluída — endpoints administrativos de membros e contas sem vínculo ativo, com autorização por tenant.
 - [x] E04 concluída — Mailpit/OTP, envio/reenvio, falha e aceite transacional validados.
 - [x] E05 concluída — promoção, revogação, revisões e corridas validadas; `0003` aplicada ao dev.
-- [ ] E06 concluída.
+- [x] E06 concluída — interfaces de equipe e aceite do convite conectadas à API; validação visual autenticada fica na E07.
 - [ ] E07 concluída.
 
-E01 configurou o acesso interno no banco de dev. E02 definiu contratos e persistência; E03–E05 implementaram consultas, convites, aceite, promoção e revogação. A interface Shadcn e a rota `/invite/accept` estão planejadas para E06; convites reais ainda não devem ser enviados.
+E01 configurou o acesso interno no banco de dev. E02 definiu contratos e persistência; E03–E05 implementaram consultas, convites, aceite, promoção e revogação. E06 implementou a interface Shadcn em `/equipe` e `/convite/aceitar`, sem enviar convites reais. A validação integrada com usuários reais permanece na E07.
 
 ## Limites e decisões
 
@@ -41,7 +41,7 @@ E01 configurou o acesso interno no banco de dev. E02 definiu contratos e persist
 - Convite: 48 horas, uso único, e-mail normalizado, cargo Técnico por padrão e reenvio invalidando o anterior. Nenhuma vinculação por simples escolha da conta na listagem.
 - Admin pode promover técnico; não remove nem rebaixa administrador. Remoção revoga membership e preserva identidade e histórico.
 - Reintegração: convite emitido depois da revogação reativa a membership existente com o cargo do convite e incrementa sua revisão. Aceite, convite, promoção e revogação serializam por workspace; revogação invalida convites pendentes para o e-mail correspondente.
-- Referências Pencil externas devem ser reconfirmadas antes de E06. Ausência de telas de equipe exige esclarecer a composição com o proprietário, conforme o fluxo de design.
+- Referências Pencil são externas; em E06, o documento foi reconfirmado e, pela autorização anterior do proprietário, as telas ausentes foram compostas com base no design system existente.
 
 ## Aceite da slice
 

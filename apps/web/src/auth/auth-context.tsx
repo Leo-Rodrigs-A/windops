@@ -18,6 +18,7 @@ import {
   getMe,
   getWorkspaceContext,
 } from '../lib/auth-api';
+import { hasPendingInvitation } from '../lib/invitation-token';
 
 export type AuthSnapshot =
   | { status: 'loading' }
@@ -37,6 +38,13 @@ const AuthContext = createContext<AuthContextValue | null>(null);
 
 const publicOnlyRoutes = new Set([
   '/',
+  '/entrar',
+  '/cadastro',
+  '/verificar-email',
+  '/confirmar-acesso',
+  '/recuperar-senha',
+]);
+const invitationAuthRoutes = new Set([
   '/entrar',
   '/cadastro',
   '/verificar-email',
@@ -149,21 +157,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [refresh]);
 
   useEffect(() => {
-    const root = document.documentElement;
-    const previousTheme = root.dataset.theme;
-    root.dataset.theme = 'dark';
-    return () => {
-      if (previousTheme) root.dataset.theme = previousTheme;
-      else delete root.dataset.theme;
-    };
-  }, []);
-
-  useEffect(() => {
     if (snapshot.status === 'loading' || snapshot.status === 'error') return;
     const path = location.pathname;
-    const isProtected = path === '/app' || path === '/sem-workspace';
+    const isProtected = path === '/app' || path === '/sem-workspace' || path === '/equipe';
 
-    if (snapshot.status === 'pending' && path !== '/confirmar-acesso') {
+    if (
+      hasPendingInvitation() &&
+      (snapshot.status === 'authenticated' || snapshot.status === 'orphan') &&
+      path !== '/convite/aceitar' &&
+      !invitationAuthRoutes.has(path)
+    ) {
+      void navigate({ to: '/convite/aceitar', replace: true });
+    } else if (snapshot.status === 'pending' && path !== '/confirmar-acesso') {
       void navigate({ to: '/confirmar-acesso', replace: true });
     } else if (
       snapshot.status === 'authenticated' &&
@@ -179,6 +184,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       void navigate({ to: '/sem-workspace', replace: true });
     } else if (snapshot.status === 'anonymous' && isProtected) {
       void navigate({ to: '/entrar', replace: true });
+    } else if (
+      snapshot.status === 'authenticated' &&
+      path === '/equipe' &&
+      snapshot.context.role !== 'admin'
+    ) {
+      void navigate({ to: '/app', replace: true });
     }
   }, [location.pathname, navigate, snapshot]);
 

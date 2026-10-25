@@ -59,6 +59,9 @@ it('documents protected identity and workspace context routes', async () => {
     async createInvitation() {
       return { status: 'unauthenticated' };
     },
+    async getInvitations() {
+      return { status: 'unauthenticated' };
+    },
     async resendInvitation() {
       return { status: 'unauthenticated' };
     },
@@ -94,7 +97,10 @@ it('documents protected identity and workspace context routes', async () => {
       '/api/workspaces/{workspaceId}/members/{membershipId}/revoke',
     );
     expect(app.swagger().paths).toHaveProperty('/api/workspaces/{workspaceId}/directory');
-    expect(app.swagger().paths).toHaveProperty('/api/workspaces/{workspaceId}/invitations');
+    expect(app.swagger().paths['/api/workspaces/{workspaceId}/invitations']).toMatchObject({
+      get: expect.any(Object),
+      post: expect.any(Object),
+    });
     expect(app.swagger().paths).toHaveProperty(
       '/api/workspaces/{workspaceId}/invitations/{invitationId}/resend',
     );

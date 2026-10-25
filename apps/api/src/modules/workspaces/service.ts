@@ -9,6 +9,7 @@ import type {
   WorkspaceContext,
   WorkspaceDirectoryPage,
   WorkspaceInvitation,
+  WorkspaceInvitationsPage,
   WorkspaceListQuery,
   WorkspaceMemberMutation,
   WorkspaceMembersPage,
@@ -178,6 +179,11 @@ export interface WorkspaceAuthorizationService {
     workspaceId: string,
     invitationId: string,
   ): Promise<WorkspaceOperationResult<WorkspaceInvitation>>;
+  getInvitations(
+    headers: IncomingHttpHeaders,
+    workspaceId: string,
+    query: WorkspaceMembersQuery,
+  ): Promise<AuthorizationResult<WorkspaceInvitationsPage>>;
   acceptInvitation(
     headers: IncomingHttpHeaders,
     token: AcceptWorkspaceInvitation['token'],
@@ -241,41 +247,61 @@ export function createWorkspaceAuthorizationService(
     async getMembers(headers, workspaceId, query) {
       const authorization = await this.authorizeWorkspace(headers, workspaceId, ['admin']);
       if (authorization.status !== 'ok') return authorization;
-      const result = await pool.query<{
-        membershipId: string;
-        userId: string;
-        role: WorkspaceRole;
-        createdAt: Date;
-        revision: number;
-      }>(
-        `SELECT id AS "membershipId", user_id AS "userId", role,
-                created_at AS "createdAt", revision
-         FROM public.workspace_members
-         WHERE workspace_id = $1 AND revoked_at IS NULL
-           AND ($2::uuid IS NULL OR id > $2::uuid)
-         ORDER BY id
-         LIMIT $3`,
-        [workspaceId, query.cursor ?? null, query.limit + 1],
-      );
-      const hasMore = result.rows.length > query.limit;
-      const rows = hasMore ? result.rows.slice(0, query.limit) : result.rows;
-      const users = await identity.getUsersByIds(rows.map((row) => row.userId));
-      const usersById = new Map(users.map((user) => [user.id, user]));
-      const items = rows.map((row) => {
-        const user = usersById.get(row.userId);
-        if (!user) throw new Error('Workspace member identity is missing.');
-        return {
-          membershipId: row.membershipId,
-          user,
-          role: row.role,
-          createdAt: row.createdAt.toISOString(),
-          revokedAt: null,
-          revision: row.revision,
-        };
-      });
+      const items: WorkspaceMembersPage['items'] = [];
+      let cursor = query.cursor ?? null;
+      let nextCursor: string | null = null;
+      let hasMoreRows = true;
+      while (hasMoreRows) {
+        const result = await pool.query<{
+          membershipId: string;
+          userId: string;
+          role: WorkspaceRole;
+          createdAt: Date;
+          revision: number;
+        }>(
+          `SELECT id AS "membershipId", user_id AS "userId", role,
+                  created_at AS "createdAt", revision
+           FROM public.workspace_members
+           WHERE workspace_id = $1 AND revoked_at IS NULL
+             AND ($2::uuid IS NULL OR id > $2::uuid)
+           ORDER BY id
+           LIMIT 101`,
+          [workspaceId, cursor],
+        );
+        hasMoreRows = result.rows.length > 100;
+        const rows = hasMoreRows ? result.rows.slice(0, 100) : result.rows;
+        if (rows.length === 0) break;
+        const users = await identity.getUsersByIds(rows.map((row) => row.userId));
+        const usersById = new Map(users.map((user) => [user.id, user]));
+        for (const row of rows) {
+          const user = usersById.get(row.userId);
+          if (!user) throw new Error('Workspace member identity is missing.');
+          const matchesSearch =
+            !query.search ||
+            `${user.name} ${user.email}`
+              .toLocaleLowerCase()
+              .includes(query.search.toLocaleLowerCase());
+          if (!matchesSearch) continue;
+          items.push({
+            membershipId: row.membershipId,
+            user,
+            role: row.role,
+            createdAt: row.createdAt.toISOString(),
+            revokedAt: null,
+            revision: row.revision,
+          });
+          if (items.length > query.limit) {
+            items.pop();
+            nextCursor = items.at(-1)?.membershipId ?? null;
+            hasMoreRows = false;
+            break;
+          }
+        }
+        cursor = rows.at(-1)?.membershipId ?? cursor;
+      }
       return {
         status: 'ok',
-        value: { items, nextCursor: hasMore ? (items.at(-1)?.membershipId ?? null) : null },
+        value: { items, nextCursor },
       };
     },
 
@@ -294,6 +320,26 @@ export function createWorkspaceAuthorizationService(
         ...(query.search ? { search: query.search } : {}),
       });
       return { status: 'ok', value: page };
+    },
+
+    async getInvitations(headers, workspaceId, query) {
+      const authorization = await this.authorizeWorkspace(headers, workspaceId, ['admin']);
+      if (authorization.status !== 'ok') return authorization;
+      const result = await pool.query<InvitationRow>(
+        `SELECT ${invitationColumns}
+         FROM public.workspace_invitations
+         WHERE workspace_id = $1 AND ($2::uuid IS NULL OR id < $2)
+         ORDER BY id DESC
+         LIMIT $3`,
+        [workspaceId, query.cursor ?? null, query.limit + 1],
+      );
+      const hasMore = result.rows.length > query.limit;
+      const rows = hasMore ? result.rows.slice(0, query.limit) : result.rows;
+      const items = rows.map(toInvitationDto);
+      return {
+        status: 'ok',
+        value: { items, nextCursor: hasMore ? (items.at(-1)?.id ?? null) : null },
+      };
     },
 
     async createInvitation(headers, workspaceId, input) {

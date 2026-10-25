@@ -66,7 +66,7 @@ export function TextAreaField({
       <Textarea
         aria-describedby={describedBy || undefined}
         aria-invalid={error ? true : undefined}
-        className="min-h-32 resize-y rounded-xl"
+        className="min-h-32 resize-y rounded-lg"
         id={fieldId}
         {...props}
       />

@@ -603,6 +603,17 @@ try {
     membersSecondPage.json().items[0].membershipId,
     membersFirstPage.json().items[0].membershipId,
   );
+  const searchedMembers = await call(
+    'GET',
+    `/api/workspaces/${workspaceA}/members?search=${encodeURIComponent(technician.email)}`,
+    sessions.get(admin.id),
+  );
+  assert.equal(searchedMembers.statusCode, 200, searchedMembers.body);
+  assert.deepEqual(
+    searchedMembers.json().items.map((item) => item.user.id),
+    [technician.id],
+    'member search filters by public identity fields while preserving workspace scope',
+  );
   const directory = await call(
     'GET',
     `/api/workspaces/${workspaceA}/directory?limit=100`,
@@ -721,6 +732,19 @@ try {
   );
   const existingMemberInvite = duplicateInvites.find((response) => response.statusCode === 201);
   assert.ok(existingMemberInvite);
+  const invitationPage = await call(
+    'GET',
+    `/api/workspaces/${workspaceA}/invitations?limit=100`,
+    sessions.get(admin.id),
+  );
+  assert.equal(invitationPage.statusCode, 200, invitationPage.body);
+  assert.ok(invitationPage.json().items.some((item) => item.id === existingMemberInvite.json().id));
+  assert.equal('token' in invitationPage.json().items[0], false);
+  assert.equal(
+    (await call('GET', `/api/workspaces/${workspaceA}/invitations`, sessions.get(technician.id)))
+      .statusCode,
+    403,
+  );
   assert.equal(existingMemberInvite.json().role, 'technician');
   assert.equal(existingMemberInvite.json().deliveryStatus, 'sent');
   assert.equal(existingMemberInvite.json().status, 'pending');

@@ -17,7 +17,7 @@ import {
 } from './sidebar';
 
 export type WorkspaceNavigationItem = {
-  href: '/app';
+  href: '/app' | '/equipe';
   label: string;
   icon: LucideIcon;
 };

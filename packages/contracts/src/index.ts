@@ -68,6 +68,7 @@ export const workspaceMembersQuerySchema = z
   .object({
     limit: z.coerce.number().int().min(1).max(100).default(25),
     cursor: z.uuid().optional(),
+    search: z.string().trim().min(1).max(320).optional(),
   })
   .strict();
 export const createWorkspaceInvitationSchema = z
@@ -133,6 +134,7 @@ export type WorkspaceInvitationDeliveryStatus = z.infer<
   typeof workspaceInvitationDeliveryStatusSchema
 >;
 export type WorkspaceInvitationStatus = z.infer<typeof workspaceInvitationStatusSchema>;
+export type WorkspaceInvitationsPage = z.infer<typeof workspaceInvitationsPageSchema>;
 export type CreateWorkspaceInvitation = z.infer<typeof createWorkspaceInvitationSchema>;
 export type AcceptWorkspaceInvitation = z.infer<typeof acceptWorkspaceInvitationSchema>;
 export type WorkspaceMember = z.infer<typeof workspaceMemberSchema>;

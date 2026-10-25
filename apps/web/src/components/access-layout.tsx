@@ -1,6 +1,7 @@
 import { Link } from '@tanstack/react-router';
 import { Wind } from 'lucide-react';
 import type { ReactNode } from 'react';
+import { ThemeToggle } from './theme-toggle';
 import { Button } from './ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
 
@@ -30,20 +31,23 @@ export function AccessLayout({
           <Wind aria-hidden="true" className="size-6 text-primary" />
           <span className="font-semibold tracking-tight">Wind Ops</span>
         </Link>
-        <Button asChild variant="ghost">
-          <Link to="/entrar">Entrar</Link>
-        </Button>
+        <div className="flex items-center gap-2">
+          <ThemeToggle />
+          <Button asChild variant="ghost">
+            <Link to="/entrar">Entrar</Link>
+          </Button>
+        </div>
       </header>
       <div className="mx-auto grid w-full max-w-6xl items-center gap-10 py-12 md:min-h-[calc(100dvh-7rem)] md:grid-cols-[minmax(0,1fr)_minmax(22rem,0.8fr)] md:gap-16 md:py-16">
         <section className="mx-auto w-full max-w-xl space-y-6">
-          <p className="text-sm font-medium uppercase tracking-[0.18em] text-blue-300">{eyebrow}</p>
+          <p className="text-sm font-medium uppercase tracking-[0.18em] text-brand">{eyebrow}</p>
           <h1 className="text-3xl font-semibold leading-tight tracking-tight sm:text-4xl lg:text-5xl">
             {heading}
           </h1>
           <p className="max-w-lg text-base leading-relaxed text-muted-foreground sm:text-lg">
             {description}
           </p>
-          <div className="hidden overflow-hidden rounded-2xl border border-border/80 bg-card/70 p-5 shadow-2xl shadow-blue-950/20 sm:block">
+          <div className="hidden overflow-hidden rounded-2xl border border-border bg-card/70 p-5 shadow-2xl shadow-blue-950/20 sm:block">
             <div className="mb-5 flex items-center justify-between border-b border-border pb-4">
               <div className="flex items-center gap-2 text-sm font-medium">
                 <span className="size-2 rounded-full bg-blue-400" />
@@ -66,7 +70,7 @@ export function AccessLayout({
             </div>
           </div>
         </section>
-        <Card className="mx-auto w-full max-w-md border-border/80 bg-card/95 shadow-2xl shadow-black/20 backdrop-blur">
+        <Card className="mx-auto w-full max-w-md bg-card/95 shadow-2xl shadow-black/20 backdrop-blur">
           <CardHeader className="space-y-2">
             <CardTitle className="text-2xl tracking-tight">{formTitle}</CardTitle>
             <CardDescription className="text-sm leading-relaxed">{formDescription}</CardDescription>

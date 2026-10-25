@@ -4,7 +4,7 @@ import { cn } from '../../lib/utils';
 import { Button } from './button';
 
 export type HomeNavigationItem = {
-  href: '/app';
+  href: '/app' | '/equipe';
   label: string;
   icon: LucideIcon;
 };

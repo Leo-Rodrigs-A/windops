@@ -6,7 +6,10 @@ import { Feedback, LoadingState } from './components/ui/feedback';
 export function AppRoot() {
   const { snapshot, refresh } = useAuth();
   const location = useLocation();
-  const protectedPath = location.pathname === '/app' || location.pathname === '/sem-workspace';
+  const protectedPath =
+    location.pathname === '/app' ||
+    location.pathname === '/sem-workspace' ||
+    location.pathname === '/equipe';
 
   if (protectedPath && snapshot.status === 'loading') {
     return (
