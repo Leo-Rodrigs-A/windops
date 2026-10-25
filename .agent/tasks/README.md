@@ -9,8 +9,9 @@ Cada nova slice fica em uma pasta `NN-nome/`, com um `README.md` que define resu
 ## Slice atual
 
 - [x] [01 — Fundação](01-fundacao/README.md): F01–F08 concluídas em 25/10/2026, com validação local e Android físico.
+- [ ] [02 — Equipe e acesso ao workspace](02-equipe-acesso/README.md): planejada, com sete tasks E01–E07.
 
-Slice atual: fundação concluída. A próxima slice deve ser detalhada progressivamente quando seu escopo e dependências estiverem prontos. No Android físico foram testados login, código, home, nome na top bar e logout. F07 concluiu fluxos públicos/protegidos e validação com Narrador; F05 concluiu guards de workspace e bootstrap administrativo; F06 estabeleceu e comparou visualmente os componentes e tokens; o schema está em [`.agent/database.md`](../database.md), e F03 aplicou as migrações de identidade, desafios e memberships no banco local.
+Slice atual: [02 — Equipe e acesso ao workspace](02-equipe-acesso/README.md), planejada, com os arquivos de tasks preparados e implementação ainda não iniciada. Próxima execução: [E01 — Conta administradora de desenvolvimento](02-equipe-acesso/01-admin-dev.md). O proprietário cadastra/verifica a conta e informa o e-mail/UUID; o agente executa o bootstrap SQL já autorizado para essa conta no banco dev. E02 pode ser preparada enquanto o cadastro é concluído. A fundação permanece concluída, com evidências de banco, autenticação, autorização, interface e Android físico.
 
 ## Convenção de execução
 
