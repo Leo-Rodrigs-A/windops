@@ -26,6 +26,7 @@
     "db:permissions": "node apps/api/scripts/permissions.mjs",
     "test:auth-integration": "node --import tsx apps/api/scripts/auth-flow.mjs",
     "test:auth-google-real": "node --import tsx apps/api/scripts/google-oauth-smoke.mjs",
+    "test:workspaces-integration": "node --import tsx apps/api/scripts/workspaces-flow.mjs",
     "test:integration": "pnpm --filter @windops/api test:integration"
   },
   "devDependencies": {

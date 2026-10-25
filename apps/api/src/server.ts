@@ -1,5 +1,6 @@
 import { buildApp } from './app.js';
-import { createIdentityProvider } from './modules/identity/index.js';
+import { createIdentityProvider, createIdentityService } from './modules/identity/index.js';
+import { createWorkspaceAuthorizationService } from './modules/workspaces/index.js';
 import { loadEnvironment } from './platform/config.js';
 import { createDatabase } from './platform/database/client.js';
 import { createEmailSender } from './platform/email.js';
@@ -18,11 +19,16 @@ const identity =
           : undefined,
       )
     : undefined;
+const workspaceAuthorization = createWorkspaceAuthorizationService(
+  pool,
+  identity ? createIdentityService(identity) : { resolveAuthenticatedUser: async () => null },
+);
 const app = buildApp({
   logger: true,
   docs: env.NODE_ENV !== 'production',
   trustProxy: env.NODE_ENV === 'production',
   ...(identity ? { identity } : {}),
+  workspaceAuthorization,
   authOrigin: env.APP_ORIGIN,
   ready: async () => {
     await pool.query('SELECT 1');

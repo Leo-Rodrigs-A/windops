@@ -10,12 +10,17 @@ import {
 } from 'fastify-type-provider-zod';
 import { type IdentityProvider, registerIdentityRoutes } from './modules/identity/index.js';
 import { registerSyncRoutes } from './modules/sync/routes.js';
+import {
+  registerWorkspaceRoutes,
+  type WorkspaceAuthorizationService,
+} from './modules/workspaces/index.js';
 export function buildApp(options: {
   ready: () => Promise<void>;
   logger?: boolean;
   docs?: boolean;
   trustProxy?: boolean;
   identity?: IdentityProvider;
+  workspaceAuthorization?: WorkspaceAuthorizationService;
   authOrigin?: string;
 }) {
   const app = Fastify({
@@ -81,6 +86,8 @@ export function buildApp(options: {
     app.register(registerSyncRoutes);
     if (options.identity && options.authOrigin)
       registerIdentityRoutes(app, options.identity, options.authOrigin);
+    if (options.workspaceAuthorization)
+      registerWorkspaceRoutes(app, options.workspaceAuthorization);
     if (options.docs) app.register(scalar, { routePrefix: '/api/docs' });
   });
   return app;

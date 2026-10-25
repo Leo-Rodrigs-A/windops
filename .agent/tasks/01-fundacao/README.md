@@ -2,7 +2,7 @@
 
 ## Status
 
-Em andamento. F01–F04 concluídas; F05 é a próxima tarefa de implementação.
+Em andamento. F01–F05 concluídas; F06 é a próxima tarefa de implementação.
 
 - [ ] Slice concluída: todos os aceites das tasks abaixo comprovados.
 
@@ -24,7 +24,7 @@ O aceite é de desenvolvimento integrado e preparação segura para implantaçã
 - [x] [F02 — PostgreSQL e privilégios](02-postgres-seguro.md). Concluída em 25/10/2026; papéis locais aplicados e verificados.
 - [x] [F03 — Schema e migrações da fundação](03-schema-migracoes.md). Concluída em 25/10/2026.
 - [x] [F04 — Autenticação e segunda etapa](04-autenticacao.md). Concluída em 25/10/2026.
-- [ ] [F05 — Autorização e bootstrap](05-autorizacao-bootstrap.md). Próxima task; depende de F03 e F04.
+- [x] [F05 — Autorização e bootstrap](05-autorizacao-bootstrap.md). Concluída em 25/10/2026; depende de F03 e F04.
 - [ ] [F06 — Referências e componentes visuais](06-design-system.md). Documento externo acessível; pode avançar após F01 em paralelo ao backend.
 - [ ] [F07 — Telas e navegação autenticada](07-interfaces-iniciais.md). Depende de F04, F05 e F06.
 - [ ] [F08 — Validação integrada](08-validacao-integrada.md). Depende de F01–F07.
@@ -60,4 +60,4 @@ Documento ativo em 24/10/2026: `G:\Meu Drive\01 - TRABALHO\08 - PENCIL WORKSPACE
 
 Preparação concluída em 24/10/2026: roadmap reorganizado e oito planos criados; referência pen.dev consultada sem escrita.
 
-F01 concluída em 25/10/2026: modelo `.agent/database.md` criado e Better Auth 1.7.12 validado. F02 concluída em 25/10/2026: papéis provisionados no volume existente, isolamento, restart/restore e Electric validados. F03 concluiu migrações e schema da fundação. F04 concluiu autenticação, segunda etapa, OAuth simulado e login Google real. F05 implementará autorização e bootstrap. Neon permanece pendente.
+F01 concluída em 25/10/2026: modelo `.agent/database.md` criado e Better Auth 1.7.12 validado. F02 concluída em 25/10/2026: papéis provisionados no volume existente, isolamento, restart/restore e Electric validados. F03 concluiu migrações e schema da fundação. F04 concluiu autenticação, segunda etapa, OAuth simulado e login Google real. F05 concluiu autorização por tenant e bootstrap administrativo explícito; bootstrap real ainda requer execução operacional. Neon permanece pendente.
