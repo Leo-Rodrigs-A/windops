@@ -18,6 +18,8 @@ const upgradeDatabase = `windops_f03_upgrade_${process.pid}`;
 const compose = ['compose', '-f', 'infra/compose.dev.yml', 'exec', '-T', 'postgres'];
 let created = false;
 let upgradeCreated = false;
+let persistedUserId;
+let persistedSessionId;
 const connectionFor = (variable, targetDatabase = database) => {
   const url = new URL(process.env[variable]);
   url.pathname = `/${targetDatabase}`;
@@ -100,6 +102,7 @@ try {
       [`f03-${process.pid}@example.invalid`],
     );
     const userId = user.rows[0].id;
+    persistedUserId = userId;
     assert.equal(
       (await app.query('SELECT email_verified FROM public.auth_users WHERE id = $1', [userId]))
         .rows[0].email_verified,
@@ -110,6 +113,7 @@ try {
        VALUES ($1, $2, now() + interval '15 minutes', now()) RETURNING id, expires_at`,
       [userId, `f03-session-${process.pid}`],
     );
+    persistedSessionId = session.rows[0].id;
     assert.match(session.rows[0].id, /^[0-9a-f-]{36}$/i, 'provider IDs must be UUIDs');
     assert.ok(session.rows[0].expires_at instanceof Date, 'session expiration must be a timestamp');
     await app.query(
@@ -197,6 +201,23 @@ try {
       workspaceId,
     ]);
     assert.equal(persisted.rowCount, 1, 'the test workspace must survive a PostgreSQL restart');
+    const persistedIdentity = await restartedApp.query(
+      `SELECT u.name, u.email, m.role, c.session_id
+       FROM public.auth_users u
+       JOIN public.workspace_members m ON m.user_id = u.id
+       JOIN public.auth_sessions s ON s.user_id = u.id AND s.id = $3
+       JOIN public.auth_login_challenges c ON c.session_id = s.id
+       WHERE u.id = $1 AND m.workspace_id = $2`,
+      [persistedUserId, workspaceId, persistedSessionId],
+    );
+    assert.deepEqual(persistedIdentity.rows, [
+      {
+        name: 'F03 probe',
+        email: `f03-${process.pid}@example.invalid`,
+        role: 'admin',
+        session_id: persistedSessionId,
+      },
+    ]);
   } finally {
     await restartedApp.end();
   }
@@ -337,7 +358,7 @@ try {
     rmSync(migrationDir, { recursive: true, force: true });
   }
   console.log(
-    'Empty install, repeated migration, constraints, restart, permissions and upgrade preserving a 0000 workspace verified.',
+    'Empty install, repeated migration, constraints, user/session/challenge/membership persistence after restart, permissions and upgrade preserving a 0000 workspace verified.',
   );
 } finally {
   if (created) docker([...compose, 'dropdb', '--if-exists', '-U', 'windops', database]);

@@ -24,8 +24,11 @@ jobs:
       - run: docker compose -f infra/compose.dev.yml config --quiet
       - run: pnpm db:setup
       - run: pnpm db:empty-check
+      - run: pnpm db:restore-check
       - run: pnpm db:migrate
       - run: pnpm db:provision
+      - run: pnpm test:auth-integration
+      - run: pnpm test:workspaces-integration
       - run: pnpm test:integration
       - run: pnpm db:permissions
       - run: bash -n scripts/deploy.sh scripts/deploy-ssh-entrypoint.sh

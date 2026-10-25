@@ -14,7 +14,7 @@ Dar acesso à home somente a membros autorizados, fornecer contexto real para a 
 
 - [x] Criar serviço público de autorização em `workspaces`, consumindo identidade já validada pelo serviço público de `identity`. Cada consulta protegida exige segunda etapa concluída e membership ativa no workspace.
 - [x] Validar workspace e cargo no servidor; ignorar workspace/role enviados fora da rota prevista. A revogação vale na próxima requisição, sem depender da expiração do cookie ou de cache frontend.
-- [x] Implementar `GET /api/me` com identidade mínima e memberships ativas, sem dados de autenticação internos. Conta órfã recebe lista vazia. Contratos compartilhados/OpenAPI e erros 401/403 definidos.
+- [x] Implementar `GET /api/me` com ID, nome e e-mail do usuário e memberships ativas, sem dados de autenticação internos. Conta órfã recebe lista vazia. Contratos compartilhados/OpenAPI e erros 401/403 definidos.
 - [x] Implementar `GET /api/workspaces/:workspaceId/context` com nome do workspace e cargo, usando o guard comum. Não retorna usuários, issues fictícias ou dados de outros tenants.
 - [x] Testar matriz de acesso: visitante/desafio pendente sem contexto; órfão somente com identidade; Técnico/Administrador no próprio workspace. `authorizeWorkspace` aceita lista de cargos para operações futuras; não cria endpoints administrativos vazios.
 - [x] Fornecer `apps/api/scripts/bootstrap-workspace.sql`: transação advisory-locked exige UUID explícito de usuário existente/verificado e workspace; cria somente o workspace piloto, é no-op ao repetir e aborta conflitos sem promoção silenciosa.
@@ -46,7 +46,7 @@ Dar acesso à home somente a membros autorizados, fornecer contexto real para a 
 
 - [x] API rejeita visitante, sessão pré-código, workspace forjado e membership revogada; guards são exercitados no servidor.
 - [x] Técnico/admin acessam o próprio contexto; usuário de A não lê B; órfão não recebe contexto.
-- [x] `GET /api/me` expõe só identidade mínima e memberships ativas; imports respeitam os `index.ts` públicos.
+- [x] `GET /api/me` expõe ID, nome, e-mail e memberships ativas; imports respeitam os `index.ts` públicos.
 - [x] Bootstrap repetido é no-op; não promove técnico; falha para usuário ausente/não verificado e workspace conflitante.
 - [x] `pnpm check` final e integração PostgreSQL/Electric passam; endpoints constam no OpenAPI sem CRUD de domínio.
 

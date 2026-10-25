@@ -2,9 +2,9 @@
 
 ## Status
 
-Em andamento. F01–F07 concluídas; F08 — validação integrada é a próxima task.
+- Concluída em 25/10/2026. F01–F08 concluídas; validação local e fluxo Android físico registrados. Limites de CI remoto, iPhone e serviços de produção estão documentados.
 
-- [ ] Slice concluída: todos os aceites das tasks abaixo comprovados.
+- [x] Slice concluída: todos os aceites das tasks abaixo comprovados.
 
 ## Resultado esperado
 
@@ -27,7 +27,7 @@ O aceite é de desenvolvimento integrado e preparação segura para implantaçã
 - [x] [F05 — Autorização e bootstrap](05-autorizacao-bootstrap.md). Concluída em 25/10/2026; depende de F03 e F04.
 - [x] [F06 — Referências e componentes visuais](06-design-system.md). Concluída em 25/10/2026; tokens, componentes Shadcn e comparação visual desktop/mobile registrados.
 - [x] [F07 — Telas e navegação autenticada](07-interfaces-iniciais.md). Concluída em 25/10/2026; fluxos de interface e Narrador do Windows validados. Depende de F04, F05 e F06.
-- [ ] [F08 — Validação integrada](08-validacao-integrada.md). Depende de F01–F07.
+- [x] [F08 — Validação integrada](08-validacao-integrada.md). Concluída em 25/10/2026; validação local, Android físico e limpeza de rede concluídos.
 
 ## Limites
 
@@ -50,13 +50,14 @@ F06 reconfirmou o documento ativo em 25/10/2026 e registrou inventário e propri
 
 ## Aceite da slice
 
-- [ ] Ambiente novo cria o schema; atualização preserva a base existente; reaplicação de migrações é segura.
-- [ ] Reinício mantém dados; aplicação não usa superusuário; papéis de runtime, migração e replicação têm testes de permissão.
-- [ ] Cadastro, senha, Google, código por e-mail, recuperação e logout validados; nenhuma sessão incompleta acessa negócio.
-- [ ] Vinculação por e-mail verificado, membership e negação entre tenants testadas no servidor.
-- [ ] Bootstrap explícito e repetível cria o primeiro administrador sem promover o primeiro cadastro.
-- [ ] Home, conta sem vínculo e telas de acesso funcionam com API real, referências visuais confirmadas e acessibilidade verificada.
-- [ ] `pnpm check`, integração PostgreSQL/Electric e verificações de contêiner/fluxos móveis registradas em F08.
+- [x] Ambiente novo cria o schema; atualização preserva a base existente; reaplicação de migrações é segura.
+- [x] Reinício mantém dados; aplicação não usa superusuário; papéis de runtime, migração e replicação têm testes de permissão.
+- [x] Cadastro, senha, Google, código por e-mail, recuperação e logout validados; nenhuma sessão incompleta acessa negócio.
+- [x] Vinculação por e-mail verificado, membership e negação entre tenants testadas no servidor.
+- [x] Bootstrap explícito e repetível cria o primeiro administrador sem promover o primeiro cadastro.
+- [x] Home, conta sem vínculo e telas de acesso funcionam com API real, referências visuais confirmadas e acessibilidade verificada.
+- [x] `pnpm check`, integração PostgreSQL/Electric e verificações de contêiner registradas em F08.
+- [x] Fluxo físico no Android registrado em F08.
 
 ## Evidências da preparação
 

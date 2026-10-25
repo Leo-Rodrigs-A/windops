@@ -2,7 +2,7 @@
 
 ## Status
 
-Planejada
+Parcialmente implementada. Cadastro, senha/Google, segunda etapa obrigatória, recuperação e sessão têm evidência local em F04/F08; gestão de conta e a validação em aparelho ainda têm pendências.
 
 ## Objetivo e escopo
 

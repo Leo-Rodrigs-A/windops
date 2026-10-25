@@ -614,6 +614,7 @@ try {
   ]);
   assert.equal(confirmations.filter((response) => response.statusCode === 200).length, 1);
   assert.equal(confirmations.filter((response) => response.statusCode !== 200).length, 1);
+  // A page that misses the successful OTP response can resume from this authoritative status.
   const authenticated = await call(app, 'GET', '/api/auth/second-step/status', undefined, cookie);
   assert.equal(authenticated.json().status, 'authenticated');
   assert.equal(authenticated.json().user.email, email);

@@ -294,6 +294,23 @@ try {
   ]);
   assert.equal('accounts' in adminMe.json(), false);
 
+  await app.close();
+  app = buildApp({
+    ready: async () => {},
+    identity,
+    authOrigin: env.APP_ORIGIN,
+    workspaceAuthorization,
+    logger: false,
+  });
+  await app.ready();
+  const adminMeAfterRestart = await call('GET', '/api/me', sessions.get(admin.id));
+  assert.equal(adminMeAfterRestart.statusCode, 200, adminMeAfterRestart.body);
+  assert.deepEqual(
+    adminMeAfterRestart.json(),
+    adminMe.json(),
+    'identity and active membership must remain available after restarting the API instance',
+  );
+
   const technicianContext = await call(
     'GET',
     `/api/workspaces/${workspaceA}/context?workspaceId=${workspaceB}&role=admin`,
@@ -375,7 +392,7 @@ try {
     [],
   );
   console.log(
-    'Workspace integration passed: bootstrap idempotency/conflicts, authenticated identity, orphan denial, tenant isolation, roles and immediate revocation.',
+    'Workspace integration passed: bootstrap idempotency/conflicts, API restart, authenticated identity, orphan denial, tenant isolation, roles and immediate revocation.',
   );
 } finally {
   if (app) await app.close();

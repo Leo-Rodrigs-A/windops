@@ -8,9 +8,9 @@ Cada nova slice fica em uma pasta `NN-nome/`, com um `README.md` que define resu
 
 ## Slice atual
 
-- [ ] [01 — Fundação](01-fundacao/README.md): F01–F07 concluídas; F08 é a próxima task.
+- [x] [01 — Fundação](01-fundacao/README.md): F01–F08 concluídas em 25/10/2026, com validação local e Android físico.
 
-Task atual: [F08 — Validação integrada](01-fundacao/08-validacao-integrada.md). F07 concluiu fluxos públicos e protegidos, incluindo cadastro pela interface, retorno à home preservando sessão, logout e validação com Narrador do Windows. F05 concluiu os guards de workspace e o bootstrap administrativo; F06 estabeleceu e comparou visualmente os componentes e tokens; o schema está em [`.agent/database.md`](../database.md), e F03 aplicou as migrações de identidade, desafios e memberships no banco local.
+Slice atual: fundação concluída. A próxima slice deve ser detalhada progressivamente quando seu escopo e dependências estiverem prontos. No Android físico foram testados login, código, home, nome na top bar e logout. F07 concluiu fluxos públicos/protegidos e validação com Narrador; F05 concluiu guards de workspace e bootstrap administrativo; F06 estabeleceu e comparou visualmente os componentes e tokens; o schema está em [`.agent/database.md`](../database.md), e F03 aplicou as migrações de identidade, desafios e memberships no banco local.
 
 ## Convenção de execução
 
@@ -20,6 +20,6 @@ Task atual: [F08 — Validação integrada](01-fundacao/08-validacao-integrada.m
 4. Marcar cada checkbox somente após realizar e validar a entrega descrita. Código existente e testes antigos são contexto, não comprovação automática de uma nova task.
 5. Ao concluir, preencher evidência com data, mudanças, comandos/resultados e limitações; marcar `Task concluída` e o item correspondente no índice. Atualizar memória e etapas do roadmap afetadas, sem declarar uma etapa inteira concluída por cobertura parcial.
 6. Rodar `pnpm check` para mudanças de fonte e validações de integração/contêiner para infraestrutura. Em mudanças só documentais, conferir caminhos, links e consistência; registrar que os testes da aplicação não foram executados.
-7. Após concluir uma task ou slice, sugerir no resumo uma mensagem de commit curta e coerente com as mudanças entregues, em português. Manter em inglês apenas nomenclaturas técnicas que façam sentido preservar.
+7. Após concluir uma task ou slice, sugerir no resumo uma mensagem de commit curta no padrão Conventional Commits (`tipo(escopo): descrição`), coerente com as mudanças entregues e com a descrição em português. Manter em inglês apenas nomenclaturas técnicas que façam sentido preservar.
 
 Mudanças de produto descobertas no design devem ser conciliadas com o proprietário e registradas na memória antes de alterar regras de negócio. Referências `.pen` continuam externas ao Git.

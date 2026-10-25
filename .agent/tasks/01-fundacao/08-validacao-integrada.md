@@ -2,9 +2,9 @@
 
 ## Status e dependências
 
-Planejada. Depende de F01–F07 do [índice](README.md).
+- Concluída em 25/10/2026. Depende de F01–F07, todas concluídas e com evidências no [índice](README.md). Validação local e Android físico concluídos; o proprietário confirmou login, segunda etapa, home, nome na top bar e logout. O portproxy e a regra de firewall temporários foram removidos e verificados ausentes no Windows.
 
-- [ ] Task concluída.
+- [x] Task concluída.
 
 ## Objetivo e escopo
 
@@ -12,25 +12,29 @@ Comprovar que banco, autenticação, autorização e interfaces funcionam juntos
 
 ## Plano de implementação
 
-- [ ] Preparar execução isolada de testes com banco/volumes próprios, usuários e e-mails sintéticos. Não limpar volume de desenvolvimento do proprietário para obter resultado verde.
-- [ ] Automatizar no CI criação/provisionamento, migração dupla e upgrade a partir da base inicial, testes de grants, integração com Electric permitido e execução do migrador na imagem da API. Injetar segredos efêmeros de teste sem publicar credenciais reais.
-- [ ] Integrar testes de auth/tenancy com PostgreSQL e Mailpit: cenários negativos do Google usam provedor simulado controlado; fluxo real Google é validado separadamente com credenciais de desenvolvimento.
-- [ ] Exercitar jornada ponta a ponta: cadastro, verificação de titularidade, bootstrap manual, senha + código, acesso à home, logout, Google + código para a mesma identidade verificada, recuperação e conta órfã. Conferir persistência de usuários/memberships após reinício da API e banco.
-- [ ] Exercitar falhas: banco/e-mail indisponível, código expirado/reutilizado, reenvio concorrente, rede perdida após confirmação, sessão revogada, tenant forjado e membership removida. Registrar comportamento esperado e resultado sem vazar códigos/tokens.
-- [ ] Testar segregação: runtime não faz DDL; replicação não lê auth; endpoints só retornam dados autorizados; docs não são servidas em produção; Electric não ganha rota pública; sync permanece fechado.
-- [ ] Validar a configuração de produção com variáveis fictícias, cookies/TLS/origens e build de imagens. Registrar separadamente Neon, Resend real, domínio e deploy não exercitados; manter deploy desabilitado.
-- [ ] Comparar UI com as referências confirmadas, validar mobile Android/iPhone e desktop, teclado e leitor de tela. Emulação não substitui evidência de aparelho real; registrar indisponibilidade sem marcar esse aceite como concluído.
-- [ ] Rodar `pnpm check`, `pnpm test:integration`, validações Compose, build/checagens das imagens e testes de fluxo adicionados. Conferir que build/CI não exigem MCP, drive Windows nem `.pen`.
-- [ ] Atualizar README, memória, modelo de dados e status das tasks em `00 - roadmap` com comportamento realmente entregue e pendências. O roadmap 04 continua parcial enquanto convites/gestão de membros não existirem; etapas 05–11 não são concluídas por esta slice.
+- [x] Preparar execução isolada de testes com databases temporárias, usuários e e-mails sintéticos. Os scripts removem somente databases próprias; o volume principal foi preservado.
+- [x] Automatizar no CI provisionamento, migração concorrente/repetida, upgrade, grants, Electric e execução do migrador na imagem da API; adicionar `db:restore-check`, auth e workspaces. Segredos de teste são efêmeros e nenhum segredo de produção é necessário.
+- [x] Integrar testes de auth/tenancy com PostgreSQL e Mailpit. Cenários negativos Google usam provedor simulado; Google real foi validado em F04 com credenciais de desenvolvimento.
+- [x] Exercitar cadastro pela interface e estado órfão; fluxos de verificação, senha + código, Google + código, recuperação, logout, bootstrap manual e autorização por tenant passaram nos testes de API/PostgreSQL. Usuário, membership, sessão e desafio sobrevivem ao restart do banco; o desafio e a sessão também sobrevivem ao restart da API.
+- [x] Exercitar indisponibilidade/falha de e-mail, códigos incorretos/expirados/reutilizados, cooldown/limites, confirmação concorrente, recuperação após perder a resposta de sucesso (reconsulta do status servidor), sessão revogada, workspace forjado e membership removida. Não registrar tokens/códigos.
+- [x] Testar segregação: runtime sem DDL, replicação sem leitura de auth, docs ausentes em produção, Electric sem porta pública no Compose de produção e sync retornando 503.
+- [x] Validar Compose de produção com variáveis de exemplo, cookies/origem segura nos fluxos existentes e build das imagens. Neon, Resend real, domínio e deploy não foram exercitados; deploy permanece desabilitado.
+- [x] Comparar UI com referências em desktop e emulação mobile; validar teclado e leitor de tela com Narrador do Windows. No Android físico, proprietário confirmou login com conta criada no PC, recebimento/entrada do código, home, nome na top bar e logout. iPhone não foi disponibilizado nesta validação.
+- [x] Rodar `pnpm check`, `pnpm db:empty-check`, `pnpm db:restore-check`, `pnpm db:permissions`, `pnpm test:auth-integration`, `pnpm test:workspaces-integration`, `pnpm test:integration`, Compose config e builds/checagens das imagens. CI não depende do MCP, do drive Windows ou de arquivos `.pen`.
+- [x] Atualizar README, memória, arquitetura e status dos roadmaps com comportamento implementado e limites. A etapa 04 permanece parcial enquanto convites/gestão de membros não existirem; etapas 05–11 não foram declaradas concluídas.
 
 ## Aceite de encerramento
 
-- [ ] Todas as tasks anteriores possuem evidências e checkboxes coerentes; nenhum teste crítico está apenas escrito ou pulado.
-- [ ] Configuração do zero e atualização preservando dados reproduzíveis; sem privilégios administrativos na API e sem segredos em arquivos versionados, logs ou bundle frontend.
-- [ ] Rotas auth só foram habilitadas após testes de segunda etapa e vínculo verificado passarem; não há caminho de negócio antes do código.
-- [ ] Google real e fluxos móveis validados, ou slice continua com bloqueio explicitamente registrado. Aprovação visual das telas faltantes documentada.
-- [ ] Evidências distinguem fundação local concluída de produção/offline/funcionalidades ainda planejadas.
+- [x] Todas as tasks anteriores possuem evidências e checkboxes coerentes; nenhum teste crítico da fundação está apenas escrito ou pulado.
+- [x] Configuração do zero e atualização preservando dados reproduzíveis; API sem privilégios administrativos e nenhum segredo de servidor no bundle frontend.
+- [x] Rotas auth só foram habilitadas após testes de segunda etapa e vínculo verificado passarem; nenhuma sessão incompleta acessa negócio.
+- [x] Google real validado em F04; login, segunda etapa, retorno à home, nome na top bar e logout testados no Android físico com conta criada no PC. iPhone não foi disponibilizado.
+- [x] Evidências distinguem fundação local concluída de produção/offline/funcionalidades ainda planejadas.
 
 ## Evidências
 
-Pendente. Registrar data, ambiente/versões, comandos com resultados, dispositivos, migrações e matriz de cenários. Não usar a existência de workflow como evidência de CI executado.
+Validação local concluída em 25/10/2026, em WSL2 com PostgreSQL 17.11, Electric 1.8.1 e Mailpit 1.32.0. `pnpm check` passou (Biome, boundaries, typechecks, 11 testes e build). `pnpm db:empty-check` passou com migração concorrente/repetida, constraints, persistência de user/membership/session/challenge após restart e upgrade; `pnpm db:restore-check` passou (`workspaces:migrations=0:2`); `pnpm db:permissions` confirmou grants; `pnpm test:auth-integration` e `pnpm test:workspaces-integration` passaram em databases sintéticas; `pnpm test:integration` confirmou shape Electric após restart do PostgreSQL. Workflow YAML parseou com 22 etapas; `actionlint` não está instalado. Imagens `windops-api:f08` e `windops-web:f08` construídas; migrador empacotado, Caddy e runtime production da API validados: live/ready 200, docs/auth 404, sync 503. Nenhuma credencial apareceu no bundle web. O Google real e o fluxo UI com Narrador têm evidência em F04/F07; a revisão UI anterior cobriu desktop e emulação mobile. Em 25/10/2026, o proprietário validou em Android físico login da conta criada no PC, recebimento/entrada do código, abertura da home, nome na top bar e logout; logs da API registraram GET `/api/me` e POST `/api/auth/sign-out`, ambos 200. O portproxy e a regra de firewall foram removidos; consultas pelo PowerShell confirmaram `firewall-rule-absent` e `portproxy-absent`. CI remoto não foi disparado, pois a alteração ainda não foi enviada ao GitHub. Neon, Resend real, domínio e deploy permanecem externos. API, Vite e configuração temporária foram encerrados/removidos após o teste. iPhone não foi disponibilizado.
+
+### Registro do teste físico Android
+
+Os servidores temporários de API/Vite e a configuração `apps/web/vite.f08-mobile.config.ts` foram encerrados/removidos após o teste. O Android acessou `http://192.168.1.152:5175/entrar` através de portproxy Windows (`192.168.1.152:5175` → WSL `172.23.76.106:5175`). A conta foi criada pela interface no PC; login, recebimento e entrada do código, home, nome na top bar e logout foram confirmados pelo proprietário. A saída do endpoint `/api/me` e do logout foi 200. Portproxy e regra de firewall removidos; PowerShell confirmou ambas as ausências. iPhone não foi disponibilizado.

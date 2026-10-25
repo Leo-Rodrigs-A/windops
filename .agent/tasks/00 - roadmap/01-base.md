@@ -2,7 +2,7 @@
 
 ## Status
 
-Base implementada; contêineres locais ativos, validação completa de integração e imagens ainda pendente. Consolidação e segurança detalhadas na [fundação](../01-fundacao/README.md).
+Base implementada e validada localmente, incluindo integração, grants, restart, restore e imagens. A revisão final da fundação segue na [F08](../01-fundacao/08-validacao-integrada.md); CI remoto e serviços de produção ainda não foram exercitados.
 
 ## Objetivo e escopo
 
@@ -28,4 +28,4 @@ Seguir [memória](../../memory.md) e [arquitetura](../../architeture.md). Este a
 
 Registro inicial no Windows (Node 22.15.1): 9 testes passaram, typecheck/build/lint aprovados. Compose dev/prod e workflows validados estaticamente com ferramentas oficiais; naquele ambiente não havia Docker acessível.
 
-Verificação posterior em 24/10/2026 no WSL: PostgreSQL/Electric/Mailpit saudáveis; metadados confirmam `workspaces`, journal Drizzle e `wal_level=logical`. Isso não comprova execução completa de migrações do zero, teste de shape, grants, reinício ou build de imagens. Ver [memória](../../memory.md) e tasks F02/F03/F08 da fundação.
+Validação integrada local em 25/10/2026: `pnpm check`, bancos descartáveis do zero/restore, grants, migrações concorrentes e repetidas, upgrade e Electric após restart passaram. Imagens da API e web foram construídas; migrador empacotado e runtime production foram verificados. Workflow YAML parseou localmente, mas CI remoto ainda não foi disparado. Ver [memória](../../memory.md) e [F08](../01-fundacao/08-validacao-integrada.md). Neon, domínio, deploy e serviços externos permanecem sem validação.

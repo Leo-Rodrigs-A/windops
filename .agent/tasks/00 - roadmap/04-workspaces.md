@@ -2,7 +2,7 @@
 
 ## Status
 
-Planejada
+Parcialmente implementada. Membership N:N, autorização tenant, contexto do usuário e bootstrap manual têm evidência em F05/F08; convites e gestão de membros seguem pendentes.
 
 ## Objetivo e escopo
 
