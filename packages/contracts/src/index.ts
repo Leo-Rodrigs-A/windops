@@ -79,7 +79,20 @@ export const createWorkspaceInvitationSchema = z
 export const acceptWorkspaceInvitationSchema = z
   .object({ token: z.string().regex(/^[A-Za-z0-9_-]{43}$/) })
   .strict();
-export const updateWorkspaceMemberRoleSchema = z.object({ role: workspaceRoleSchema }).strict();
+export const updateWorkspaceMemberRoleSchema = z
+  .object({ role: z.literal('admin'), expectedRevision: z.number().int().positive() })
+  .strict();
+export const revokeWorkspaceMemberSchema = z
+  .object({ expectedRevision: z.number().int().positive() })
+  .strict();
+export const workspaceMemberMutationSchema = z
+  .object({
+    membershipId: z.uuid(),
+    role: workspaceRoleSchema,
+    revokedAt: z.iso.datetime().nullable(),
+    revision: z.number().int().positive(),
+  })
+  .strict();
 export const workspaceMemberSchema = z
   .object({
     membershipId: z.uuid(),
@@ -87,6 +100,7 @@ export const workspaceMemberSchema = z
     role: workspaceRoleSchema,
     createdAt: z.iso.datetime(),
     revokedAt: z.iso.datetime().nullable(),
+    revision: z.number().int().positive(),
   })
   .strict();
 export const workspaceMembersPageSchema = z
@@ -122,6 +136,7 @@ export type WorkspaceInvitationStatus = z.infer<typeof workspaceInvitationStatus
 export type CreateWorkspaceInvitation = z.infer<typeof createWorkspaceInvitationSchema>;
 export type AcceptWorkspaceInvitation = z.infer<typeof acceptWorkspaceInvitationSchema>;
 export type WorkspaceMember = z.infer<typeof workspaceMemberSchema>;
+export type WorkspaceMemberMutation = z.infer<typeof workspaceMemberMutationSchema>;
 export type WorkspaceMembersPage = z.infer<typeof workspaceMembersPageSchema>;
 export type WorkspaceDirectoryAccount = z.infer<typeof workspaceDirectoryAccountSchema>;
 export type WorkspaceDirectoryPage = z.infer<typeof workspaceDirectoryPageSchema>;

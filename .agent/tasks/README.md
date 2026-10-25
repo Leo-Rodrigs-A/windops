@@ -9,9 +9,9 @@ Cada nova slice fica em uma pasta `NN-nome/`, com um `README.md` que define resu
 ## Slice atual
 
 - [x] [01 — Fundação](01-fundacao/README.md): F01–F08 concluídas em 25/10/2026, com validação local e Android físico.
-- [ ] [02 — Equipe e acesso ao workspace](02-equipe-acesso/README.md): E01–E04 concluídas; E05–E07 planejadas.
+- [ ] [02 — Equipe e acesso ao workspace](02-equipe-acesso/README.md): E01–E05 concluídas; E06–E07 planejadas.
 
-Task atual: [E05 — Cargos e revogação](02-equipe-acesso/05-cargos-revogacao.md). E01–E04 concluídas: admin dev, modelo, consultas administrativas e fluxo de convite/aceite. Migração `0002` aplicada ao banco dev; SMTP Mailpit e limites tenant foram validados. Interface de equipe e aceite ainda está planejada para E06.
+Task atual: [E06 — Interfaces de equipe e convite](02-equipe-acesso/06-interfaces.md). E01–E05 concluídas: conta admin dev, modelo, consultas administrativas, convites/aceite e promoção/revogação. Migrações `0002` e `0003` aplicadas ao banco dev; SMTP Mailpit, autorização tenant e concorrência foram validados. Interface de equipe e aceite continua pendente em E06.
 
 ## Convenção de execução
 

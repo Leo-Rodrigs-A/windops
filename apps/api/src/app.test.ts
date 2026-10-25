@@ -65,6 +65,12 @@ it('documents protected identity and workspace context routes', async () => {
     async acceptInvitation() {
       return { status: 'unauthenticated' };
     },
+    async promoteMember() {
+      return { status: 'unauthenticated' };
+    },
+    async revokeMember() {
+      return { status: 'unauthenticated' };
+    },
   };
   const app = buildApp({ ready: async () => {}, workspaceAuthorization });
   try {
@@ -81,6 +87,12 @@ it('documents protected identity and workspace context routes', async () => {
     expect(app.swagger().paths).toHaveProperty('/api/me');
     expect(app.swagger().paths).toHaveProperty('/api/workspaces/{workspaceId}/context');
     expect(app.swagger().paths).toHaveProperty('/api/workspaces/{workspaceId}/members');
+    expect(app.swagger().paths).toHaveProperty(
+      '/api/workspaces/{workspaceId}/members/{membershipId}/role',
+    );
+    expect(app.swagger().paths).toHaveProperty(
+      '/api/workspaces/{workspaceId}/members/{membershipId}/revoke',
+    );
     expect(app.swagger().paths).toHaveProperty('/api/workspaces/{workspaceId}/directory');
     expect(app.swagger().paths).toHaveProperty('/api/workspaces/{workspaceId}/invitations');
     expect(app.swagger().paths).toHaveProperty(

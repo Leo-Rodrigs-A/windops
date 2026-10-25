@@ -970,8 +970,106 @@ try {
     429,
     'admin invitation delivery is limited to ten attempts per hour',
   );
-  runAdminSql(`UPDATE public.workspace_members SET revoked_at = clock_timestamp()
-    WHERE workspace_id = '${workspaceA}' AND user_id = '${technician.id}'`);
+  const membersBeforeAdministration = await call(
+    'GET',
+    `/api/workspaces/${workspaceA}/members?limit=100`,
+    sessions.get(admin.id),
+  );
+  const membershipFor = (userId) =>
+    membersBeforeAdministration.json().items.find((item) => item.user.id === userId);
+  const promotedMembership = membershipFor(revokedPlusActive.id);
+  assert.ok(promotedMembership);
+  const promotePath = `/api/workspaces/${workspaceA}/members/${promotedMembership.membershipId}/role`;
+  const promoted = await call('PATCH', promotePath, sessions.get(admin.id), {
+    role: 'admin',
+    expectedRevision: promotedMembership.revision,
+  });
+  assert.equal(promoted.statusCode, 200, promoted.body);
+  assert.equal(promoted.json().role, 'admin');
+  const repeatedPromotion = await call('PATCH', promotePath, sessions.get(admin.id), {
+    role: 'admin',
+    expectedRevision: promotedMembership.revision,
+  });
+  assert.equal(repeatedPromotion.statusCode, 200, repeatedPromotion.body);
+  assert.equal(repeatedPromotion.json().revision, promoted.json().revision);
+  const adminCannotBeRemoved = await call(
+    'POST',
+    `/api/workspaces/${workspaceA}/members/${promotedMembership.membershipId}/revoke`,
+    sessions.get(admin.id),
+    { expectedRevision: promoted.json().revision },
+  );
+  assert.equal(adminCannotBeRemoved.statusCode, 409);
+  const selfRemoval = await call(
+    'POST',
+    `/api/workspaces/${workspaceA}/members/${membershipFor(admin.id).membershipId}/revoke`,
+    sessions.get(admin.id),
+    { expectedRevision: membershipFor(admin.id).revision },
+  );
+  assert.equal(selfRemoval.statusCode, 409);
+  const foreignMembership = await pool.query(
+    `SELECT id FROM public.workspace_members WHERE workspace_id = $1 AND user_id = $2`,
+    [workspaceB, workspaceBUser.id],
+  );
+  assert.equal(
+    (
+      await call(
+        'POST',
+        `/api/workspaces/${workspaceA}/members/${foreignMembership.rows[0].id}/revoke`,
+        sessions.get(admin.id),
+        { expectedRevision: 1 },
+      )
+    ).statusCode,
+    404,
+  );
+  assert.equal(
+    (
+      await call(
+        'POST',
+        `/api/workspaces/${workspaceA}/members/${membershipFor(technician.id).membershipId}/revoke`,
+        sessions.get(technician.id),
+        { expectedRevision: membershipFor(technician.id).revision },
+      )
+    ).statusCode,
+    403,
+  );
+
+  const racedMembership = membershipFor(orphan.id);
+  assert.ok(racedMembership);
+  const racedPath = `/api/workspaces/${workspaceA}/members/${racedMembership.membershipId}`;
+  const racedChanges = await Promise.all([
+    call('PATCH', `${racedPath}/role`, sessions.get(admin.id), {
+      role: 'admin',
+      expectedRevision: racedMembership.revision,
+    }),
+    call('POST', `${racedPath}/revoke`, sessions.get(admin.id), {
+      expectedRevision: racedMembership.revision,
+    }),
+  ]);
+  assert.deepEqual(
+    racedChanges.map((response) => response.statusCode).sort(),
+    [200, 409],
+    'promotion and revocation races must have one winner',
+  );
+
+  const technicianMembership = membershipFor(technician.id);
+  const technicianRevokePath = `/api/workspaces/${workspaceA}/members/${technicianMembership.membershipId}/revoke`;
+  const revokedMembership = await call('POST', technicianRevokePath, sessions.get(admin.id), {
+    expectedRevision: technicianMembership.revision,
+  });
+  assert.equal(revokedMembership.statusCode, 200, revokedMembership.body);
+  const retriedRevocation = await call('POST', technicianRevokePath, sessions.get(admin.id), {
+    expectedRevision: technicianMembership.revision,
+  });
+  assert.equal(retriedRevocation.statusCode, 200, retriedRevocation.body);
+  assert.equal(retriedRevocation.json().revision, revokedMembership.json().revision);
+  assert.ok(
+    (
+      await pool.query(`SELECT revoked_at FROM public.workspace_invitations WHERE id = $1`, [
+        existingMemberInvite.json().id,
+      ])
+    ).rows[0].revoked_at,
+    'revoking a member must atomically invalidate invitations for that email',
+  );
   assert.equal(
     (await call('GET', `/api/workspaces/${workspaceA}/context`, sessions.get(technician.id)))
       .statusCode,
@@ -990,6 +1088,87 @@ try {
     ).statusCode,
     409,
     'an invite issued before removal cannot restore the revoked membership',
+  );
+  const reactivationToken = randomBytes(32).toString('base64url');
+  const reactivationInviteId = randomUUID();
+  await pool.query(
+    `INSERT INTO public.workspace_invitations
+       (id, workspace_id, email, role, invited_by_user_id, token_hash, created_at,
+        expires_at, delivery_status, sent_at)
+     VALUES ($1, $2, $3, 'technician', $4, $5, clock_timestamp(),
+             clock_timestamp() + interval '48 hours', 'sent', clock_timestamp())`,
+    [
+      reactivationInviteId,
+      workspaceA,
+      technician.email,
+      admin.id,
+      createHash('sha256').update(reactivationToken).digest(),
+    ],
+  );
+  assert.equal(
+    (
+      await call('POST', '/api/invitations/accept', sessions.get(technician.id), {
+        token: reactivationToken,
+      })
+    ).statusCode,
+    200,
+    'a fresh invitation can reactivate a revoked membership',
+  );
+  assert.equal(
+    (
+      await call('POST', technicianRevokePath, sessions.get(admin.id), {
+        expectedRevision: technicianMembership.revision,
+      })
+    ).statusCode,
+    409,
+    'a stale retry cannot revoke membership reactivated by a newer invitation',
+  );
+  const raceInviteToken = randomBytes(32).toString('base64url');
+  const raceInviteId = randomUUID();
+  await pool.query(
+    `INSERT INTO public.workspace_invitations
+       (id, workspace_id, email, role, invited_by_user_id, token_hash, created_at,
+        expires_at, delivery_status, sent_at)
+     VALUES ($1, $2, $3, 'technician', $4, $5, clock_timestamp(),
+             clock_timestamp() + interval '48 hours', 'sent', clock_timestamp())`,
+    [
+      raceInviteId,
+      workspaceA,
+      revokedOnly.email,
+      admin.id,
+      createHash('sha256').update(raceInviteToken).digest(),
+    ],
+  );
+  const currentMembers = await call(
+    'GET',
+    `/api/workspaces/${workspaceA}/members?limit=100`,
+    sessions.get(admin.id),
+  );
+  const revokeOnlyMembership = currentMembers
+    .json()
+    .items.find((item) => item.user.id === revokedOnly.id);
+  assert.ok(revokeOnlyMembership);
+  const acceptAndRevoke = await Promise.all([
+    call('POST', '/api/invitations/accept', sessions.get(revokedOnly.id), {
+      token: raceInviteToken,
+    }),
+    call(
+      'POST',
+      `/api/workspaces/${workspaceA}/members/${revokeOnlyMembership.membershipId}/revoke`,
+      sessions.get(admin.id),
+      { expectedRevision: revokeOnlyMembership.revision },
+    ),
+  ]);
+  assert.deepEqual(
+    acceptAndRevoke.map((response) => response.statusCode).sort(),
+    [200, 409],
+    'acceptance and revocation must serialize, with revocation taking effect exactly once',
+  );
+  assert.equal(
+    (await call('GET', `/api/workspaces/${workspaceA}/context`, sessions.get(revokedOnly.id)))
+      .statusCode,
+    403,
+    'a concurrent invitation acceptance cannot bypass completed revocation',
   );
   runAdminSql(`UPDATE public.workspace_members SET revoked_at = clock_timestamp()
     WHERE workspace_id = '${workspaceA}' AND user_id = '${admin.id}'`);
@@ -1013,7 +1192,7 @@ try {
     'invitation acceptance attempts are limited per client IP',
   );
   console.log(
-    'Workspace integration passed: invitation delivery/acceptance, Mailpit second step, expiry, rate limits, concurrency, member/directory access and tenant isolation.',
+    'Workspace integration passed: invitations, Mailpit second step, expiry, rate limits, membership promotion/revocation, concurrency and tenant isolation.',
   );
 } finally {
   if (app) await app.close();

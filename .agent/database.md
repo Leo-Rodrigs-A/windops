@@ -149,16 +149,17 @@ Após emissão, entrega de e-mail que falha não concede acesso; permitir solici
 
 Proprietária: `workspaces`; um registro por pessoa/workspace, mantendo o registro ao revogar para que histórico de ator continue referenciável.
 
-| Coluna         | Tipo          | Nulo/default | Regra                                                                                      |
-| -------------- | ------------- | ------------ | ------------------------------------------------------------------------------------------ |
-| `id`           | `uuid`        | não; UUID v4 | PK estável do vínculo.                                                                     |
-| `workspace_id` | `uuid`        | não          | FK `workspaces.id`; `ON DELETE RESTRICT`.                                                  |
-| `user_id`      | `uuid`        | não          | FK `auth_users.id`; `ON DELETE RESTRICT`.                                                  |
-| `role`         | `text`        | não          | `CHECK(role IN ('admin','technician'))`; papel por workspace.                              |
-| `created_at`   | `timestamptz` | não; `now()` | Criação do vínculo.                                                                        |
-| `revoked_at`   | `timestamptz` | sim          | Nulo = membership ativa; preenchido = revogada. Não remover a linha em desligamento comum. |
+| Coluna         | Tipo          | Nulo/default | Regra                                                                                                                                            |
+| -------------- | ------------- | ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `id`           | `uuid`        | não; UUID v4 | PK estável do vínculo.                                                                                                                           |
+| `workspace_id` | `uuid`        | não          | FK `workspaces.id`; `ON DELETE RESTRICT`.                                                                                                        |
+| `user_id`      | `uuid`        | não          | FK `auth_users.id`; `ON DELETE RESTRICT`.                                                                                                        |
+| `role`         | `text`        | não          | `CHECK(role IN ('admin','technician'))`; papel por workspace.                                                                                    |
+| `revision`     | `integer`     | não; `1`     | Incrementa em promoção, revogação e reativação por convite. Comandos de administração exigem a revisão observada para impedir retries obsoletos. |
+| `created_at`   | `timestamptz` | não; `now()` | Criação do vínculo.                                                                                                                              |
+| `revoked_at`   | `timestamptz` | sim          | Nulo = membership ativa; preenchido = revogada. Não remover a linha em desligamento comum.                                                       |
 
-Constraints/índices: `UNIQUE(workspace_id,user_id)`, `UNIQUE(id,workspace_id,user_id)` para referências compostas futuras, FK para os dois pais, índice `(user_id, revoked_at)` e `(workspace_id, revoked_at)`. Alteração de cargo, revogação e bootstrap passam por transação de serviço com regra de último administrador. Não permitir cadastro público de workspace.
+Constraints/índices: `UNIQUE(workspace_id,user_id)`, `UNIQUE(id,workspace_id,user_id)` para referências compostas futuras, FK para os dois pais, índice `(user_id, revoked_at)` e `(workspace_id, revoked_at)`. Alteração de cargo, revogação e bootstrap passam por transação de serviço. E05 preserva todos os admins e impede auto-revogação; não permitir cadastro público de workspace. A revisão aumenta nas transições de cargo, revogação e reativação, e a API exige a revisão observada no comando.
 
 ### `public.workspace_invitations`
 
@@ -269,13 +270,14 @@ Não configurar RLS como substituto dos guards. Se vier a ser acrescentado, prov
 
 ## Plano de migrações da fundação
 
-| Ordem       | Migração                     | Conteúdo                                                                                                                                                                                                                                  |
-| ----------- | ---------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Já aplicada | `0000_workspace_foundation`  | `workspaces` e índice singleton; preservar checksum e dados.                                                                                                                                                                              |
-| F03         | `0001_auth_core`             | Cinco tabelas Better Auth, `auth_login_challenges` e `workspace_members`, criadas juntas em migração atômica. Inclui UUID, snake_case, índices, checks e FKs; a FK cruzada de membership é SQL revisado. Nenhuma rota de auth habilitada. |
-| F02         | grants/config de ambiente    | Provisionamento versionado/repetível separado do DDL de negócio, que suporta banco novo e volume existente; migrador serializado com credencial própria. Não executar init scripts destrutivos em volumes ativos.                         |
-| E02         | `0002_workspace_invitations` | `workspace_invitations`, com hash de token, estados de entrega/consumo, checks, índices e FKs para workspace, autor, substituição e usuário que aceitou. API recebe DML via default privileges; sem grant/publicação para Electric.       |
-| E04         | sem DDL adicional            | Emissão, reenvio e aceite; usa `auth_rate_limits`.`0002_workspace_invitations` aplicada ao dev persistente após integração em banco descartável. Sem outbox.                                                                              |
+| Ordem       | Migração                         | Conteúdo                                                                                                                                                                                                                                  |
+| ----------- | -------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Já aplicada | `0000_workspace_foundation`      | `workspaces` e índice singleton; preservar checksum e dados.                                                                                                                                                                              |
+| F03         | `0001_auth_core`                 | Cinco tabelas Better Auth, `auth_login_challenges` e `workspace_members`, criadas juntas em migração atômica. Inclui UUID, snake_case, índices, checks e FKs; a FK cruzada de membership é SQL revisado. Nenhuma rota de auth habilitada. |
+| F02         | grants/config de ambiente        | Provisionamento versionado/repetível separado do DDL de negócio, que suporta banco novo e volume existente; migrador serializado com credencial própria. Não executar init scripts destrutivos em volumes ativos.                         |
+| E02         | `0002_workspace_invitations`     | `workspace_invitations`, com hash de token, estados de entrega/consumo, checks, índices e FKs para workspace, autor, substituição e usuário que aceitou. API recebe DML via default privileges; sem grant/publicação para Electric.       |
+| E04         | sem DDL adicional                | Emissão, reenvio e aceite; usa `auth_rate_limits`.`0002_workspace_invitations` aplicada ao dev persistente após integração em banco descartável. Sem outbox.                                                                              |
+| E05         | `0003_workspace_member_revision` | Revisão otimista de membership para promoção/revogação e proteção contra retry após reintegração; integração descartável e aplicação dev concluídas.                                                                                      |
 
 Gerar e revisar SQL com Better Auth 1.7.12 + Drizzle e `schema: "public"`/mapeamento explicitamente alinhado. A ferramenta Better Auth `generate` pode gerar definição ORM, mas Drizzle controla journal e aplicação. Não rodar migration CLI do Better Auth contra ambiente compartilhado. Validar banco vazio e atualização de `0000` com os mesmos contratos, dupla execução, FKs/índices e imagem de runtime.
 

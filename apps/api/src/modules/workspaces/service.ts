@@ -10,6 +10,7 @@ import type {
   WorkspaceDirectoryPage,
   WorkspaceInvitation,
   WorkspaceListQuery,
+  WorkspaceMemberMutation,
   WorkspaceMembersPage,
   WorkspaceMembersQuery,
   WorkspaceRole,
@@ -182,6 +183,18 @@ export interface WorkspaceAuthorizationService {
     token: AcceptWorkspaceInvitation['token'],
     clientIp: string,
   ): Promise<WorkspaceOperationResult<WorkspaceContext>>;
+  promoteMember(
+    headers: IncomingHttpHeaders,
+    workspaceId: string,
+    membershipId: string,
+    expectedRevision: number,
+  ): Promise<WorkspaceOperationResult<WorkspaceMemberMutation>>;
+  revokeMember(
+    headers: IncomingHttpHeaders,
+    workspaceId: string,
+    membershipId: string,
+    expectedRevision: number,
+  ): Promise<WorkspaceOperationResult<WorkspaceMemberMutation>>;
 }
 
 export function createWorkspaceAuthorizationService(
@@ -233,9 +246,10 @@ export function createWorkspaceAuthorizationService(
         userId: string;
         role: WorkspaceRole;
         createdAt: Date;
+        revision: number;
       }>(
         `SELECT id AS "membershipId", user_id AS "userId", role,
-                created_at AS "createdAt"
+                created_at AS "createdAt", revision
          FROM public.workspace_members
          WHERE workspace_id = $1 AND revoked_at IS NULL
            AND ($2::uuid IS NULL OR id > $2::uuid)
@@ -256,6 +270,7 @@ export function createWorkspaceAuthorizationService(
           role: row.role,
           createdAt: row.createdAt.toISOString(),
           revokedAt: null,
+          revision: row.revision,
         };
       });
       return {
@@ -485,9 +500,10 @@ export function createWorkspaceAuthorizationService(
         const membershipResult = await client.query<{
           id: string;
           role: WorkspaceRole;
+          revision: number;
           revokedAt: Date | null;
         }>(
-          `SELECT id, role, revoked_at AS "revokedAt" FROM public.workspace_members
+          `SELECT id, role, revision, revoked_at AS "revokedAt" FROM public.workspace_members
            WHERE workspace_id = $1 AND user_id = $2 FOR UPDATE`,
           [workspaceId, acceptor.user.id],
         );
@@ -502,14 +518,14 @@ export function createWorkspaceAuthorizationService(
         }
         if (membership) {
           await client.query(
-            `UPDATE public.workspace_members SET role = $2, revoked_at = NULL
+            `UPDATE public.workspace_members SET role = $2, revoked_at = NULL, revision = revision + 1
              WHERE id = $1 AND revoked_at IS NOT NULL`,
             [membership.id, invitation.role],
           );
         } else {
           await client.query(
-            `INSERT INTO public.workspace_members (id, workspace_id, user_id, role, created_at)
-             VALUES ($1, $2, $3, $4, clock_timestamp())`,
+            `INSERT INTO public.workspace_members (id, workspace_id, user_id, role, created_at, revision)
+             VALUES ($1, $2, $3, $4, clock_timestamp(), 1)`,
             [randomUUID(), workspaceId, acceptor.user.id, invitation.role],
           );
         }
@@ -532,6 +548,172 @@ export function createWorkspaceAuthorizationService(
         status: 'ok',
         value: { workspace: { id: workspace.id, name: workspace.name }, role },
       };
+    },
+
+    async promoteMember(headers, workspaceId, membershipId, expectedRevision) {
+      const actor = await identity.resolveAuthenticatedUser(headers);
+      if (!actor) return { status: 'unauthenticated' };
+      const client = await pool.connect();
+      try {
+        await client.query('BEGIN');
+        if (!(await lockWorkspaceForAdmin(client, workspaceId, actor.id))) {
+          await client.query('ROLLBACK');
+          return { status: 'forbidden' };
+        }
+        const targetResult = await client.query<{
+          id: string;
+          userId: string;
+          role: WorkspaceRole;
+          revision: number;
+          revokedAt: Date | null;
+        }>(
+          `SELECT id, user_id AS "userId", role, revision, revoked_at AS "revokedAt"
+           FROM public.workspace_members
+           WHERE id = $1 AND workspace_id = $2 FOR UPDATE`,
+          [membershipId, workspaceId],
+        );
+        const target = targetResult.rows[0];
+        if (!target) {
+          await client.query('ROLLBACK');
+          return { status: 'not_found' };
+        }
+        if (target.userId === actor.id || target.revokedAt) {
+          await client.query('ROLLBACK');
+          return { status: 'conflict' };
+        }
+        if (target.role === 'admin') {
+          const value = {
+            membershipId: target.id,
+            role: target.role,
+            revokedAt: null,
+            revision: target.revision,
+          } satisfies WorkspaceMemberMutation;
+          await client.query('COMMIT');
+          return { status: 'ok', value };
+        }
+        if (target.revision !== expectedRevision) {
+          await client.query('ROLLBACK');
+          return { status: 'conflict' };
+        }
+        const updated = await client.query<{
+          membershipId: string;
+          role: WorkspaceRole;
+          revokedAt: Date | null;
+          revision: number;
+        }>(
+          `UPDATE public.workspace_members
+           SET role = 'admin', revision = revision + 1
+           WHERE id = $1 AND workspace_id = $2 AND revision = $3 AND revoked_at IS NULL
+           RETURNING id AS "membershipId", role, revoked_at AS "revokedAt", revision`,
+          [membershipId, workspaceId, expectedRevision],
+        );
+        const row = updated.rows[0];
+        if (!row) {
+          await client.query('ROLLBACK');
+          return { status: 'conflict' };
+        }
+        const value: WorkspaceMemberMutation = {
+          ...row,
+          revokedAt: row.revokedAt?.toISOString() ?? null,
+        };
+        await client.query('COMMIT');
+        return { status: 'ok', value };
+      } catch (error) {
+        await client.query('ROLLBACK').catch(() => undefined);
+        throw error;
+      } finally {
+        client.release();
+      }
+    },
+
+    async revokeMember(headers, workspaceId, membershipId, expectedRevision) {
+      const actor = await identity.resolveAuthenticatedUser(headers);
+      if (!actor) return { status: 'unauthenticated' };
+      const client = await pool.connect();
+      try {
+        await client.query('BEGIN');
+        if (!(await lockWorkspaceForAdmin(client, workspaceId, actor.id))) {
+          await client.query('ROLLBACK');
+          return { status: 'forbidden' };
+        }
+        const targetResult = await client.query<{
+          id: string;
+          userId: string;
+          role: WorkspaceRole;
+          revision: number;
+          revokedAt: Date | null;
+        }>(
+          `SELECT id, user_id AS "userId", role, revision, revoked_at AS "revokedAt"
+           FROM public.workspace_members
+           WHERE id = $1 AND workspace_id = $2 FOR UPDATE`,
+          [membershipId, workspaceId],
+        );
+        const target = targetResult.rows[0];
+        if (!target) {
+          await client.query('ROLLBACK');
+          return { status: 'not_found' };
+        }
+        if (target.userId === actor.id || target.role === 'admin') {
+          await client.query('ROLLBACK');
+          return { status: 'conflict' };
+        }
+        if (target.revokedAt) {
+          if (target.revision === expectedRevision + 1) {
+            const value = {
+              membershipId: target.id,
+              role: target.role,
+              revokedAt: target.revokedAt.toISOString(),
+              revision: target.revision,
+            } satisfies WorkspaceMemberMutation;
+            await client.query('COMMIT');
+            return { status: 'ok', value };
+          }
+          await client.query('ROLLBACK');
+          return { status: 'conflict' };
+        }
+        if (target.revision !== expectedRevision) {
+          await client.query('ROLLBACK');
+          return { status: 'conflict' };
+        }
+        const updated = await client.query<{
+          membershipId: string;
+          role: WorkspaceRole;
+          revokedAt: Date | null;
+          revision: number;
+        }>(
+          `UPDATE public.workspace_members
+           SET revoked_at = clock_timestamp(), revision = revision + 1
+           WHERE id = $1 AND workspace_id = $2 AND revision = $3 AND revoked_at IS NULL
+           RETURNING id AS "membershipId", role, revoked_at AS "revokedAt", revision`,
+          [membershipId, workspaceId, expectedRevision],
+        );
+        const row = updated.rows[0];
+        if (!row) {
+          await client.query('ROLLBACK');
+          return { status: 'conflict' };
+        }
+        const value: WorkspaceMemberMutation = {
+          ...row,
+          revokedAt: row.revokedAt?.toISOString() ?? null,
+        };
+        const targetIdentity = (await identity.getUsersByIds([target.userId]))[0];
+        if (!targetIdentity) throw new Error('Workspace member identity is missing.');
+        await client.query(
+          `UPDATE public.workspace_invitations
+           SET revoked_at = clock_timestamp()
+           WHERE workspace_id = $1 AND email = $2
+             AND accepted_at IS NULL AND revoked_at IS NULL
+             AND superseded_by_invitation_id IS NULL`,
+          [workspaceId, targetIdentity.email],
+        );
+        await client.query('COMMIT');
+        return { status: 'ok', value };
+      } catch (error) {
+        await client.query('ROLLBACK').catch(() => undefined);
+        throw error;
+      } finally {
+        client.release();
+      }
     },
 
     async authorizeWorkspace(headers, workspaceId, allowedRoles) {

@@ -4,6 +4,7 @@ import {
   createWorkspaceInvitationSchema,
   errorSchema,
   healthSchema,
+  revokeWorkspaceMemberSchema,
   updateWorkspaceMemberRoleSchema,
   workspaceDirectoryAccountSchema,
   workspaceInvitationSchema,
@@ -33,6 +34,17 @@ it('rejects malformed invitation tokens and roles', () => {
     createWorkspaceInvitationSchema.safeParse({ email: 'tech@example.com', role: 'owner' }).success,
   ).toBe(false);
   expect(updateWorkspaceMemberRoleSchema.safeParse({ role: 'owner' }).success).toBe(false);
+  expect(
+    updateWorkspaceMemberRoleSchema.safeParse({ role: 'technician', expectedRevision: 1 }).success,
+  ).toBe(false);
+  expect(
+    updateWorkspaceMemberRoleSchema.safeParse({ role: 'admin', expectedRevision: 0 }).success,
+  ).toBe(false);
+  expect(
+    updateWorkspaceMemberRoleSchema.safeParse({ role: 'admin', expectedRevision: 1 }).success,
+  ).toBe(true);
+  expect(revokeWorkspaceMemberSchema.safeParse({ expectedRevision: 1 }).success).toBe(true);
+  expect(revokeWorkspaceMemberSchema.safeParse({ expectedRevision: -1 }).success).toBe(false);
 });
 
 it('bounds team directory pagination and search', () => {

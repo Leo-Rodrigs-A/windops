@@ -3,10 +3,13 @@ import {
   createWorkspaceInvitationSchema,
   errorSchema,
   meSchema,
+  revokeWorkspaceMemberSchema,
+  updateWorkspaceMemberRoleSchema,
   workspaceContextSchema,
   workspaceDirectoryPageSchema,
   workspaceInvitationSchema,
   workspaceListQuerySchema,
+  workspaceMemberMutationSchema,
   workspaceMembersPageSchema,
   workspaceMembersQuerySchema,
 } from '@windops/contracts';
@@ -16,6 +19,7 @@ import type { WorkspaceAuthorizationService } from './service.js';
 
 const workspaceParams = z.object({ workspaceId: z.uuid() });
 const invitationParams = z.object({ workspaceId: z.uuid(), invitationId: z.uuid() });
+const memberParams = z.object({ workspaceId: z.uuid(), membershipId: z.uuid() });
 
 export function registerWorkspaceRoutes(
   app: FastifyInstance,
@@ -97,6 +101,64 @@ export function registerWorkspaceRoutes(
         return authorizationError(reply, request, 401, 'AUTHENTICATION_REQUIRED');
       if (result.status === 'forbidden')
         return authorizationError(reply, request, 403, 'WORKSPACE_ACCESS_DENIED');
+      return reply.send(result.value);
+    },
+  );
+
+  app.patch(
+    '/api/workspaces/:workspaceId/members/:membershipId/role',
+    {
+      schema: {
+        params: memberParams,
+        body: updateWorkspaceMemberRoleSchema,
+        response: {
+          200: workspaceMemberMutationSchema,
+          401: errorSchema,
+          403: errorSchema,
+          404: errorSchema,
+          409: errorSchema,
+        },
+      },
+    },
+    async (request, reply) => {
+      const { workspaceId, membershipId } = memberParams.parse(request.params);
+      const { expectedRevision } = updateWorkspaceMemberRoleSchema.parse(request.body);
+      const result = await authorization.promoteMember(
+        request.headers,
+        workspaceId,
+        membershipId,
+        expectedRevision,
+      );
+      if (result.status !== 'ok') return operationError(reply, request, result.status, 'member');
+      return reply.send(result.value);
+    },
+  );
+
+  app.post(
+    '/api/workspaces/:workspaceId/members/:membershipId/revoke',
+    {
+      schema: {
+        params: memberParams,
+        body: revokeWorkspaceMemberSchema,
+        response: {
+          200: workspaceMemberMutationSchema,
+          401: errorSchema,
+          403: errorSchema,
+          404: errorSchema,
+          409: errorSchema,
+        },
+      },
+    },
+    async (request, reply) => {
+      const { workspaceId, membershipId } = memberParams.parse(request.params);
+      const { expectedRevision } = revokeWorkspaceMemberSchema.parse(request.body);
+      const result = await authorization.revokeMember(
+        request.headers,
+        workspaceId,
+        membershipId,
+        expectedRevision,
+      );
+      if (result.status !== 'ok') return operationError(reply, request, result.status, 'member');
       return reply.send(result.value);
     },
   );
@@ -193,7 +255,24 @@ function operationError(
     | 'email_unverified'
     | 'rate_limited'
     | 'delivery_failed',
+  resource: 'invitation' | 'member' = 'invitation',
 ) {
+  if (resource === 'member' && status === 'not_found')
+    return reply.code(404).send({
+      error: {
+        code: 'MEMBERSHIP_NOT_FOUND',
+        message: 'Membership not found.',
+        requestId: request.id,
+      },
+    });
+  if (resource === 'member' && status === 'conflict')
+    return reply.code(409).send({
+      error: {
+        code: 'MEMBERSHIP_CONFLICT',
+        message: 'Membership changed or cannot be modified.',
+        requestId: request.id,
+      },
+    });
   const errors = {
     unauthenticated: [401, 'AUTHENTICATION_REQUIRED', 'Authentication required.'],
     forbidden: [403, 'WORKSPACE_ACCESS_DENIED', 'Workspace access denied.'],
