@@ -1,0 +1,93 @@
+name: windops
+services:
+  api:
+    image: ${API_IMAGE:?Set an immutable API image reference}
+    environment: &api_environment
+      NODE_ENV: production
+      HOST: 0.0.0.0
+      PORT: 3000
+      APP_ORIGIN: ${APP_ORIGIN:?Set HTTPS origin}
+      DATABASE_URL: ${DATABASE_URL:?Set runtime database URL}
+      ELECTRIC_URL: http://electric:3000
+      ELECTRIC_SECRET: ${ELECTRIC_SECRET:?Set random secret}
+      EMAIL_TRANSPORT: resend
+      EMAIL_FROM: ${EMAIL_FROM:?Set verified sender}
+      RESEND_API_KEY: ${RESEND_API_KEY:?Set Resend key}
+      BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:-}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
+      VAPID_SUBJECT: ${VAPID_SUBJECT:-}
+      VAPID_PUBLIC_KEY: ${VAPID_PUBLIC_KEY:-}
+      VAPID_PRIVATE_KEY: ${VAPID_PRIVATE_KEY:-}
+    restart: unless-stopped
+    init: true
+    read_only: true
+    tmpfs: [/tmp]
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    networks: [private]
+    healthcheck:
+      test:
+        [
+          CMD,
+          node,
+          -e,
+          "fetch('http://127.0.0.1:3000/api/health/ready').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+        ]
+      interval: 15s
+      timeout: 12s
+      retries: 10
+      start_period: 20s
+  migrate:
+    image: ${API_IMAGE:?Set an immutable API image reference}
+    profiles: [tools]
+    environment:
+      <<: *api_environment
+      DATABASE_URL: ${MIGRATION_DATABASE_URL:?Set direct database owner URL}
+    command: [node, dist/platform/database/migrate.js]
+    networks: [private]
+    read_only: true
+    tmpfs: [/tmp]
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    healthcheck:
+      disable: true
+  electric:
+    image: electricsql/electric:1.8.1
+    environment:
+      DATABASE_URL: ${ELECTRIC_DATABASE_URL:?Set direct Neon replication URL}
+      ELECTRIC_SECRET: ${ELECTRIC_SECRET:?Set random secret}
+      ELECTRIC_STORAGE_DIR: /var/lib/electric/persistent
+    volumes: [electric_data:/var/lib/electric]
+    restart: unless-stopped
+    networks: [private]
+    security_opt: [no-new-privileges:true]
+    healthcheck:
+      test:
+        [
+          CMD-SHELL,
+          'test "$$(curl -so /dev/null -w ''%{http_code}'' http://localhost:3000/v1/health)" = 200',
+        ]
+      interval: 15s
+      timeout: 5s
+      retries: 20
+  web:
+    image: ${WEB_IMAGE:?Set an immutable web image reference}
+    environment:
+      APP_DOMAIN: ${APP_DOMAIN:?Set public hostname}
+    ports: ["80:8080", "443:8443", "443:8443/udp"]
+    volumes: [caddy_data:/data, caddy_config:/config]
+    restart: unless-stopped
+    read_only: true
+    tmpfs: [/tmp]
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    networks: [private]
+    depends_on:
+      api: { condition: service_healthy }
+networks:
+  private:
+volumes:
+  electric_data:
+  caddy_data:
+  caddy_config:

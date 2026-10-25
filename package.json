@@ -1,0 +1,32 @@
+{
+  "name": "windops",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@10.34.8",
+  "engines": {
+    "node": ">=22.12.0 <27"
+  },
+  "scripts": {
+    "dev": "pnpm --filter @windops/contracts build && concurrently -k -n api,web \"pnpm --filter @windops/api dev\" \"pnpm --filter @windops/web dev\"",
+    "build": "pnpm --filter @windops/contracts build && pnpm --filter @windops/api build && pnpm --filter @windops/web build",
+    "typecheck": "pnpm --filter @windops/contracts build && pnpm -r typecheck",
+    "lint": "biome check . && node scripts/check-boundaries.mjs",
+    "format": "biome check --write .",
+    "test": "vitest run",
+    "check": "pnpm lint && pnpm typecheck && pnpm test && pnpm build",
+    "infra:up": "docker compose -f infra/compose.dev.yml up -d --wait",
+    "infra:down": "docker compose -f infra/compose.dev.yml down",
+    "db:generate": "pnpm --filter @windops/api db:generate",
+    "db:migrate": "pnpm --filter @windops/api db:migrate",
+    "test:integration": "pnpm --filter @windops/api test:integration"
+  },
+  "devDependencies": {
+    "typescript": "7.0.2",
+    "vitest": "5.0.5",
+    "tsx": "4.23.15",
+    "@types/node": "22.19.15",
+    "@biomejs/biome": "2.6.3",
+    "concurrently": "10.0.6"
+  }
+}

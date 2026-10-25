@@ -1,0 +1,20 @@
+FROM node:22.22.2-bookworm-slim AS build
+WORKDIR /app
+RUN npm install --global pnpm@10.34.8
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml .npmrc ./
+COPY apps/api/package.json apps/api/package.json
+COPY apps/web/package.json apps/web/package.json
+COPY packages/contracts/package.json packages/contracts/package.json
+RUN pnpm install --frozen-lockfile
+COPY tsconfig.base.json ./
+COPY packages/contracts packages/contracts
+COPY apps/web apps/web
+RUN pnpm --filter @windops/contracts build && pnpm --filter @windops/web build
+
+FROM caddy:2.11.7-alpine AS runtime
+RUN addgroup -g 10001 app && adduser -D -u 10001 -G app app && mkdir -p /data /config && chown -R app:app /data /config
+COPY infra/Caddyfile /etc/caddy/Caddyfile
+COPY --from=build /app/apps/web/dist /srv
+USER 10001:10001
+EXPOSE 8080 8443
+HEALTHCHECK --interval=15s --timeout=5s CMD wget -q -O /dev/null http://127.0.0.1:8081/healthz || exit 1
