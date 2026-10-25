@@ -11,6 +11,10 @@ const schema = z
     DATABASE_URL: z.url().refine((v) => /^postgres(ql)?:/.test(v), 'PostgreSQL URL required'),
     ELECTRIC_URL: z.url(),
     ELECTRIC_SECRET: z.string().min(1),
+    AUTH_ENABLED: z
+      .enum(['true', 'false'])
+      .default('false')
+      .transform((value) => value === 'true'),
     EMAIL_TRANSPORT: z.enum(['smtp', 'resend']).default('smtp'),
     SMTP_URL: z.url().optional(),
     EMAIL_FROM: z.string().min(1),
@@ -29,6 +33,18 @@ const schema = z
       ctx.addIssue({ code: 'custom', path: ['RESEND_API_KEY'], message: 'Resend key required' });
     if (env.NODE_ENV === 'production' && !env.APP_ORIGIN.startsWith('https://'))
       ctx.addIssue({ code: 'custom', path: ['APP_ORIGIN'], message: 'HTTPS required' });
+    if (env.AUTH_ENABLED && !env.BETTER_AUTH_SECRET)
+      ctx.addIssue({
+        code: 'custom',
+        path: ['BETTER_AUTH_SECRET'],
+        message: 'Required when AUTH_ENABLED=true',
+      });
+    if (Boolean(env.GOOGLE_CLIENT_ID) !== Boolean(env.GOOGLE_CLIENT_SECRET))
+      ctx.addIssue({
+        code: 'custom',
+        path: ['GOOGLE_CLIENT_SECRET'],
+        message: 'Google client ID and secret must be configured together',
+      });
   });
 export type Environment = z.infer<typeof schema>;
 export function parseEnvironment(input: Record<string, unknown>): Environment {

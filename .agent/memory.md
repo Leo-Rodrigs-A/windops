@@ -17,7 +17,7 @@ Idioma inicial pt-BR. Layout mobile e design system são referências do proprie
 ## Organização das tasks — 24/10/2026
 
 - As 11 slices originais foram movidas para [tasks/00 - roadmap](tasks/00%20-%20roadmap/README.md), preservando números e objetivos como visão geral. Novas slices executáveis terão pastas próprias e arquivos de tasks detalhados com status, checkboxes, dependências, plano, testes e evidências, criados progressivamente.
-- Primeira slice: [01 — Fundação](tasks/01-fundacao/README.md), com oito tasks. F01–F03 modelaram e aplicaram localmente o schema inicial registrado em [`.agent/database.md`](database.md); F04 é a próxima task.
+- Primeira slice: [01 — Fundação](tasks/01-fundacao/README.md), com oito tasks. F01–F04 concluídas; F05 autorização/bootstrap é a próxima. O schema e estado aplicado estão em [`.agent/database.md`](database.md).
 - Escopo da fundação: PostgreSQL com privilégios mínimos, schema de identidade/memberships, autenticação senha/Google com código obrigatório por e-mail, autorização e bootstrap explícito, componentes e telas iniciais. Convites, administração completa de membros, parques/issues, offline e push continuam para slices futuras; implantação de produção continua no roadmap 11.
 - Leitura estrutural via MCP confirmou guia claro/escuro, Inter, componentes e home escura com variantes. `GetVariables()` retornou vazio; nenhum componente reutilizável formal foi listado. Login/cadastro/código/recuperação não foram identificados como telas explícitas; F06 deve conferir screenshots e obter referências/composições aprovadas para o que faltar.
 - Rótulos “Aberto/Resolvendo/Concluído” e filtro por data aparecem no desenho; não alteram automaticamente os estados e filtros da memória. Conciliar antes de implementar esses fluxos de produto.
@@ -88,9 +88,9 @@ RNFs originais: carregamento <2s e SLA 99,5% são metas ainda sem medição/SLO 
 
 ## Situação da entrega
 
-Base criada com apps, contratos, configuração ShadcnUI, adaptadores não ativados, health checks, schema inicial, Compose e CI/CD bloqueado por variável. Autenticação, PWA, persistência, sync autorizada, issues e notificações ainda planejadas. Builder Better Auth não é login completo.
+Base criada com apps, contratos, configuração ShadcnUI, health checks, schema inicial, Compose e CI/CD bloqueado por variável. Autenticação Better Auth/Fastify está implementada e validada; as rotas são opt-in. Autorização, bootstrap, PWA, persistência, sync autorizada, issues e notificações continuam planejados.
 
-Modelo do banco — 25/10/2026: F01 documentou identidade Better Auth, desafios, workspaces e memberships; F02 separou papéis locais; F03 aplicou `0001_auth_core` com schema de identidade e memberships. F04 implementará autenticação/segunda etapa; rotas continuam desativadas.
+F04 concluída — 25/10/2026: implementado Better Auth/Fastify e fluxos de senha e OAuth com verificação de e-mail, desafio persistido de 8 dígitos, barreira para sessão pendente, rotação/limites, recuperação, logout e vinculação nas duas ordens. `pnpm check`, integração PostgreSQL/Mailpit com OAuth simulado e login Google real em banco descartável passaram. Banco e página temporários foram removidos. Rotas permanecem desativadas por padrão (`AUTH_ENABLED=false`); autorização de workspace é F05.
 
 F02 — PostgreSQL e privilégios — 25/10/2026: provisionador idempotente aplicado no volume WSL existente; `windops_app`, `windops_migrator` e `windops_replication` separados, migração exige URL própria e publicação manual do Electric inclui somente `workspaces`. Instalação vazia, grants, restart/restore e shape passaram. `.env` local foi atualizado sem commit. Neon/VPS não provisionados.
 

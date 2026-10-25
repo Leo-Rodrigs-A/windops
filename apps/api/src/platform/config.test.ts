@@ -25,4 +25,16 @@ it('requires production HTTPS', () => {
 });
 it('loads local defaults', () => {
   expect(parseEnvironment(base).PORT).toBe(3000);
+  expect(parseEnvironment(base).AUTH_ENABLED).toBe(false);
+});
+it('requires an auth secret and complete Google credentials when auth is enabled', () => {
+  expect(() => parseEnvironment({ ...base, AUTH_ENABLED: 'true' })).toThrow('BETTER_AUTH_SECRET');
+  expect(() =>
+    parseEnvironment({
+      ...base,
+      AUTH_ENABLED: 'true',
+      BETTER_AUTH_SECRET: 'a'.repeat(40),
+      GOOGLE_CLIENT_ID: 'client-id',
+    }),
+  ).toThrow('GOOGLE_CLIENT_SECRET');
 });

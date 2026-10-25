@@ -2,7 +2,7 @@
 
 ## Status
 
-Em andamento. F01–F03 concluídas; F04 é a próxima tarefa de implementação.
+Em andamento. F01–F04 concluídas; F05 é a próxima tarefa de implementação.
 
 - [ ] Slice concluída: todos os aceites das tasks abaixo comprovados.
 
@@ -10,11 +10,11 @@ Em andamento. F01–F03 concluídas; F04 é a próxima tarefa de implementação
 
 Aplicação executável no WSL2 com PostgreSQL persistente, schema de identidade e memberships migrado, privilégios mínimos e usuários autenticados por senha ou Google, sempre com segunda etapa obrigatória por e-mail. Membros acessam uma home protegida; contas sem vínculo recebem uma tela própria sem acesso operacional. Layouts iniciais seguem as referências externas do pen.dev.
 
-O aceite é de desenvolvimento integrado e preparação segura para implantação. Provisionamento Neon/VPS, domínio e liberação de produção continuam na [etapa 11](<../00 - roadmap/11-production.md>). Login Google real exige credenciais de desenvolvimento; ausência delas bloqueia sua validação final, não autoriza declarar o fluxo completo entregue.
+O aceite é de desenvolvimento integrado e preparação segura para implantação. Provisionamento Neon/VPS, domínio e liberação de produção continuam na [etapa 11](<../00 - roadmap/11-production.md>). O login Google real foi validado em banco descartável; auth permanece desligada por padrão.
 
 ## Estado de partida
 
-- Existem Compose, cliente PostgreSQL/Drizzle, migração de `workspaces`, health checks e testes básicos. O builder Better Auth não está montado; frontend tem somente uma landing provisória.
+- Existem Compose, cliente PostgreSQL/Drizzle, schema de identidade/memberships, health checks e testes. Better Auth/Fastify é montado somente com `AUTH_ENABLED=true`; frontend continua com uma landing provisória.
 - PostgreSQL/Electric/Mailpit foram observados saudáveis. F02 validou papéis, restart/restore e shape; F03 aplicou `0001_auth_core` no banco local e provou upgrade/reaplicação em bancos descartáveis.
 - A configuração inicial compartilhava credenciais. F02 separou os papéis no volume existente; `windops` é usado somente como bootstrap administrativo.
 
@@ -23,8 +23,8 @@ O aceite é de desenvolvimento integrado e preparação segura para implantaçã
 - [x] [F01 — Modelagem do banco](01-modelagem-banco.md). Concluída; `.agent/database.md` revisado. Nenhum DDL aplicado.
 - [x] [F02 — PostgreSQL e privilégios](02-postgres-seguro.md). Concluída em 25/10/2026; papéis locais aplicados e verificados.
 - [x] [F03 — Schema e migrações da fundação](03-schema-migracoes.md). Concluída em 25/10/2026.
-- [ ] [F04 — Autenticação e segunda etapa](04-autenticacao.md). Depende de F03.
-- [ ] [F05 — Autorização e bootstrap](05-autorizacao-bootstrap.md). Depende de F03 e F04.
+- [x] [F04 — Autenticação e segunda etapa](04-autenticacao.md). Concluída em 25/10/2026.
+- [ ] [F05 — Autorização e bootstrap](05-autorizacao-bootstrap.md). Próxima task; depende de F03 e F04.
 - [ ] [F06 — Referências e componentes visuais](06-design-system.md). Documento externo acessível; pode avançar após F01 em paralelo ao backend.
 - [ ] [F07 — Telas e navegação autenticada](07-interfaces-iniciais.md). Depende de F04, F05 e F06.
 - [ ] [F08 — Validação integrada](08-validacao-integrada.md). Depende de F01–F07.
@@ -60,4 +60,4 @@ Documento ativo em 24/10/2026: `G:\Meu Drive\01 - TRABALHO\08 - PENCIL WORKSPACE
 
 Preparação concluída em 24/10/2026: roadmap reorganizado e oito planos criados; referência pen.dev consultada sem escrita.
 
-F01 concluída em 25/10/2026: modelo `.agent/database.md` criado e Better Auth 1.7.12 validado. F02 concluída em 25/10/2026: papéis provisionados no volume existente, isolamento, restart/restore e Electric validados. F03 concluiu migrações e schema da fundação; autenticação e autorização seguem para F04/F05. Neon permanece pendente.
+F01 concluída em 25/10/2026: modelo `.agent/database.md` criado e Better Auth 1.7.12 validado. F02 concluída em 25/10/2026: papéis provisionados no volume existente, isolamento, restart/restore e Electric validados. F03 concluiu migrações e schema da fundação. F04 concluiu autenticação, segunda etapa, OAuth simulado e login Google real. F05 implementará autorização e bootstrap. Neon permanece pendente.

@@ -90,9 +90,9 @@ Proprietária: `identity`; contém sessão pendente e sessão liberada. A coluna
 | `id`                       | `uuid`        | não; UUID v4 | PK interna.                                                                                                    |
 | `token`                    | `text`        | não          | Token opaco do cookie; `UNIQUE`, sem log/DTO/cópia para storage web. Better Auth precisa dele para lookup.     |
 | `user_id`                  | `uuid`        | não          | FK `auth_users.id`; cascade somente para apagar sessão privada ao excluir conta.                               |
-| `expires_at`               | `timestamptz` | não          | Criada com 15 minutos para sessão pendente; após confirmação, ganha a duração normal decidida em F04.          |
+| `expires_at`               | `timestamptz` | não          | 15 minutos enquanto pendente; sete dias após confirmação do segundo passo.                                     |
 | `email_second_step_at`     | `timestamptz` | sim          | `NULL` bloqueia negócio; após OTP válido, setado na mesma transação de consumo. Não aceito na entrada pública. |
-| `ip_address`, `user_agent` | `text`        | sim          | Metadados mínimos; não usar como fator de autorização. Avaliar minimização/retensão de IP em F04.              |
+| `ip_address`, `user_agent` | `text`        | sim          | Metadados mínimos; não usar como fator de autorização. Rever minimização/retensão antes de produção.           |
 | `created_at`, `updated_at` | `timestamptz` | não          | Controle da sessão.                                                                                            |
 
 Constraints/índices: PK, `UNIQUE(token)` e índice `user_id`. Desativar cache de sessão em cookie e refresh automático até a segunda etapa ser liberada; logout/revogação elimina o bearer no servidor. Não usar o plugin padrão `twoFactor` como barreira do OAuth: na versão auditada, ele desafia apenas sessões de certas rotas de login, não todos os métodos de entrada.
@@ -178,7 +178,7 @@ stateDiagram-v2
 
 Rotas públicas enumeradas de auth são as exceções ao bloqueio de sessão pendente: confirmação, reenvio, verificação de e-mail e recuperação de senha, mais operações sem sessão explicitamente documentadas. Atualização de perfil, conexão/desconexão de provider, gerenciamento de sessão, mudança de e-mail/senha com sessão, dados do usuário e toda rota operacional são bloqueadas até confirmação. Não retornar sessão pendente como `authenticated` em `/api/me`. A matriz e teste de todas as rotas precisam constar em F04 antes de montar Better Auth no servidor.
 
-Política inicial para F04: código decimal de 8 dígitos, 5 falhas, até 3 envios por 15 minutos, intervalo mínimo de 60 segundos, expiração de 15 minutos; lockout revoga a sessão provisória. Mensagens públicas não confirmam existência de conta. Mudanças nesse limite exigem atualizar este modelo e os testes.
+Política inicial para F04: código decimal de 8 dígitos, 5 falhas, até 3 envios por 15 minutos, intervalo mínimo de 60 segundos, expiração de 15 minutos; lockout revoga a sessão provisória. Mensagens públicas não confirmam existência de conta. F04 implementou e integrou esses limites no fluxo de senha; OAuth ainda aguarda testes de callback/vinculação e as rotas permanecem desabilitadas. Mudanças nesse limite exigem atualizar este modelo e os testes.
 
 **Recuperação da senha** usa o token de uso único/expiração nativos e separados dos desafios. A redefinição revoga sessões existentes e a próxima entrada ainda exige o segundo fator. Verificação de e-mail prova titularidade e não equivale ao segundo fator de uma sessão.
 

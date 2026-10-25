@@ -27,19 +27,19 @@ Cada módulo é dono de seus dados. Chamadas entre módulos usam serviços públ
 
 ## Dados e isolamento
 
-O modelo relacional está registrado em [`.agent/database.md`](database.md), definido em F01 e implementado em F03 com Better Auth 1.7.12. `0001_auth_core` adiciona identidade, challenges e memberships; o banco WSL local já recebeu a migração. F02 separou e verificou os papéis; `windops` continua bootstrap administrativo, enquanto API, migrador e Electric usam papéis próprios. Neon não está provisionado. F04/F05 implementam fluxos de autenticação e autorização sobre essa base.
+O modelo relacional está registrado em [`.agent/database.md`](database.md), definido em F01 e implementado em F03 com Better Auth 1.7.12. `0001_auth_core` adiciona identidade, challenges e memberships; o banco WSL local já recebeu a migração. F02 separou e verificou os papéis; `windops` continua bootstrap administrativo, enquanto API, migrador e Electric usam papéis próprios. Neon não está provisionado. F04 validou autenticação; F05 implementa autorização e bootstrap sobre essa base.
 
 Drizzle controla schema e migrações SQL versionadas. Migrações criam workspaces com UUID e índice singleton, identidade Better Auth, desafios de segunda etapa e `workspace_members` com cargo por workspace. Remover o limite singleton exige migração futura; workspace_id continua obrigatório em todos os dados de negócio. Não haverá endpoint de criação pública de workspace no piloto.
 
 Administrador vê membros do workspace e contas sem vínculo algum; não vê usuários exclusivos de outro workspace. Acesso a issues, histórico, convites, notificações e shapes sempre valida membership no servidor. Nunca confiar em workspace_id do cliente sem autorização. Cache e fila locais separados por conta e workspace.
 
-O schema Better Auth é configurado no builder não montado em [F03 — Schema e migrações](tasks/01-fundacao/03-schema-migracoes.md), com OAuth tokens criptografados e marcador da segunda etapa server-only. Rotas permanecem desativadas até os testes obrigatórios de F04. Bootstrap do primeiro workspace/administrador nunca promove automaticamente o primeiro cadastro.
+O schema Better Auth foi mapeado em F03 com OAuth tokens criptografados e marcador da segunda etapa server-only. As rotas estão implementadas e são montadas somente com `AUTH_ENABLED=true`; por padrão permanecem desativadas. Bootstrap do primeiro workspace/administrador nunca promove automaticamente o primeiro cadastro.
 
 ## API e autenticação
 
-Contratos atuais: GET /api/health/live, GET /api/health/ready; erros estruturados em error {code,message,requestId}; /api/docs apenas local; GET /api/sync/:collection devolve 503 enquanto não implementado. Sem rota pública funcional de auth.
+Contratos atuais: GET /api/health/live, GET /api/health/ready; erros estruturados em error {code,message,requestId}; /api/docs apenas local; GET /api/sync/:collection devolve 503 enquanto não implementado. As rotas `/api/auth/*` são opt-in e ficam desabilitadas por padrão.
 
-Better Auth é uma fundação não montada. Login Google e senha convergem por e-mail cuja titularidade foi verificada. Não vincular contas apenas porque um provedor declara um e-mail não verificado. Toda nova sessão online exige código por e-mail válido por 15 minutos; reenvio invalida o anterior. Nenhuma sessão com acesso de negócio antes de completar a segunda etapa, inclusive OAuth. F01 validou o schema gerado e limites do plugin; testar hooks e fluxo integrado em [F04 — Autenticação](tasks/01-fundacao/04-autenticacao.md), que detalha a etapa 03 do roadmap. As rotas permanecem desabilitadas até os testes críticos passarem.
+Better Auth e a integração Fastify foram implementados e validados em F04; rotas ficam desabilitadas por padrão (`AUTH_ENABLED=false`). Fluxos de senha e OAuth simulado/real passaram em PostgreSQL/Mailpit, incluindo vinculação nas duas ordens, cookie/callback e segunda etapa. Login Google e senha convergem por e-mail cuja titularidade foi verificada. Não vincular contas apenas porque um provedor declara um e-mail não verificado. Toda nova sessão online exige código por e-mail válido por 15 minutos; reenvio invalida o anterior. Nenhuma sessão com acesso de negócio antes de completar a segunda etapa, inclusive OAuth. Autorização de workspace continua em F05.
 
 Usar cookies HttpOnly/Secure em produção, origem confiável e proteção CSRF. Não copiar tokens de sessão para armazenamento JavaScript como estratégia offline. Metadados de acesso local e dados persistidos permitem reabrir o dispositivo já autenticado; sessão expirada permite trabalho local, mas upload exige autenticação renovada. Definir descarte de cache na saída sem apagar silenciosamente pendências; oferecer exportação.
 

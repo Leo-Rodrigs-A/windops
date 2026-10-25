@@ -12,6 +12,7 @@ services:
       ELECTRIC_SECRET: ${ELECTRIC_SECRET:?Set random secret}
       EMAIL_TRANSPORT: resend
       EMAIL_FROM: ${EMAIL_FROM:?Set verified sender}
+      AUTH_ENABLED: ${AUTH_ENABLED:-false}
       RESEND_API_KEY: ${RESEND_API_KEY:?Set Resend key}
       BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:-}
       GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}

@@ -24,6 +24,8 @@
     "db:generate": "pnpm --filter @windops/api db:generate",
     "db:migrate": "pnpm --filter @windops/api db:migrate",
     "db:permissions": "node apps/api/scripts/permissions.mjs",
+    "test:auth-integration": "node --import tsx apps/api/scripts/auth-flow.mjs",
+    "test:auth-google-real": "node --import tsx apps/api/scripts/google-oauth-smoke.mjs",
     "test:integration": "pnpm --filter @windops/api test:integration"
   },
   "devDependencies": {

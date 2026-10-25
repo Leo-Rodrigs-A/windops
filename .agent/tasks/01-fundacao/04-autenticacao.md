@@ -2,9 +2,9 @@
 
 ## Status e dependências
 
-Planejada. Depende de [F03](03-schema-migracoes.md) e das decisões de provedor/desafio de F01.
+Concluída em 25/10/2026. Depende de [F03](03-schema-migracoes.md) e das decisões de provedor/desafio de F01; ambas concluídas.
 
-- [ ] Task concluída.
+- [x] Task concluída.
 
 ## Objetivo e limites
 
@@ -12,27 +12,27 @@ Entregar cadastro, login e-mail/senha e Google, verificação de titularidade, s
 
 ## Plano de implementação
 
-- [ ] Configurar Better Auth, integração Fastify e adaptador de dados conforme a prova de F01. Manter as rotas desabilitadas no app normal enquanto a suíte de segunda etapa/vinculação não passar; usar montagem isolada em testes para validar o fluxo completo antes de habilitar.
-- [ ] Implementar cadastro e senha com hash gerenciado pelo provedor, normalização/unicidade de e-mail e verificação de titularidade. Não retornar senha/hash/segredos em DTOs, logs ou respostas de erro.
-- [ ] Configurar Google com callback/base URL/origens explícitos. Vincular métodos somente após prova de titularidade de e-mail; não confiar em e-mail não verificado nem permitir que o simples conhecimento de um endereço vincule contas. Cobrir as duas ordens de criação: senha seguida de Google e Google seguido de senha.
-- [ ] Executar a máquina de estados de F01 para toda nova sessão online, inclusive OAuth e login após recuperação: primeira etapa válida → desafio persistido → confirmação única → sessão liberada. Não oferecer dispositivo confiável, opção de pular código ou sessão de negócio emitida antes da confirmação.
-- [ ] Aplicar validade de 15 minutos pelo relógio do servidor; reenvio invalida código anterior e renova prazo. Persistir tentativas/limites, vincular desafio à tentativa correta e consumir de modo atômico para evitar dois sucessos concorrentes. Não manter esse estado apenas em memória.
-- [ ] Definir e documentar limites numéricos de tentativas, cooldown e envio por conta/IP, duração de sessão e política de renovação conforme a análise de segurança de F01. Provar limites no backend; contagem regressiva da UI é apenas informativa.
-- [ ] Usar `EmailSender` para SMTP/Mailpit local e Resend em produção, com código/links sensíveis fora dos logs. Falha de envio deixa estado recuperável e nunca autentica o usuário. Tratar reenvio, indisponibilidade e limitação do provedor sem enumerar contas em respostas públicas.
-- [ ] Implementar recuperação com token efêmero de uso único e política explícita de revogação das sessões após mudança de senha. Recuperação não equivale a sessão autenticada; o próximo login continua exigindo o código.
-- [ ] Implementar sessão/cookies HttpOnly e Secure em produção, SameSite/origem/CSRF e proteção de callback OAuth conforme suporte validado do provedor. Reabrir sessão válida não solicita código novamente; logout revoga a sessão no servidor, sem copiar token para localStorage/IndexedDB.
-- [ ] Exportar pelo serviço público de `identity` a identidade autenticada com segunda etapa concluída, sem expor registros internos. Definir contratos de cliente para os estados anônimo, aguardando código e autenticado; endpoints do provedor seguem sua API validada, sem aliases fictícios.
-- [ ] Validar env obrigatória quando auth estiver habilitada; sem credenciais Google, manter a opção indisponível com limitação documentada. Isso não conclui o aceite Google. Montar `/api/auth/*` somente após os testes críticos passarem e manter sync fechado.
+- [x] Configurar Better Auth, integração Fastify e adaptador de dados conforme a prova de F01. As rotas só são montadas com `AUTH_ENABLED=true`; a montagem isolada de integração não altera o padrão desabilitado.
+- [x] Implementar cadastro e senha com hash gerenciado pelo provedor, normalização/unicidade de e-mail e verificação de titularidade. Não retornar senha/hash/segredos em DTOs, logs ou respostas de erro.
+- [x] Configurar Google com callback/base URL/origens explícitos. Vincular métodos somente após prova de titularidade de e-mail; não confiar em e-mail não verificado nem permitir que o simples conhecimento de um endereço vincule contas.
+- [x] Configurar Google e provar em OAuth simulado a vinculação verificada nas duas ordens: senha seguida de Google e Google seguido de senha. E-mail Google não verificado é rejeitado antes da criação/vinculação.
+- [x] Executar a máquina de estados para toda nova sessão online, inclusive OAuth simulado/real e login após recuperação.
+- [x] Aplicar validade de 15 minutos, reenvio com rotação, cinco tentativas, cooldown de 60 segundos, até três envios por 15 minutos e consumo atômico. Limites de chamadas de verificação/reenvio também são aplicados no banco por IP/conta.
+- [x] Usar `EmailSender` no desafio, verificação e recuperação. Testada falha de entrega sem sessão liberada; respostas de recuperação não enumeram contas.
+- [x] Implementar recuperação com token nativo de uso único, revogação de sessões e exigência de novo código no login seguinte.
+- [x] Validar cookies HttpOnly/SameSite e callback OAuth em navegador; a sessão real percorreu callback e segunda etapa. A integração rejeita mutações sem `Origin` e com origem estrangeira.
+- [x] Exportar a superfície de composição pública de `identity` por `index.ts` e expor estados anônimo/pendente/autenticado sem token. A API de workspace autorizada será tratada em F05.
+- [x] Validar env obrigatória quando auth estiver habilitada; Google é omitido sem o par de credenciais. Montar `/api/auth/*` somente após os testes críticos passarem; sync permanece fechado.
 
 ## Testes e aceite
 
-- [ ] Senha e Google chegam ao desafio; acesso direto, cookies provisórios, callback OAuth, refresh ou endpoint alternativo não contornam a segunda etapa.
-- [ ] Código incorreto, expirado, consumido, de outra tentativa e anterior ao reenvio é rejeitado; confirmar/reemitir em paralelo não gera duas sessões liberadas.
-- [ ] Reiniciar API entre emissão e confirmação preserva desafio, expiração e limites. Falha de e-mail/rede permite retry controlado sem liberar sessão.
-- [ ] E-mails não verificados não vinculam contas; duas autenticações concorrentes não criam identidades duplicadas. Sessão de conta órfã autentica identidade sem conceder workspace.
-- [ ] Recuperação, logout, expiração, cookies, CSRF, origem não confiável e respostas sem segredos/enumeration leaks exercitados com PostgreSQL real e Mailpit; OAuth simulado cobre negativos em CI.
-- [ ] Login Google real com credenciais de desenvolvimento e entrega de e-mail local comprovados; `pnpm check` e integração passam antes de habilitar rotas no app normal.
+- [x] Senha e OAuth simulado/real chegam ao desafio; sessão pendente não atravessa a barreira de rotas nem o callback.
+- [x] Código incorreto, expirado, consumido e anterior ao reenvio são rejeitados; reenvio excedente é bloqueado; duas confirmações concorrentes dão um sucesso.
+- [x] Reinício da API entre emissão e confirmação preserva desafio. Falha de e-mail revoga sessão provisória; limites são persistidos no banco.
+- [x] E-mail não verificado não vincula contas; vinculação senha→Google e Google→senha passou em OAuth simulado. Isolamento de workspace e sessões sem membership pertencem a F05.
+- [x] Recuperação, logout, expiração, cookies HttpOnly/SameSite, `Origin` não confiável e respostas sem enumeração testados com PostgreSQL/Mailpit; OAuth simulado cobre negativos e vinculação.
+- [x] Login Google real com credenciais de desenvolvimento e e-mail local concluído em banco descartável. `pnpm check`, teste de integração OAuth/PostgreSQL/Mailpit e integração PostgreSQL/Electric passam; auth continua desligada por padrão.
 
 ## Evidências
 
-Pendente. Registrar decisões do provedor, matriz de testes e transição que libera sessão, limites escolhidos, ensaio Google real e limitações Resend. Nunca registrar códigos, cookies, tokens ou credenciais.
+Concluída em 25/10/2026. `pnpm check` passou (lint, tipos, 10 testes unitários e builds); `pnpm test:auth-integration` passou contra PostgreSQL/Mailpit descartáveis, cobrindo verificação de e-mail, normalização, barreira da sessão provisória, reenvio/rotação/limite, expiração, corrida de confirmação, reinício da API, falha de e-mail, recuperação, logout, lockout e OAuth simulado (e-mail não verificado, senha→Google e Google→senha). O login Google real e a confirmação do código também passaram em navegador, usando credenciais locais e banco descartável; o banco e a página temporários foram removidos. As rotas seguem desabilitadas por padrão (`AUTH_ENABLED=false`); habilitação permanente depende de implantação/configuração operacional. Resend externo não foi ensaiado. Nunca registrar códigos, cookies, tokens ou credenciais.

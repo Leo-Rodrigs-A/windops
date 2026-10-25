@@ -8,9 +8,9 @@ Cada nova slice fica em uma pasta `NN-nome/`, com um `README.md` que define resu
 
 ## Slice atual
 
-- [ ] [01 — Fundação](01-fundacao/README.md): modelagem, PostgreSQL seguro e schema/migrações concluídos; autenticação, autorização e interfaces iniciais ainda planejadas.
+- [ ] [01 — Fundação](01-fundacao/README.md): F01–F04 concluídas; autorização/bootstrap e interfaces iniciais seguem em andamento.
 
-Task atual: [F04 — Autenticação e segunda etapa](01-fundacao/04-autenticacao.md). O schema está em [`.agent/database.md`](../database.md); F03 aplicou as migrações de identidade, desafios e memberships no banco local.
+Task atual: [F05 — Autorização e bootstrap](01-fundacao/05-autorizacao-bootstrap.md). F04 concluiu a autenticação e a segunda etapa; o schema está em [`.agent/database.md`](../database.md), e F03 aplicou as migrações de identidade, desafios e memberships no banco local.
 
 ## Convenção de execução
 

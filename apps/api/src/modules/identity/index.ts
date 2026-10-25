@@ -1,2 +1,3 @@
-// Public module entrypoint. Business behavior belongs to its documented slice.
-export {};
+export type { GoogleCredentials, IdentityProvider } from './provider.js';
+export { createIdentityProvider } from './provider.js';
+export { registerIdentityRoutes } from './routes.js';

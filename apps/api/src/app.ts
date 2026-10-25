@@ -8,11 +8,15 @@ import {
   validatorCompiler,
   type ZodTypeProvider,
 } from 'fastify-type-provider-zod';
+import { type IdentityProvider, registerIdentityRoutes } from './modules/identity/index.js';
 import { registerSyncRoutes } from './modules/sync/routes.js';
 export function buildApp(options: {
   ready: () => Promise<void>;
   logger?: boolean;
   docs?: boolean;
+  trustProxy?: boolean;
+  identity?: IdentityProvider;
+  authOrigin?: string;
 }) {
   const app = Fastify({
     logger: options.logger
@@ -22,6 +26,7 @@ export function buildApp(options: {
         }
       : false,
     bodyLimit: 1048576,
+    trustProxy: options.trustProxy ?? false,
   }).withTypeProvider<ZodTypeProvider>();
   app.setValidatorCompiler(validatorCompiler);
   app.setSerializerCompiler(serializerCompiler);
@@ -74,6 +79,8 @@ export function buildApp(options: {
       },
     );
     app.register(registerSyncRoutes);
+    if (options.identity && options.authOrigin)
+      registerIdentityRoutes(app, options.identity, options.authOrigin);
     if (options.docs) app.register(scalar, { routePrefix: '/api/docs' });
   });
   return app;
