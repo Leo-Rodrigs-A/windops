@@ -3,7 +3,7 @@ import { Pool } from 'pg';
 
 const pool = new Pool({
   connectionString:
-    process.env.DATABASE_URL ?? 'postgresql://windops:windops_dev@127.0.0.1:5432/windops',
+    process.env.DATABASE_URL ?? 'postgresql://windops_app:windops_app_dev@127.0.0.1:5432/windops',
 });
 try {
   await pool.query('SELECT id FROM workspaces LIMIT 1');

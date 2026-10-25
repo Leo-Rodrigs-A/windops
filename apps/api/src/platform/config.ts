@@ -43,6 +43,27 @@ export function parseEnvironment(input: Record<string, unknown>): Environment {
   return result.data;
 }
 export function loadEnvironment(): Environment {
-  config({ path: fileURLToPath(new URL('../../../../.env', import.meta.url)), quiet: true });
-  return parseEnvironment(process.env);
+  const fileEnvironment =
+    config({
+      path: fileURLToPath(new URL('../../../../.env', import.meta.url)),
+      quiet: true,
+      processEnv: {},
+    }).parsed ?? {};
+  return parseEnvironment({ ...fileEnvironment, ...process.env });
+}
+
+export function loadMigrationDatabaseUrl(): string {
+  const fileEnvironment =
+    config({
+      path: fileURLToPath(new URL('../../../../.env', import.meta.url)),
+      quiet: true,
+      processEnv: {},
+    }).parsed ?? {};
+  const result = z
+    .url()
+    .refine((value) => /^postgres(ql)?:/.test(value), 'PostgreSQL URL required')
+    .safeParse(process.env.MIGRATION_DATABASE_URL ?? fileEnvironment.MIGRATION_DATABASE_URL);
+  if (!result.success)
+    throw new Error('Invalid environment: MIGRATION_DATABASE_URL is required for migrations.');
+  return result.data;
 }
