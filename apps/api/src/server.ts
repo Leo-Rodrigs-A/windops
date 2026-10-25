@@ -21,7 +21,13 @@ const identity =
     : undefined;
 const workspaceAuthorization = createWorkspaceAuthorizationService(
   pool,
-  identity ? createIdentityService(identity) : { resolveAuthenticatedUser: async () => null },
+  identity
+    ? createIdentityService(identity, pool)
+    : {
+        resolveAuthenticatedUser: async () => null,
+        getUsersByIds: async () => [],
+        listVerifiedDirectoryAccounts: async () => ({ items: [], nextCursor: null }),
+      },
 );
 const app = buildApp({
   logger: true,

@@ -5,8 +5,10 @@ import {
   errorSchema,
   healthSchema,
   updateWorkspaceMemberRoleSchema,
+  workspaceDirectoryAccountSchema,
   workspaceInvitationSchema,
   workspaceListQuerySchema,
+  workspaceMembersQuerySchema,
 } from './index.js';
 
 it('rejects false-positive health', () => {
@@ -39,6 +41,22 @@ it('bounds team directory pagination and search', () => {
   expect(workspaceListQuerySchema.safeParse({ limit: 10, workspaceId: 'forged' }).success).toBe(
     false,
   );
+});
+
+it('bounds member pagination and rejects sensitive fields in directory DTOs', () => {
+  expect(workspaceMembersQuerySchema.parse({})).toEqual({ limit: 25 });
+  expect(workspaceMembersQuerySchema.safeParse({ cursor: 'invalid' }).success).toBe(false);
+  expect(workspaceListQuerySchema.safeParse({ limit: 10, search: '   ' }).success).toBe(false);
+  const account = {
+    id: 'c65e443d-9003-4e89-877c-11b42ea693dd',
+    name: 'Tech',
+    email: 'tech@example.com',
+    createdAt: '2026-10-25T00:00:00.000Z',
+  };
+  expect(workspaceDirectoryAccountSchema.safeParse(account).success).toBe(true);
+  expect(
+    workspaceDirectoryAccountSchema.safeParse({ ...account, password: 'never-return' }).success,
+  ).toBe(false);
 });
 
 it('requires invitation responses to omit raw tokens and include delivery state', () => {

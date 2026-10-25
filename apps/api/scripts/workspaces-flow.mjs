@@ -28,6 +28,11 @@ const admin = { id: randomUUID(), email: `f05-admin-${process.pid}@example.inval
 const technician = { id: randomUUID(), email: `f05-tech-${process.pid}@example.invalid` };
 const workspaceBUser = { id: randomUUID(), email: `f05-other-${process.pid}@example.invalid` };
 const orphan = { id: randomUUID(), email: `f05-orphan-${process.pid}@example.invalid` };
+const revokedOnly = { id: randomUUID(), email: `f05-revoked-only-${process.pid}@example.invalid` };
+const revokedPlusActive = {
+  id: randomUUID(),
+  email: `f05-revoked-plus-active-${process.pid}@example.invalid`,
+};
 const unverified = { id: randomUUID(), email: `f05-unverified-${process.pid}@example.invalid` };
 const pendingUser = { id: randomUUID(), email: `f05-pending-${process.pid}@example.invalid` };
 const sessions = new Map();
@@ -159,7 +164,16 @@ function expectBootstrapFailure(userId, pattern, requestedWorkspace = workspaceA
 }
 
 function seedSql() {
-  const values = [admin, technician, workspaceBUser, orphan, unverified, pendingUser]
+  const values = [
+    admin,
+    technician,
+    workspaceBUser,
+    orphan,
+    unverified,
+    pendingUser,
+    revokedOnly,
+    revokedPlusActive,
+  ]
     .map(
       (user, index) =>
         `('${user.id}', 'F05 Test ${index}', '${user.email}', ${user === unverified ? 'false' : 'true'})`,
@@ -318,6 +332,9 @@ try {
 
   runAdminSql(`INSERT INTO public.workspace_members (workspace_id, user_id, role)
     VALUES ('${workspaceA}', '${technician.id}', 'technician')`);
+  runAdminSql(`INSERT INTO public.workspace_members (workspace_id, user_id, role, revoked_at)
+    VALUES ('${workspaceA}', '${revokedOnly.id}', 'technician', clock_timestamp()),
+           ('${workspaceA}', '${revokedPlusActive.id}', 'technician', clock_timestamp())`);
   const invitationId = randomUUID();
   await pool.query(
     `INSERT INTO public.workspace_invitations
@@ -380,6 +397,8 @@ try {
   );
   runAdminSql(`INSERT INTO public.workspace_members (workspace_id, user_id, role)
     VALUES ('${workspaceB}', '${workspaceBUser.id}', 'technician')`);
+  runAdminSql(`INSERT INTO public.workspace_members (workspace_id, user_id, role)
+    VALUES ('${workspaceB}', '${revokedPlusActive.id}', 'technician')`);
   createSession(admin);
   createSession(technician);
   createSession(workspaceBUser);
@@ -392,7 +411,7 @@ try {
   });
   const workspaceAuthorization = createWorkspaceAuthorizationService(
     pool,
-    createIdentityService(identity),
+    createIdentityService(identity, pool),
   );
   app = buildApp({
     ready: async () => {},
@@ -418,6 +437,12 @@ try {
       .statusCode,
     401,
     'sessions before the second step must not access workspace context',
+  );
+  assert.equal(
+    (await call('GET', `/api/workspaces/${workspaceA}/directory`, sessions.get(pendingUser.id)))
+      .statusCode,
+    401,
+    'sessions before the second step must not access the administrative directory',
   );
   const adminMe = await call('GET', '/api/me', sessions.get(admin.id));
   assert.equal(adminMe.statusCode, 200, adminMe.body);
@@ -493,6 +518,121 @@ try {
   );
   assert.equal(workspaceBContext.statusCode, 200, workspaceBContext.body);
   assert.equal(workspaceBContext.json().role, 'technician');
+
+  const members = await call(
+    'GET',
+    `/api/workspaces/${workspaceA}/members`,
+    sessions.get(admin.id),
+  );
+  assert.equal(members.statusCode, 200, members.body);
+  assert.equal(members.json().items.length, 3);
+  assert.deepEqual(
+    Object.keys(members.json().items[0].user).sort(),
+    ['email', 'id', 'name'],
+    'member DTOs must not expose authentication fields',
+  );
+  const membersFirstPage = await call(
+    'GET',
+    `/api/workspaces/${workspaceA}/members?limit=1`,
+    sessions.get(admin.id),
+  );
+  assert.equal(membersFirstPage.json().items.length, 1);
+  assert.ok(membersFirstPage.json().nextCursor);
+  const membersSecondPage = await call(
+    'GET',
+    `/api/workspaces/${workspaceA}/members?limit=1&cursor=${membersFirstPage.json().nextCursor}`,
+    sessions.get(admin.id),
+  );
+  assert.equal(membersSecondPage.json().items.length, 1);
+  assert.notEqual(
+    membersSecondPage.json().items[0].membershipId,
+    membersFirstPage.json().items[0].membershipId,
+  );
+  const directory = await call(
+    'GET',
+    `/api/workspaces/${workspaceA}/directory?limit=100`,
+    sessions.get(admin.id),
+  );
+  assert.equal(directory.statusCode, 200, directory.body);
+  assert.deepEqual(
+    directory
+      .json()
+      .items.map((account) => account.email)
+      .sort(),
+    [orphan.email, pendingUser.email, revokedOnly.email].sort(),
+    'directory includes verified accounts without any active membership and excludes other workspace members',
+  );
+  assert.equal(
+    directory.json().items.some((account) => account.id === revokedPlusActive.id),
+    false,
+    'a revoked link in this workspace does not make a user orphan while another workspace link is active',
+  );
+  assert.equal(
+    directory.json().items.some((account) => account.id === unverified.id),
+    false,
+    'unverified accounts are omitted from the administrative directory',
+  );
+  assert.deepEqual(
+    Object.keys(directory.json().items[0]).sort(),
+    ['createdAt', 'email', 'id', 'name'],
+    'directory DTOs contain only minimal identity fields',
+  );
+  const hiddenAccountSearch = await call(
+    'GET',
+    `/api/workspaces/${workspaceA}/directory?search=${encodeURIComponent(workspaceBUser.email)}`,
+    sessions.get(admin.id),
+  );
+  assert.deepEqual(hiddenAccountSearch.json(), { items: [], nextCursor: null });
+  const orphanSearch = await call(
+    'GET',
+    `/api/workspaces/${workspaceA}/directory?search=${encodeURIComponent(orphan.email)}`,
+    sessions.get(admin.id),
+  );
+  assert.deepEqual(
+    orphanSearch.json().items.map((account) => account.id),
+    [orphan.id],
+  );
+  const directoryFirstPage = await call(
+    'GET',
+    `/api/workspaces/${workspaceA}/directory?limit=1`,
+    sessions.get(admin.id),
+  );
+  const directorySecondPage = await call(
+    'GET',
+    `/api/workspaces/${workspaceA}/directory?limit=1&cursor=${directoryFirstPage.json().nextCursor}`,
+    sessions.get(admin.id),
+  );
+  assert.equal(directoryFirstPage.json().items.length, 1);
+  assert.equal(directorySecondPage.json().items.length, 1);
+  assert.notEqual(
+    directorySecondPage.json().items[0].id,
+    directoryFirstPage.json().items[0].id,
+    'directory cursor pagination must not repeat accounts',
+  );
+  assert.equal(
+    (await call('GET', `/api/workspaces/${workspaceA}/members`, sessions.get(technician.id)))
+      .statusCode,
+    403,
+    'technicians must not access the member list',
+  );
+  assert.equal(
+    (await call('GET', `/api/workspaces/${workspaceA}/directory`, sessions.get(technician.id)))
+      .statusCode,
+    403,
+    'technicians must not access the administrative directory',
+  );
+  assert.equal(
+    (await call('GET', `/api/workspaces/${workspaceB}/directory`, sessions.get(admin.id)))
+      .statusCode,
+    403,
+    'an admin must not use their workspace A membership to query workspace B',
+  );
+  assert.equal(
+    (await call('GET', `/api/workspaces/${randomUUID()}/directory`, sessions.get(admin.id)))
+      .statusCode,
+    403,
+    'unknown workspaces must not disclose whether a directory exists',
+  );
   assert.deepEqual(
     (await call('GET', '/api/me', sessions.get(workspaceBUser.id))).json().workspaces,
     [{ id: workspaceB, name: 'F05 Other Workspace', role: 'technician' }],
@@ -525,8 +665,16 @@ try {
     (await call('GET', '/api/me', sessions.get(technician.id))).json().workspaces,
     [],
   );
+  runAdminSql(`UPDATE public.workspace_members SET revoked_at = clock_timestamp()
+    WHERE workspace_id = '${workspaceA}' AND user_id = '${admin.id}'`);
+  assert.equal(
+    (await call('GET', `/api/workspaces/${workspaceA}/directory`, sessions.get(admin.id)))
+      .statusCode,
+    403,
+    'an admin whose membership was revoked must lose directory access immediately',
+  );
   console.log(
-    'Workspace integration passed: invitation migration/constraints and grants, no Electric access/publication, bootstrap idempotency/conflicts, API restart, authenticated identity, tenant isolation, roles and immediate revocation.',
+    'Workspace integration passed: invitations, member/directory access, pagination, identity field minimization, tenant isolation, API restart and membership revocation.',
   );
 } finally {
   if (app) await app.close();

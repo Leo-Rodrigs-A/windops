@@ -1,4 +1,12 @@
-import { errorSchema, meSchema, workspaceContextSchema } from '@windops/contracts';
+import {
+  errorSchema,
+  meSchema,
+  workspaceContextSchema,
+  workspaceDirectoryPageSchema,
+  workspaceListQuerySchema,
+  workspaceMembersPageSchema,
+  workspaceMembersQuerySchema,
+} from '@windops/contracts';
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import { z } from 'zod';
 import type { WorkspaceAuthorizationService } from './service.js';
@@ -31,6 +39,56 @@ export function registerWorkspaceRoutes(
     async (request, reply) => {
       const { workspaceId } = workspaceParams.parse(request.params);
       const result = await authorization.getContext(request.headers, workspaceId);
+      if (result.status === 'unauthenticated')
+        return authorizationError(reply, request, 401, 'AUTHENTICATION_REQUIRED');
+      if (result.status === 'forbidden')
+        return authorizationError(reply, request, 403, 'WORKSPACE_ACCESS_DENIED');
+      return reply.send(result.value);
+    },
+  );
+
+  app.get(
+    '/api/workspaces/:workspaceId/members',
+    {
+      schema: {
+        params: workspaceParams,
+        querystring: workspaceMembersQuerySchema,
+        response: {
+          200: workspaceMembersPageSchema,
+          401: errorSchema,
+          403: errorSchema,
+        },
+      },
+    },
+    async (request, reply) => {
+      const { workspaceId } = workspaceParams.parse(request.params);
+      const query = workspaceMembersQuerySchema.parse(request.query);
+      const result = await authorization.getMembers(request.headers, workspaceId, query);
+      if (result.status === 'unauthenticated')
+        return authorizationError(reply, request, 401, 'AUTHENTICATION_REQUIRED');
+      if (result.status === 'forbidden')
+        return authorizationError(reply, request, 403, 'WORKSPACE_ACCESS_DENIED');
+      return reply.send(result.value);
+    },
+  );
+
+  app.get(
+    '/api/workspaces/:workspaceId/directory',
+    {
+      schema: {
+        params: workspaceParams,
+        querystring: workspaceListQuerySchema,
+        response: {
+          200: workspaceDirectoryPageSchema,
+          401: errorSchema,
+          403: errorSchema,
+        },
+      },
+    },
+    async (request, reply) => {
+      const { workspaceId } = workspaceParams.parse(request.params);
+      const query = workspaceListQuerySchema.parse(request.query);
+      const result = await authorization.getDirectory(request.headers, workspaceId, query);
       if (result.status === 'unauthenticated')
         return authorizationError(reply, request, 401, 'AUTHENTICATION_REQUIRED');
       if (result.status === 'forbidden')

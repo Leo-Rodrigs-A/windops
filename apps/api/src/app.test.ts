@@ -50,6 +50,12 @@ it('documents protected identity and workspace context routes', async () => {
     async getContext() {
       return { status: 'unauthenticated' };
     },
+    async getMembers() {
+      return { status: 'unauthenticated' };
+    },
+    async getDirectory() {
+      return { status: 'unauthenticated' };
+    },
   };
   const app = buildApp({ ready: async () => {}, workspaceAuthorization });
   try {
@@ -58,8 +64,15 @@ it('documents protected identity and workspace context routes', async () => {
     expect(me.json().error.code).toBe('AUTHENTICATION_REQUIRED');
     const context = await app.inject(`/api/workspaces/${randomUUID()}/context`);
     expect(context.statusCode).toBe(401);
+    expect((await app.inject(`/api/workspaces/${randomUUID()}/members`)).statusCode).toBe(401);
+    expect((await app.inject(`/api/workspaces/${randomUUID()}/directory`)).statusCode).toBe(401);
+    expect(
+      (await app.inject(`/api/workspaces/${randomUUID()}/directory?limit=1000`)).statusCode,
+    ).toBe(400);
     expect(app.swagger().paths).toHaveProperty('/api/me');
     expect(app.swagger().paths).toHaveProperty('/api/workspaces/{workspaceId}/context');
+    expect(app.swagger().paths).toHaveProperty('/api/workspaces/{workspaceId}/members');
+    expect(app.swagger().paths).toHaveProperty('/api/workspaces/{workspaceId}/directory');
   } finally {
     await app.close();
   }

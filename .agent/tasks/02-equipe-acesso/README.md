@@ -2,7 +2,7 @@
 
 ## Status
 
-Em andamento. Depende da [slice 01 — Fundação](../01-fundacao/README.md), concluída. E01 e E02 concluídas: conta admin configurada no banco persistente; modelo, contratos, migração e limites de acesso da tabela de convites definidos e validados. Próxima: E03 — consulta de membros e contas sem vínculo. E04–E07 seguem planejadas.
+Em andamento. Depende da [slice 01 — Fundação](../01-fundacao/README.md), concluída. E01–E03 concluídas: acesso admin dev, modelo/contratos de convites e consultas administrativas de membros/diretório. Próxima: E04 — convites e aceite. E05–E07 seguem planejadas.
 
 - [ ] Slice concluída: implementação e aceites comprovados.
 
@@ -25,13 +25,13 @@ Administrador é um cargo da membership no workspace, não um superadministrador
 | [E07 — Validação integrada](07-validacao-integrada.md)                  | Percurso com administrador e técnico                   | E01–E06      |
 - [x] E01 concluída — conta admin dev vinculada pelo bootstrap; API regular e login em `localhost` validados.
 - [x] E02 concluída — modelo, contratos e migração validados em banco descartável.
-- [ ] E03 concluída.
+- [x] E03 concluída — endpoints administrativos de membros e contas sem vínculo ativo, com autorização por tenant.
 - [ ] E04 concluída.
 - [ ] E05 concluída.
 - [ ] E06 concluída.
 - [ ] E07 concluída.
 
-E01 configurou o acesso interno no banco de dev. E02 definiu contratos e persistência; endpoints e telas de gestão ainda planejados não foram implementados.
+E01 configurou o acesso interno no banco de dev. E02 definiu contratos e persistência. E03 implementou as consultas administrativas; emissão de convite começa em E04 e a interface Shadcn está planejada para E06.
 
 ## Limites e decisões
 

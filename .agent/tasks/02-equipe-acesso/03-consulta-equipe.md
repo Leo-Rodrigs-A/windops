@@ -2,9 +2,9 @@
 
 ## Status e dependências
 
-Planejada. Depende de E02.
+Concluída em 25/10/2026. Depende de E02, concluída.
 
-- [ ] Task concluída.
+- [x] Task concluída.
 
 ## Objetivo e escopo
 
@@ -12,24 +12,26 @@ Permitir que admin consulte membros do próprio workspace e contas sem membershi
 
 ## Plano de implementação
 
-- [ ] Implementar consultas e serviço público de workspaces com autorização admin baseada em sessão completa e membership ativa.
-- [ ] Obter somente ID, nome e e-mail necessários pelo serviço público de identity; manter dados de sessão, senha, OAuth e verificação internos.
-- [ ] Listar membros ativos com cargo e metadados mínimos; definir filtro explícito de revogados se necessário ao fluxo de reintegração.
-- [ ] Listar órfãos considerando ausência de vínculos ativos em todos os workspaces. Não revelar contas exclusivas de outro workspace, mesmo em busca por e-mail exato.
-- [ ] Definir tratamento de contas ainda não verificadas sem permitir que essa consulta substitua a verificação no aceite.
-- [ ] Implementar busca e paginação limitadas, ordenação estável, validação de entradas e DTOs dos contratos E02.
-- [ ] Tratar pesquisa sem resultados, workspace inexistente/forjado e perda de membership durante navegação.
-- [ ] Documentar endpoints no OpenAPI e atualizar os limites públicos dos módulos.
+- [x] Implementar consultas de membros/diretório em `workspaces`, autorizadas para admin com sessão completa e membership ativa verificada em cada requisição.
+- [x] Usar os métodos públicos de `identity` para ler apenas ID, nome, e-mail e data de criação; não retornar sessão, senha, OAuth ou estado de verificação.
+- [x] Listar somente memberships ativas no workspace solicitado; a próxima página usa cursor por UUID, limite 1–100 (padrão 25) e ordenação estável.
+- [x] Listar contas verificadas sem membership ativa em qualquer workspace. Membership revogada isolada não impede reaparecer como órfão; membership ativa em outro workspace impede listagem.
+- [x] Excluir contas ainda não verificadas do diretório. Isso não altera a condição de e-mail verificado exigida para aceite de convite.
+- [x] Implementar busca por nome/e-mail com escape de curingas e paginação cursor; validar parâmetros e contratos sem campos adicionais.
+- [x] Tratar lista vazia, cursor inválido, workspace forjado, usuário técnico, sessão sem segunda etapa, conta de outro workspace e membership revogada.
+- [x] Documentar rotas no OpenAPI e atualizar serviços públicos de identity/workspaces.
 
 ## Validação e aceite
 
-- [ ] Admin vê membros de A e órfãos; não vê usuários exclusivos de B.
-- [ ] Técnico, visitante, sessão pré-código e admin revogado não acessam o diretório.
-- [ ] Conta com vínculo revogado e outro vínculo ativo não aparece como órfã.
-- [ ] Paginação/busca não contornam o filtro tenant nem expõem campos sensíveis.
-- [ ] Integração usa banco descartável com dois tenants; singleton só é removido na fixture.
-- [ ] `pnpm check` e integração de workspaces passam; evidências e índice atualizados.
+- [x] Admin consulta membros de A e órfãos; não vê usuários exclusivos de B, inclusive com busca por e-mail exato.
+- [x] Técnico, visitante, sessão pré-código e admin revogado não acessam o diretório.
+- [x] Conta com membership revogada em A, mas ativa em B, não aparece como órfã; conta só com vínculo revogado pode aparecer.
+- [x] Paginação, busca e DTOs não contornam o filtro tenant nem retornam campos sensíveis.
+- [x] Integração usa banco descartável com dois tenants; índice singleton é removido somente na fixture.
+- [x] `pnpm check` e integração de workspaces passaram; evidências e índice atualizados.
 
 ## Evidências
 
-Pendente. Nenhum endpoint novo de diretório implementado.
+Implementados `GET /api/workspaces/:workspaceId/members` e `GET /api/workspaces/:workspaceId/directory`, documentados no OpenAPI. Admin autorizado vê memberships ativas de seu workspace e contas verificadas sem membership ativa em qualquer workspace. Usuários ligados a outro workspace são excluídos antes de busca; emails não verificados não são mostrados. Respostas contêm somente campos de identidade e membership necessários.
+
+`pnpm check` passou (lint/boundaries, typecheck, 16 testes e builds). `pnpm test:workspaces-integration` passou em PostgreSQL descartável com dois workspaces: incluiu páginas sem repetição, busca exata que não revela usuário de B, membership revogada com vínculo ativo em outro workspace, técnico, sessão pendente e admin revogado. Nenhuma migração foi aplicada ao banco dev persistente. A tela administrativa ainda não existe; implementação visual fica para E06.

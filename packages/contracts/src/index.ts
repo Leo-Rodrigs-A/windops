@@ -10,11 +10,13 @@ export type Health = z.infer<typeof healthSchema>;
 export type ApiError = z.infer<typeof errorSchema>;
 
 export const workspaceRoleSchema = z.enum(['admin', 'technician']);
-export const authenticatedUserSchema = z.object({
-  id: z.uuid(),
-  email: z.email(),
-  name: z.string(),
-});
+export const authenticatedUserSchema = z
+  .object({
+    id: z.uuid(),
+    email: z.email(),
+    name: z.string(),
+  })
+  .strict();
 export const authorizedWorkspaceSchema = z.object({
   id: z.uuid(),
   name: z.string().min(1),
@@ -62,6 +64,12 @@ export const workspaceListQuerySchema = z
     search: z.string().trim().min(1).max(320).optional(),
   })
   .strict();
+export const workspaceMembersQuerySchema = z
+  .object({
+    limit: z.coerce.number().int().min(1).max(100).default(25),
+    cursor: z.uuid().optional(),
+  })
+  .strict();
 export const createWorkspaceInvitationSchema = z
   .object({
     email: z.string().trim().toLowerCase().pipe(z.email()),
@@ -72,25 +80,33 @@ export const acceptWorkspaceInvitationSchema = z
   .object({ token: z.string().regex(/^[A-Za-z0-9_-]{43}$/) })
   .strict();
 export const updateWorkspaceMemberRoleSchema = z.object({ role: workspaceRoleSchema }).strict();
-export const workspaceMemberSchema = z.object({
-  membershipId: z.uuid(),
-  user: authenticatedUserSchema,
-  role: workspaceRoleSchema,
-  createdAt: z.iso.datetime(),
-  revokedAt: z.iso.datetime().nullable(),
-});
-export const workspaceMembersPageSchema = z.object({
-  items: z.array(workspaceMemberSchema),
-  nextCursor: z.uuid().nullable(),
-});
-export const workspaceDirectoryAccountSchema = z.object({
-  ...authenticatedUserSchema.shape,
-  createdAt: z.iso.datetime(),
-});
-export const workspaceDirectoryPageSchema = z.object({
-  items: z.array(workspaceDirectoryAccountSchema),
-  nextCursor: z.uuid().nullable(),
-});
+export const workspaceMemberSchema = z
+  .object({
+    membershipId: z.uuid(),
+    user: authenticatedUserSchema,
+    role: workspaceRoleSchema,
+    createdAt: z.iso.datetime(),
+    revokedAt: z.iso.datetime().nullable(),
+  })
+  .strict();
+export const workspaceMembersPageSchema = z
+  .object({
+    items: z.array(workspaceMemberSchema),
+    nextCursor: z.uuid().nullable(),
+  })
+  .strict();
+export const workspaceDirectoryAccountSchema = z
+  .object({
+    ...authenticatedUserSchema.shape,
+    createdAt: z.iso.datetime(),
+  })
+  .strict();
+export const workspaceDirectoryPageSchema = z
+  .object({
+    items: z.array(workspaceDirectoryAccountSchema),
+    nextCursor: z.uuid().nullable(),
+  })
+  .strict();
 
 export type WorkspaceRole = z.infer<typeof workspaceRoleSchema>;
 export type AuthenticatedUser = z.infer<typeof authenticatedUserSchema>;
@@ -106,4 +122,8 @@ export type WorkspaceInvitationStatus = z.infer<typeof workspaceInvitationStatus
 export type CreateWorkspaceInvitation = z.infer<typeof createWorkspaceInvitationSchema>;
 export type AcceptWorkspaceInvitation = z.infer<typeof acceptWorkspaceInvitationSchema>;
 export type WorkspaceMember = z.infer<typeof workspaceMemberSchema>;
+export type WorkspaceMembersPage = z.infer<typeof workspaceMembersPageSchema>;
 export type WorkspaceDirectoryAccount = z.infer<typeof workspaceDirectoryAccountSchema>;
+export type WorkspaceDirectoryPage = z.infer<typeof workspaceDirectoryPageSchema>;
+export type WorkspaceListQuery = z.infer<typeof workspaceListQuerySchema>;
+export type WorkspaceMembersQuery = z.infer<typeof workspaceMembersQuerySchema>;
