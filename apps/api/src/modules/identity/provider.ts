@@ -10,10 +10,13 @@ export interface GoogleCredentials {
 }
 
 export interface IdentityProvider {
+  googleEnabled: boolean;
   auth: {
     handler: (request: Request) => Promise<Response>;
     api: {
-      getSession: (input: { headers: Headers }) => Promise<{ session: { id: string } } | null>;
+      getSession: (input: {
+        headers: Headers;
+      }) => Promise<{ session: { id: string }; user: { name: string } } | null>;
     };
   };
   challenges: LoginChallengeService;
@@ -191,5 +194,5 @@ export function createIdentityProvider(
         }
       : {}),
   });
-  return { auth, challenges };
+  return { auth, challenges, googleEnabled: Boolean(googleCredentials) };
 }

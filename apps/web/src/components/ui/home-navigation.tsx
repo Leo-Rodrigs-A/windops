@@ -1,9 +1,10 @@
+import { Link } from '@tanstack/react-router';
 import type { LucideIcon } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { Button } from './button';
 
 export type HomeNavigationItem = {
-  href: string;
+  href: '/app';
   label: string;
   icon: LucideIcon;
 };
@@ -38,9 +39,9 @@ export function HomeNavigation({
                 size="icon"
                 variant="ghost"
               >
-                <a href={href}>
+                <Link to={href}>
                   <Icon aria-hidden="true" size={20} strokeWidth={2} />
-                </a>
+                </Link>
               </Button>
             </li>
           );

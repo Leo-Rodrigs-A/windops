@@ -28,6 +28,10 @@ export function registerIdentityRoutes(
 ) {
   const { auth, challenges } = identity;
 
+  app.get('/api/auth/providers', async (_request, reply) =>
+    reply.send({ google: identity.googleEnabled }),
+  );
+
   app.get('/api/auth/second-step/status', async (request, reply) => {
     const state = await getRequestState(request, identity);
     if (!state) return reply.send({ status: 'anonymous' });

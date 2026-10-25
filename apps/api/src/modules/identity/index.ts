@@ -16,7 +16,11 @@ export function createIdentityService(identity: IdentityProvider): IdentityServi
       if (!providerSession) return null;
       const state = await identity.challenges.getState(providerSession.session.id);
       if (!state?.emailSecondStepAt) return null;
-      return { id: state.userId, email: state.email };
+      return {
+        id: state.userId,
+        email: state.email,
+        name: providerSession.user.name,
+      };
     },
   };
 }

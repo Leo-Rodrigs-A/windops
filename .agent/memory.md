@@ -6,6 +6,8 @@ Engenheiros visitam parques sem internet, encontram problemas nos elevadores e f
 
 Idioma inicial pt-BR. Layout mobile e design system são referências do proprietário em arquivos `.pen` do Pencil/pen.dev, mantidos em uma pasta local do Windows fora do repositório. Não copiar nem commitar esses arquivos; usá-los somente como guia para implementar o frontend. Não inventar telas definitivas. Não criar site com serviços externos. Repositório alvo /home/leodevanda/proj-pessoais/windops, Ubuntu-24.04.
 
+Preferência permanente para commits: sugerir mensagens em português; nomenclaturas técnicas podem permanecer em inglês.
+
 ## Fluxo de referência visual — 24/10/2026
 
 - Pencil/pen.dev executa no Windows; Codex CLI executa no WSL2 e consulta os designs pelo MCP do aplicativo Windows. Confirmar o documento ativo antes de usá-lo e não editar designs sem solicitação explícita.
@@ -17,7 +19,8 @@ Idioma inicial pt-BR. Layout mobile e design system são referências do proprie
 ## Organização das tasks — 24/10/2026
 
 - As 11 slices originais foram movidas para [tasks/00 - roadmap](tasks/00%20-%20roadmap/README.md), preservando números e objetivos como visão geral. Novas slices executáveis terão pastas próprias e arquivos de tasks detalhados com status, checkboxes, dependências, plano, testes e evidências, criados progressivamente.
-- Primeira slice: [01 — Fundação](tasks/01-fundacao/README.md), com oito tasks. F01–F06 concluídas; F07 telas e navegação autenticada é a próxima. O schema e estado aplicado estão em [`.agent/database.md`](database.md).
+- Primeira slice: [01 — Fundação](tasks/01-fundacao/README.md), com oito tasks. F01–F07 concluídas; F08 validação integrada é a próxima. O schema e estado aplicado estão em [`.agent/database.md`](database.md).
+- F07 concluída em 25/10/2026: nove rotas, formulários e sessão conectados à API real, autorização por workspace no servidor, home e navegação responsivas. Conta sem workspace pode voltar à home preservando sessão; a top bar mostra o nome real ao lado do logout, com nome fornecido por `/api/me`. O proprietário concluiu cadastro pela interface, confirmou a correção de navegação e validou a leitura com Narrador do Windows. `pnpm check` e integrações auth/workspaces passaram; referências desktop/mobile, teclado e árvore AX inspecionados.
 - F06 concluída em 25/10/2026: documento Pencil e três referências selecionadas para a home reconfirmados; inventário, medidas, tokens e composições aprovadas em [`.agent/design-reference.md`](design-reference.md). Componentes Shadcn, sidebar desktop, navegação mobile e Inter local implementados e comparados visualmente em ambos os viewports. As telas de acesso ausentes estão autorizadas para composição com o design system; o primário usa Tailwind blue-600 por acessibilidade.
 - Preferência permanente de UI: usar Shadcn UI para todos os componentes/controles visuais; compor layouts com os componentes Shadcn e estilizar com Tailwind. Não criar primitives visuais paralelos.
 - Escopo da fundação: PostgreSQL com privilégios mínimos, schema de identidade/memberships, autenticação senha/Google com código obrigatório por e-mail, autorização e bootstrap explícito, componentes e telas iniciais. Convites, administração completa de membros, parques/issues, offline e push continuam para slices futuras; implantação de produção continua no roadmap 11.

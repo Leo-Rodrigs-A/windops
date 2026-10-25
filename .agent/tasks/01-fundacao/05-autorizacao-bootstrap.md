@@ -4,7 +4,7 @@
 
 Concluída em 25/10/2026. Depende de [F03](03-schema-migracoes.md) e [F04](04-autenticacao.md); ambas concluídas.
 
-- [ ] Task concluída.
+- [x] Task concluída.
 
 ## Objetivo e escopo
 
@@ -38,6 +38,7 @@ Dar acesso à home somente a membros autorizados, fornecer contexto real para a 
    ```
 
    Em produção, use `psql` contra uma conexão administrativa obtida por canal operacional seguro e passe os mesmos parâmetros com `-f apps/api/scripts/bootstrap-workspace.sql`. Não salve essa credencial no ambiente de runtime nem em logs.
+
 4. Confirme o resultado pelos UUIDs: `SELECT w.id, w.name, m.user_id, m.role, m.revoked_at FROM public.workspaces w JOIN public.workspace_members m ON m.workspace_id = w.id WHERE w.id = '<uuid-do-workspace>';`. Deve existir um vínculo ativo `admin` para o UUID selecionado.
 5. Repetir os mesmos parâmetros não altera dados. Usuário ausente/não verificado, workspace diferente ou vínculo conflitante abortam a transação; investigue e corrija explicitamente, sem trocar o usuário automaticamente.
 

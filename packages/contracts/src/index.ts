@@ -10,7 +10,11 @@ export type Health = z.infer<typeof healthSchema>;
 export type ApiError = z.infer<typeof errorSchema>;
 
 export const workspaceRoleSchema = z.enum(['admin', 'technician']);
-export const authenticatedUserSchema = z.object({ id: z.uuid(), email: z.email() });
+export const authenticatedUserSchema = z.object({
+  id: z.uuid(),
+  email: z.email(),
+  name: z.string(),
+});
 export const authorizedWorkspaceSchema = z.object({
   id: z.uuid(),
   name: z.string().min(1),
@@ -24,8 +28,10 @@ export const workspaceContextSchema = z.object({
   workspace: z.object({ id: z.uuid(), name: z.string().min(1) }),
   role: workspaceRoleSchema,
 });
+export const authProvidersSchema = z.object({ google: z.boolean() });
 export type WorkspaceRole = z.infer<typeof workspaceRoleSchema>;
 export type AuthenticatedUser = z.infer<typeof authenticatedUserSchema>;
 export type AuthorizedWorkspace = z.infer<typeof authorizedWorkspaceSchema>;
 export type Me = z.infer<typeof meSchema>;
 export type WorkspaceContext = z.infer<typeof workspaceContextSchema>;
+export type AuthProviders = z.infer<typeof authProvidersSchema>;

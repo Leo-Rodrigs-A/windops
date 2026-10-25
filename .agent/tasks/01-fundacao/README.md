@@ -2,7 +2,7 @@
 
 ## Status
 
-Em andamento. F01–F06 concluídas; F07 é a próxima tarefa de implementação.
+Em andamento. F01–F07 concluídas; F08 — validação integrada é a próxima task.
 
 - [ ] Slice concluída: todos os aceites das tasks abaixo comprovados.
 
@@ -26,7 +26,7 @@ O aceite é de desenvolvimento integrado e preparação segura para implantaçã
 - [x] [F04 — Autenticação e segunda etapa](04-autenticacao.md). Concluída em 25/10/2026.
 - [x] [F05 — Autorização e bootstrap](05-autorizacao-bootstrap.md). Concluída em 25/10/2026; depende de F03 e F04.
 - [x] [F06 — Referências e componentes visuais](06-design-system.md). Concluída em 25/10/2026; tokens, componentes Shadcn e comparação visual desktop/mobile registrados.
-- [ ] [F07 — Telas e navegação autenticada](07-interfaces-iniciais.md). Depende de F04, F05 e F06.
+- [x] [F07 — Telas e navegação autenticada](07-interfaces-iniciais.md). Concluída em 25/10/2026; fluxos de interface e Narrador do Windows validados. Depende de F04, F05 e F06.
 - [ ] [F08 — Validação integrada](08-validacao-integrada.md). Depende de F01–F07.
 
 ## Limites

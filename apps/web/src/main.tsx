@@ -2,65 +2,85 @@ import {
   createRootRoute,
   createRoute,
   createRouter,
-  Outlet,
+  lazyRouteComponent,
   RouterProvider,
 } from '@tanstack/react-router';
-import { Wind } from 'lucide-react';
-import { StrictMode, useState } from 'react';
+import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import '@fontsource-variable/inter';
-import { Button } from './components/ui/button';
-import { getHealth } from './lib/api';
+import { AppRoot } from './app-root';
+import { AuthProvider } from './auth/auth-context';
 import './styles.css';
 
-function Landing() {
-  const [status, setStatus] = useState('');
-  const [busy, setBusy] = useState(false);
-  async function check() {
-    setBusy(true);
-    try {
-      await getHealth();
-      setStatus('API disponível.');
-    } catch {
-      setStatus('API indisponível. Verifique o servidor local.');
-    } finally {
-      setBusy(false);
-    }
-  }
+function RootLayout() {
   return (
-    <main className="mx-auto flex min-h-screen max-w-3xl flex-col justify-center gap-7 px-6 py-16">
-      <div className="flex items-center gap-3 text-primary">
-        <Wind aria-hidden="true" size={32} />
-        <span className="text-lg font-semibold">Wind Ops</span>
-      </div>
-      <h1 className="max-w-xl text-4xl font-semibold leading-tight tracking-tight sm:text-5xl">
-        O registro começa no campo.
-      </h1>
-      <p className="max-w-xl text-lg leading-relaxed text-muted-foreground">
-        Um projeto para registrar problemas nos elevadores de torres eólicas e acompanhar o
-        atendimento da equipe, mesmo em locais sem conexão.
-      </p>
-      <div className="rounded-xl border border-border p-5">
-        <h2 className="font-medium">Projeto em construção</h2>
-        <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-          Esta é a base inicial. Login, chamados e operação offline serão disponibilizados nas
-          próximas etapas.
-        </p>
-      </div>
-      <div>
-        <Button onClick={check} disabled={busy}>
-          {busy ? 'Verificando…' : 'Verificar conexão com a API'}
-        </Button>
-        <p role="status" className="mt-3 min-h-6 text-sm text-muted-foreground">
-          {status}
-        </p>
-      </div>
-    </main>
+    <AuthProvider>
+      <AppRoot />
+    </AuthProvider>
   );
 }
-const rootRoute = createRootRoute({ component: Outlet });
-const indexRoute = createRoute({ getParentRoute: () => rootRoute, path: '/', component: Landing });
-const router = createRouter({ routeTree: rootRoute.addChildren([indexRoute]) });
+
+const rootRoute = createRootRoute({ component: RootLayout });
+const accessPages = () => import('./pages/access-pages');
+const workspacePages = () => import('./pages/workspace-pages');
+const indexRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/',
+  component: lazyRouteComponent(accessPages, 'LandingPage'),
+});
+const signInRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/entrar',
+  component: lazyRouteComponent(accessPages, 'SignInPage'),
+});
+const signUpRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/cadastro',
+  component: lazyRouteComponent(accessPages, 'SignUpPage'),
+});
+const verifyEmailRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/verificar-email',
+  component: lazyRouteComponent(accessPages, 'VerifyEmailPage'),
+});
+const secondStepRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/confirmar-acesso',
+  component: lazyRouteComponent(accessPages, 'SecondStepPage'),
+});
+const recoverRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/recuperar-senha',
+  component: lazyRouteComponent(accessPages, 'RecoverPasswordPage'),
+});
+const resetRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/redefinir-senha',
+  component: lazyRouteComponent(accessPages, 'ResetPasswordPage'),
+});
+const noWorkspaceRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/sem-workspace',
+  component: lazyRouteComponent(workspacePages, 'NoWorkspacePage'),
+});
+const appRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/app',
+  component: lazyRouteComponent(workspacePages, 'WorkspaceHomePage'),
+});
+const router = createRouter({
+  routeTree: rootRoute.addChildren([
+    indexRoute,
+    signInRoute,
+    signUpRoute,
+    verifyEmailRoute,
+    secondStepRoute,
+    recoverRoute,
+    resetRoute,
+    noWorkspaceRoute,
+    appRoute,
+  ]),
+});
 declare module '@tanstack/react-router' {
   interface Register {
     router: typeof router;

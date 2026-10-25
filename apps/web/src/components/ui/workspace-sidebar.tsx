@@ -1,3 +1,4 @@
+import { Link } from '@tanstack/react-router';
 import { type LucideIcon, Wind } from 'lucide-react';
 import type { ReactNode } from 'react';
 import {
@@ -16,7 +17,7 @@ import {
 } from './sidebar';
 
 export type WorkspaceNavigationItem = {
-  href: string;
+  href: '/app';
   label: string;
   icon: LucideIcon;
 };
@@ -53,10 +54,10 @@ export function WorkspaceSidebarLayout({
                 {items.map(({ href, label, icon: Icon }) => (
                   <SidebarMenuItem key={href}>
                     <SidebarMenuButton asChild isActive={href === activeHref} tooltip={label}>
-                      <a href={href}>
+                      <Link to={href}>
                         <Icon aria-hidden="true" />
                         <span>{label}</span>
-                      </a>
+                      </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
                 ))}

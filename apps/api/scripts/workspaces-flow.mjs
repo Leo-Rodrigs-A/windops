@@ -287,7 +287,8 @@ try {
   );
   const adminMe = await call('GET', '/api/me', sessions.get(admin.id));
   assert.equal(adminMe.statusCode, 200, adminMe.body);
-  assert.deepEqual(Object.keys(adminMe.json().user).sort(), ['email', 'id']);
+  assert.deepEqual(Object.keys(adminMe.json().user).sort(), ['email', 'id', 'name']);
+  assert.equal(adminMe.json().user.name, 'F05 Test 0');
   assert.deepEqual(adminMe.json().workspaces, [
     { id: workspaceA, name: 'F05 Workspace', role: 'admin' },
   ]);

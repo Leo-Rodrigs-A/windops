@@ -57,7 +57,7 @@ export function createWorkspaceAuthorizationService(
         name: row.name,
         role: row.role,
       }));
-      const authenticatedUser: AuthenticatedUser = { id: user.id, email: user.email };
+      const authenticatedUser: AuthenticatedUser = user;
       return { status: 'ok', value: { user: authenticatedUser, workspaces } };
     },
 
