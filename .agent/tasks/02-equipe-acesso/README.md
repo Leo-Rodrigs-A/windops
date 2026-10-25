@@ -2,7 +2,7 @@
 
 ## Status
 
-Planejada. Depende da [slice 01 — Fundação](../01-fundacao/README.md), concluída.
+Em andamento. Depende da [slice 01 — Fundação](../01-fundacao/README.md), concluída. E01 e E02 concluídas: conta admin configurada no banco persistente; modelo, contratos, migração e limites de acesso da tabela de convites definidos e validados. Próxima: E03 — consulta de membros e contas sem vínculo. E04–E07 seguem planejadas.
 
 - [ ] Slice concluída: implementação e aceites comprovados.
 
@@ -14,25 +14,24 @@ Administrador é um cargo da membership no workspace, não um superadministrador
 
 ## Ordem e dependências
 
-| Task | Entrega | Dependências |
-| --- | --- | --- |
-| [E01 — Conta administradora de desenvolvimento](01-admin-dev.md) | Cadastro pelo proprietário e bootstrap SQL pelo agente | F01–F08 |
-| [E02 — Modelo, contratos e migração](02-modelo-contratos.md) | Convites, estados e matriz de autorização | F01–F08 |
-| [E03 — Consulta de membros e contas sem vínculo](03-consulta-equipe.md) | Consultas administrativas isoladas por tenant | E02 |
-| [E04 — Convites e aceite](04-convites-aceite.md) | Emissão, reenvio, entrega e aceite transacional | E02 |
-| [E05 — Cargos e revogação](05-cargos-revogacao.md) | Promoção, remoção e tratamento de concorrência | E02, E04 |
-| [E06 — Interfaces de equipe e convite](06-interfaces.md) | Fluxos Shadcn ligados à API | E01, E03–E05 |
-| [E07 — Validação integrada](07-validacao-integrada.md) | Percurso com administrador e técnico | E01–E06 |
-
-- [ ] E01 concluída.
-- [ ] E02 concluída.
+| Task                                                                    | Entrega                                                | Dependências |
+| ----------------------------------------------------------------------- | ------------------------------------------------------ | ------------ |
+| [E01 — Conta administradora de desenvolvimento](01-admin-dev.md)        | Cadastro pelo proprietário e bootstrap SQL pelo agente | F01–F08      |
+| [E02 — Modelo, contratos e migração](02-modelo-contratos.md)            | Convites, estados e matriz de autorização              | F01–F08      |
+| [E03 — Consulta de membros e contas sem vínculo](03-consulta-equipe.md) | Consultas administrativas isoladas por tenant          | E02          |
+| [E04 — Convites e aceite](04-convites-aceite.md)                        | Emissão, reenvio, entrega e aceite transacional        | E02          |
+| [E05 — Cargos e revogação](05-cargos-revogacao.md)                      | Promoção, remoção e tratamento de concorrência         | E02, E04     |
+| [E06 — Interfaces de equipe e convite](06-interfaces.md)                | Fluxos Shadcn ligados à API                            | E01, E03–E05 |
+| [E07 — Validação integrada](07-validacao-integrada.md)                  | Percurso com administrador e técnico                   | E01–E06      |
+- [x] E01 concluída — conta admin dev vinculada pelo bootstrap; API regular e login em `localhost` validados.
+- [x] E02 concluída — modelo, contratos e migração validados em banco descartável.
 - [ ] E03 concluída.
 - [ ] E04 concluída.
 - [ ] E05 concluída.
 - [ ] E06 concluída.
 - [ ] E07 concluída.
 
-E01 é a primeira execução para permitir conferir a área interna existente. E02 pode ser preparada enquanto o proprietário cadastra/verifica a conta. Concluir E01 não significa que telas de gestão ainda planejadas já existam.
+E01 configurou o acesso interno no banco de dev. E02 definiu contratos e persistência; endpoints e telas de gestão ainda planejados não foram implementados.
 
 ## Limites e decisões
 

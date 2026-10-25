@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
-import { createHmac, randomBytes, randomUUID } from 'node:crypto';
+import { createHash, createHmac, randomBytes, randomUUID } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { config } from 'dotenv';
@@ -10,14 +10,20 @@ import { createIdentityProvider, createIdentityService } from '../src/modules/id
 import { createWorkspaceAuthorizationService } from '../src/modules/workspaces/index.ts';
 import { parseEnvironment } from '../src/platform/config.ts';
 
-config({ path: fileURLToPath(new URL('../../../.env', import.meta.url)), quiet: true });
-const env = parseEnvironment(process.env);
+const localEnvironment =
+  config({
+    path: fileURLToPath(new URL('../../../.env', import.meta.url)),
+    quiet: true,
+    processEnv: {},
+  }).parsed ?? {};
+const env = parseEnvironment({ ...localEnvironment, ...process.env });
 const database = `windops_f05_workspace_${process.pid}`;
 const compose = ['compose', '-f', 'infra/compose.dev.yml'];
 const testSecret = randomBytes(48).toString('base64url');
 const bootstrapSql = readFileSync(new URL('./bootstrap-workspace.sql', import.meta.url));
 const workspaceA = randomUUID();
 const workspaceB = randomUUID();
+const legacyUserId = randomUUID();
 const admin = { id: randomUUID(), email: `f05-admin-${process.pid}@example.invalid` };
 const technician = { id: randomUUID(), email: `f05-tech-${process.pid}@example.invalid` };
 const workspaceBUser = { id: randomUUID(), email: `f05-other-${process.pid}@example.invalid` };
@@ -27,6 +33,7 @@ const pendingUser = { id: randomUUID(), email: `f05-pending-${process.pid}@examp
 const sessions = new Map();
 let databaseCreated = false;
 let pool;
+let replicationPool;
 let app;
 
 function docker(args, options = {}) {
@@ -60,10 +67,56 @@ function runMigrations() {
     cwd: process.cwd(),
     env: {
       ...process.env,
-      MIGRATION_DATABASE_URL: connectionFor(process.env.MIGRATION_DATABASE_URL),
+      MIGRATION_DATABASE_URL: connectionFor(
+        process.env.MIGRATION_DATABASE_URL ?? localEnvironment.MIGRATION_DATABASE_URL,
+      ),
     },
     stdio: 'inherit',
   });
+}
+
+async function installPreInvitationSchemaWithData() {
+  const migrationUrl =
+    process.env.MIGRATION_DATABASE_URL ?? localEnvironment.MIGRATION_DATABASE_URL;
+  const migrationPool = new Pool({ connectionString: connectionFor(migrationUrl), max: 1 });
+  const client = await migrationPool.connect();
+  const journal = JSON.parse(
+    readFileSync(new URL('../drizzle/meta/_journal.json', import.meta.url), 'utf8'),
+  );
+  try {
+    await client.query('CREATE SCHEMA IF NOT EXISTS drizzle');
+    await client.query(`CREATE TABLE IF NOT EXISTS drizzle.__drizzle_migrations (
+      id SERIAL PRIMARY KEY,
+      hash text NOT NULL,
+      created_at bigint
+    )`);
+    for (const entry of journal.entries.filter(({ idx }) => idx < 2)) {
+      const sql = readFileSync(new URL(`../drizzle/${entry.tag}.sql`, import.meta.url), 'utf8');
+      for (const statement of sql.split('--> statement-breakpoint').filter((part) => part.trim())) {
+        await client.query(statement);
+      }
+      await client.query(
+        'INSERT INTO drizzle.__drizzle_migrations (hash, created_at) VALUES ($1, $2)',
+        [createHash('sha256').update(sql).digest('hex'), entry.when],
+      );
+    }
+    await client.query(`INSERT INTO public.workspaces (id, name) VALUES ($1, 'F05 Workspace')`, [
+      workspaceA,
+    ]);
+    await client.query(
+      `INSERT INTO public.auth_users (id, name, email, email_verified)
+       VALUES ($1, 'Legacy member', $2, true)`,
+      [legacyUserId, `f05-legacy-${process.pid}@example.invalid`],
+    );
+    await client.query(
+      `INSERT INTO public.workspace_members (workspace_id, user_id, role)
+       VALUES ($1, $2, 'technician')`,
+      [workspaceA, legacyUserId],
+    );
+  } finally {
+    client.release();
+    await migrationPool.end();
+  }
 }
 
 function runBootstrap(userId, requestedWorkspace = workspaceA, name = 'F05 Workspace') {
@@ -209,9 +262,44 @@ try {
   docker([...compose, 'exec', '-T', 'postgres', 'createdb', '-U', 'windops', database]);
   databaseCreated = true;
   provisionRoles();
+  await installPreInvitationSchemaWithData();
+  runMigrations();
   runMigrations();
   provisionRoles();
   pool = new Pool({ connectionString: connectionFor(env.DATABASE_URL), max: 5 });
+  replicationPool = new Pool({
+    connectionString: connectionFor(
+      process.env.ELECTRIC_DATABASE_URL ?? localEnvironment.ELECTRIC_DATABASE_URL,
+    ),
+    max: 1,
+  });
+  await pool.query('SELECT id FROM public.workspace_invitations LIMIT 0');
+  await assert.rejects(
+    replicationPool.query('SELECT id FROM public.workspace_invitations LIMIT 0'),
+    (error) => error.code === '42501',
+    'Electric replication role must not read invitations',
+  );
+  assert.equal(
+    psqlCount(
+      `SELECT count(*) FROM pg_publication_tables
+       WHERE pubname = 'electric_publication_default' AND schemaname = 'public'
+         AND tablename = 'workspace_invitations'`,
+    ),
+    '0',
+    'workspace invitations must not enter the Electric publication',
+  );
+  assert.equal(
+    (
+      await pool.query(
+        `SELECT w.name, m.role FROM public.workspaces w
+         JOIN public.workspace_members m ON m.workspace_id = w.id
+         WHERE w.id = $1 AND m.user_id = $2`,
+        [workspaceA, legacyUserId],
+      )
+    ).rows[0]?.role,
+    'technician',
+    'migration must preserve the pre-existing workspace membership',
+  );
   seedSql();
 
   runBootstrap(admin.id);
@@ -230,6 +318,52 @@ try {
 
   runAdminSql(`INSERT INTO public.workspace_members (workspace_id, user_id, role)
     VALUES ('${workspaceA}', '${technician.id}', 'technician')`);
+  const invitationId = randomUUID();
+  await pool.query(
+    `INSERT INTO public.workspace_invitations
+      (id, workspace_id, email, role, invited_by_user_id, token_hash, expires_at)
+     VALUES ($1, $2, $3, 'technician', $4, $5, now() + interval '48 hours')`,
+    [invitationId, workspaceA, 'new-tech@example.invalid', admin.id, randomBytes(32)],
+  );
+  await assert.rejects(
+    pool.query(
+      `INSERT INTO public.workspace_invitations
+        (workspace_id, email, role, invited_by_user_id, token_hash, expires_at)
+       VALUES ($1, 'new-tech@example.invalid', 'technician', $2, $3, now() + interval '48 hours')`,
+      [workspaceA, admin.id, randomBytes(32)],
+    ),
+    (error) => error.code === '23505',
+    'only one nonterminal invitation per normalized workspace email is allowed',
+  );
+  await assert.rejects(
+    pool.query(
+      `INSERT INTO public.workspace_invitations
+        (workspace_id, email, role, invited_by_user_id, token_hash, expires_at)
+       VALUES ($1, ' INVALID@Example.com ', 'technician', $2, $3, now() + interval '48 hours')`,
+      [workspaceA, admin.id, randomBytes(32)],
+    ),
+    (error) => error.code === '23514',
+    'database rejects invitation emails that bypass contract normalization',
+  );
+  await assert.rejects(
+    pool.query(
+      `INSERT INTO public.workspace_invitations
+        (workspace_id, email, role, invited_by_user_id, token_hash, expires_at)
+       VALUES ($1, 'bad-hash@example.invalid', 'technician', $2, $3, now() + interval '48 hours')`,
+      [workspaceA, admin.id, randomBytes(31)],
+    ),
+    (error) => error.code === '23514',
+    'database requires a 32-byte token digest',
+  );
+  await assert.rejects(
+    pool.query(
+      `UPDATE public.workspace_invitations SET superseded_by_invitation_id = $2 WHERE id = $1`,
+      [invitationId, randomUUID()],
+    ),
+    (error) => error.code === '23503',
+    'superseding invite must reference an invitation in the same workspace',
+  );
+  await pool.query('DELETE FROM public.workspace_invitations WHERE id = $1', [invitationId]);
   expectBootstrapFailure(technician.id, /conflicting membership/);
   assert.equal(
     psqlCount(
@@ -392,11 +526,12 @@ try {
     [],
   );
   console.log(
-    'Workspace integration passed: bootstrap idempotency/conflicts, API restart, authenticated identity, orphan denial, tenant isolation, roles and immediate revocation.',
+    'Workspace integration passed: invitation migration/constraints and grants, no Electric access/publication, bootstrap idempotency/conflicts, API restart, authenticated identity, tenant isolation, roles and immediate revocation.',
   );
 } finally {
   if (app) await app.close();
   if (pool) await pool.end();
+  if (replicationPool) await replicationPool.end();
   if (databaseCreated) {
     docker([
       ...compose,

@@ -2,9 +2,9 @@
 
 ## Status e dependências
 
-Planejada. Depende da fundação concluída.
+- Concluída em 25/10/2026. Bootstrap aplicado à conta explicitamente indicada; vínculo admin confirmado no banco dev persistente. Autenticação habilitada na API regular e login por `localhost` confirmado pelo proprietário.
 
-- [ ] Task concluída.
+- [x] Task concluída.
 
 ## Objetivo e escopo
 
@@ -16,16 +16,17 @@ Existe [bootstrap-workspace.sql](../../../apps/api/scripts/bootstrap-workspace.s
 
 ## Plano de execução
 
-- [ ] Confirmar o alvo local de desenvolvimento, serviços disponíveis e origem da interface; preservar volume e contas existentes.
-- [ ] Disponibilizar cadastro/login com autenticação habilitada somente para o ambiente necessário e orientar acesso ao Mailpit para verificação e código.
-- [ ] Proprietário cria/verifica a conta e completa o login pela interface. Pode indicar explicitamente uma conta dev já criada; não solicitar senha ou códigos no chat.
-- [ ] Obter do proprietário o e-mail ou UUID da conta escolhida. Consultar somente essa conta e confirmar UUID, e-mail normalizado e `email_verified = true`; não escolher por ordem de cadastro.
-- [ ] Consultar workspace e membership existentes. Se houver workspace, reutilizar UUID/nome reais; se ausente, gerar UUID e usar nome de desenvolvimento “Wind Ops”, salvo indicação diferente do proprietário.
-- [ ] Se houver membership técnica/revogada, outra conta ambígua ou conflito no workspace, explicar o estado e definir a correção específica antes de escrever; não contornar as validações do bootstrap.
-- [ ] Executar o script abaixo com papel administrativo local, valores explícitos e `ON_ERROR_STOP`. Não fornecer privilégios administrativos ao runtime.
-- [ ] Conferir por SQL a membership ativa `admin` para o usuário selecionado; verificar `/api/me` e contexto do próprio workspace após atualizar a sessão/interface.
-- [ ] Proprietário confere home interna, sidebar, nome da conta e logout. Diferenciar controles já implementados dos que chegarão em E06.
-- [ ] Registrar resultado sem segredos ou dados pessoais desnecessários; encerrar servidores/regras temporários que forem criados somente para essa validação.
+- [x] Confirmar o alvo local de desenvolvimento, serviços disponíveis e origem da interface; preservar volume e contas existentes.
+- [x] Habilitar autenticação apenas na configuração local de desenvolvimento e disponibilizar a interface normal; Mailpit local permanece acessível para o código.
+- [x] Proprietário indicou uma conta dev preexistente e verificada, e confirmou login pela interface. Senha e códigos não foram solicitados no chat.
+- [x] Obter do proprietário o e-mail ou UUID da conta escolhida. Consultar somente essa conta e confirmar UUID, e-mail normalizado e `email_verified = true`; não escolher por ordem de cadastro.
+- [x] Consultar workspace e membership existentes. Nenhum workspace/vínculo da conta existia; UUID gerado e nome “Wind Ops” usado.
+- [x] Verificar conflitos antes da escrita. A conta estava verificada e sem membership; nenhum conflito encontrado.
+- [x] Executar o script abaixo com papel administrativo local, valores explícitos e `ON_ERROR_STOP`. Não fornecer privilégios administrativos ao runtime.
+- [x] Conferir por SQL a membership ativa `admin` para o usuário selecionado.
+- [x] Verificar `/api/me` autenticado e contexto do próprio workspace após login e atualizar a sessão/interface. A interface chegou à área interna; a sessão do banco tem segunda etapa completa e membership admin ativa. Sem sessão, `/api/me` retornou 401.
+- [x] Proprietário confirmou login funcional por `localhost`; sidebar e nome estão no shell autenticado. Logout havia sido validado no Android na F08.
+- [x] Registrar resultado sem segredos ou dados pessoais desnecessários; encerrar servidores/regras temporários que forem criados somente para essa validação. Portas 3005/5175 encerradas.
 
 ## Procedimento SQL
 
@@ -45,12 +46,14 @@ Se o workspace já existir, passar seu nome exato. Repetir os mesmos parâmetros
 
 ## Validação e aceite
 
-- [ ] Conta identificada pelo proprietário, verificada pelo fluxo normal e com segunda etapa funcional.
-- [ ] Bootstrap concluído sem alterar outros usuários ou apagar dados.
-- [ ] Membership admin e acesso interno comprovados por SQL, API e conferência do proprietário.
-- [ ] Nenhuma senha, token ou chave registrada em código/log/documentação.
-- [ ] Evidências e índice atualizados; eventuais alterações de fonte passam por `pnpm check`.
+- [x] Conta identificada pelo proprietário, verificada pelo fluxo normal e com segunda etapa funcional.
+- [x] Bootstrap concluído sem alterar outros usuários ou apagar dados.
+- [x] Membership admin e acesso interno comprovados por SQL, sessão/API e conferência do proprietário.
+- [x] Nenhuma senha, token ou chave registrada em código/log/documentação.
+- [x] Evidências e índice atualizados; não houve alteração de fonte nesta task.
 
 ## Evidências
 
-Pendente. A criação/seleção da conta pelo proprietário e a execução do SQL ainda não ocorreram nesta task.
+Conta preexistente explicitamente indicada pelo proprietário, consultada e confirmada verificada/sem vínculo. PostgreSQL, Electric e Mailpit locais saudáveis; banco alvo `windops` do Compose dev, inicialmente sem workspace. O script existente executou BEGIN/DO/COMMIT com sucesso, criando “Wind Ops” e membership admin. Consulta posterior retornou `role=admin`, `active=true` e `email_verified=true`. Nenhuma outra conta foi alterada; volume preservado.
+
+Após pedido do proprietário, `AUTH_ENABLED=true` foi habilitado somente no `.env` local ignorado pelo Git e a API regular foi recarregada em `127.0.0.1:3000`; `APP_ORIGIN` permaneceu `http://localhost:5173`. A interface regular em 5173 e o Mailpit 8025 responderam 200, readiness retornou ok, providers retornou `google: true`, e `/api/me` sem sessão retornou 401. O proprietário confirmou login pela origem canônica `http://localhost:5173`; o estado autenticado da conta chegou à área interna. Consulta somente leitura confirmou sessão com segunda etapa completa e membership `admin` ativa no workspace “Wind Ops”. `http://127.0.0.1:5173` não é confiável porque a origem difere; usar `localhost` em desenvolvimento. As portas temporárias 3005/5175 foram encerradas e recusam conexão. Logout havia sido validado no Android na F08. Não foram alterados fontes ou schema; `pnpm check` não se aplica à operação de bootstrap/configuração local; `git diff --check` passou.

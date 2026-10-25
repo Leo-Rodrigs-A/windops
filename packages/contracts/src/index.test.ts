@@ -1,5 +1,13 @@
 import { expect, it } from 'vitest';
-import { errorSchema, healthSchema } from './index.js';
+import {
+  acceptWorkspaceInvitationSchema,
+  createWorkspaceInvitationSchema,
+  errorSchema,
+  healthSchema,
+  updateWorkspaceMemberRoleSchema,
+  workspaceInvitationSchema,
+  workspaceListQuerySchema,
+} from './index.js';
 
 it('rejects false-positive health', () => {
   expect(healthSchema.safeParse({ status: 'down', service: 'windops-api' }).success).toBe(false);
@@ -8,4 +16,44 @@ it('requires traceable errors', () => {
   expect(errorSchema.safeParse({ error: { code: 'FAIL', message: 'failure' } }).success).toBe(
     false,
   );
+});
+
+it('normalizes invitation email and defaults invited members to technician', () => {
+  expect(createWorkspaceInvitationSchema.parse({ email: '  TECH@Example.com  ' })).toEqual({
+    email: 'tech@example.com',
+    role: 'technician',
+  });
+});
+
+it('rejects malformed invitation tokens and roles', () => {
+  expect(acceptWorkspaceInvitationSchema.safeParse({ token: 'short' }).success).toBe(false);
+  expect(
+    createWorkspaceInvitationSchema.safeParse({ email: 'tech@example.com', role: 'owner' }).success,
+  ).toBe(false);
+  expect(updateWorkspaceMemberRoleSchema.safeParse({ role: 'owner' }).success).toBe(false);
+});
+
+it('bounds team directory pagination and search', () => {
+  expect(workspaceListQuerySchema.parse({})).toEqual({ limit: 25 });
+  expect(workspaceListQuerySchema.safeParse({ limit: 1000 }).success).toBe(false);
+  expect(workspaceListQuerySchema.safeParse({ limit: 10, workspaceId: 'forged' }).success).toBe(
+    false,
+  );
+});
+
+it('requires invitation responses to omit raw tokens and include delivery state', () => {
+  const response = {
+    id: 'c65e443d-9003-4e89-877c-11b42ea693dd',
+    email: 'tech@example.com',
+    role: 'technician',
+    status: 'pending',
+    deliveryStatus: 'sent',
+    createdAt: '2026-10-25T00:00:00.000Z',
+    expiresAt: '2026-10-27T00:00:00.000Z',
+    sentAt: '2026-10-25T00:00:00.000Z',
+  };
+  expect(workspaceInvitationSchema.safeParse(response).success).toBe(true);
+  expect(
+    workspaceInvitationSchema.safeParse({ ...response, token: 'should-not-be-returned' }).success,
+  ).toBe(false);
 });

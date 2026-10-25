@@ -29,6 +29,7 @@ async function expectDenied(pool, sql, label) {
 
 try {
   await app.query('SELECT id FROM public.workspaces LIMIT 1');
+  await app.query('SELECT id FROM public.workspace_invitations LIMIT 0');
   await app.query('UPDATE public.workspaces SET name = name WHERE false');
   await expectDenied(app, 'CREATE TABLE public.f02_runtime_probe (id integer)', 'runtime DDL');
   await expectDenied(
@@ -87,6 +88,7 @@ try {
     'auth_rate_limits',
     'auth_login_challenges',
     'workspace_members',
+    'workspace_invitations',
   ]) {
     await expectDenied(
       replication,

@@ -9,9 +9,9 @@ Cada nova slice fica em uma pasta `NN-nome/`, com um `README.md` que define resu
 ## Slice atual
 
 - [x] [01 — Fundação](01-fundacao/README.md): F01–F08 concluídas em 25/10/2026, com validação local e Android físico.
-- [ ] [02 — Equipe e acesso ao workspace](02-equipe-acesso/README.md): planejada, com sete tasks E01–E07.
+- [ ] [02 — Equipe e acesso ao workspace](02-equipe-acesso/README.md): E01–E02 concluídas; E03–E07 planejadas.
 
-Slice atual: [02 — Equipe e acesso ao workspace](02-equipe-acesso/README.md), planejada, com os arquivos de tasks preparados e implementação ainda não iniciada. Próxima execução: [E01 — Conta administradora de desenvolvimento](02-equipe-acesso/01-admin-dev.md). O proprietário cadastra/verifica a conta e informa o e-mail/UUID; o agente executa o bootstrap SQL já autorizado para essa conta no banco dev. E02 pode ser preparada enquanto o cadastro é concluído. A fundação permanece concluída, com evidências de banco, autenticação, autorização, interface e Android físico.
+Task atual: [E03 — Consulta de membros e contas sem vínculo](02-equipe-acesso/03-consulta-equipe.md). E01–E02 concluídas: conta admin configurada no banco dev; modelo/contratos de convites e migração `0002_workspace_invitations` validados em banco descartável, sem aplicar ao volume dev persistente. E03–E07 ainda não foram executadas.
 
 ## Convenção de execução
 

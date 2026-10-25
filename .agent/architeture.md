@@ -33,6 +33,8 @@ O modelo relacional está registrado em [`.agent/database.md`](database.md), def
 
 Drizzle controla schema e migrações SQL versionadas. Migrações criam workspaces com UUID e índice singleton, identidade Better Auth, desafios de segunda etapa e `workspace_members` com cargo por workspace. Remover o limite singleton exige migração futura; workspace_id continua obrigatório em todos os dados de negócio. Não haverá endpoint de criação pública de workspace no piloto.
 
+E02 adiciona `workspace_invitations`: token aleatório de uso único (somente SHA-256 armazenado), validade de 48 horas, normalização de e-mail e role selecionada com padrão `technician`. O envio de e-mail ocorre após commit; falha encerra esse convite e recuperação cria outro, invalidando o anterior. `pending` pode indicar queda entre commit e entrega; não existe outbox/retry automático ainda. A tabela não entra na publicação Electric. Contratos/migração estão definidos; endpoints de equipe e convite permanecem para E03–E05.
+
 Administrador vê membros do workspace e contas sem vínculo algum; não vê usuários exclusivos de outro workspace. Acesso a issues, histórico, convites, notificações e shapes sempre valida membership no servidor. Nunca confiar em workspace_id do cliente sem autorização. Cache e fila locais separados por conta e workspace.
 
 O schema Better Auth foi mapeado em F03 com OAuth tokens criptografados e marcador da segunda etapa server-only. As rotas estão implementadas e são montadas somente com `AUTH_ENABLED=true`; por padrão permanecem desativadas. Bootstrap do primeiro workspace/administrador nunca promove automaticamente o primeiro cadastro.

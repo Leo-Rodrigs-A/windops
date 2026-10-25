@@ -96,6 +96,10 @@ RNFs originais: carregamento <2s e SLA 99,5% são metas ainda sem medição/SLO 
 
 ## Situação da entrega
 
+E01 concluída: proprietário indicou uma conta dev preexistente e verificada, sem membership. Bootstrap SQL aplicado no PostgreSQL local persistente `windops`, criando workspace “Wind Ops” e vínculo `admin` ativo, confirmado por consulta. Conta pessoal/UUIDs não reproduzidos. `AUTH_ENABLED=true` habilitado somente no `.env` local ignorado pelo Git; API regular em 3000, Vite em 5173 e Mailpit em 8025. Proprietário confirmou login pela origem `localhost`; consulta confirmou sessão autenticada e membership admin. `127.0.0.1` permanece fora da origem confiável configurada. Portas temporárias 3005/5175 fechadas.
+
+E02 concluída: contratos e tabela `workspace_invitations` modelados com SHA-256 do token, validade de 48h, estados de entrega, unicidade ativa e FKs tenant; migração `0002_workspace_invitations` permanece versionada, não aplicada ao banco dev persistente. Sem acesso/publicação Electric. `pnpm check`, `drizzle-kit check` e integração de workspaces passaram; fixture aplicou `0002` sobre workspace/membership preexistentes em banco descartável, reaplicou migrações e verificou constraints/grants. Próxima: E03 — consulta de membros e contas sem vínculo.
+
 Base criada com apps, contratos, configuração ShadcnUI, health checks, schema inicial, Compose e CI/CD bloqueado por variável. Autenticação Better Auth/Fastify e autorização/bootstrap de workspace estão implementadas e validadas; auth permanece opt-in. PWA, persistência, sync autorizada, issues e notificações continuam planejados.
 
 F04 concluída — 25/10/2026: implementado Better Auth/Fastify e fluxos de senha e OAuth com verificação de e-mail, desafio persistido de 8 dígitos, barreira para sessão pendente, rotação/limites, recuperação, logout e vinculação nas duas ordens. `pnpm check`, integração PostgreSQL/Mailpit com OAuth simulado e login Google real em banco descartável passaram. Banco e página temporários foram removidos. Rotas permanecem desativadas por padrão (`AUTH_ENABLED=false`).
