@@ -36,7 +36,7 @@ it('rejects malformed invitation tokens and roles', () => {
   expect(updateWorkspaceMemberRoleSchema.safeParse({ role: 'owner' }).success).toBe(false);
   expect(
     updateWorkspaceMemberRoleSchema.safeParse({ role: 'technician', expectedRevision: 1 }).success,
-  ).toBe(false);
+  ).toBe(true);
   expect(
     updateWorkspaceMemberRoleSchema.safeParse({ role: 'admin', expectedRevision: 0 }).success,
   ).toBe(false);

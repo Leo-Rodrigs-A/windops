@@ -9,9 +9,9 @@ Cada nova slice fica em uma pasta `NN-nome/`, com um `README.md` que define resu
 ## Slice atual
 
 - [x] [01 — Fundação](01-fundacao/README.md): F01–F08 concluídas em 25/10/2026, com validação local e Android físico.
-- [ ] [02 — Equipe e acesso ao workspace](02-equipe-acesso/README.md): E01–E06 concluídas; E07 validação integrada pendente.
+- [x] [02 — Equipe e acesso ao workspace](02-equipe-acesso/README.md): E01–E07 concluídas; integrações, desktop, Android e ações entre cargos validados. Ajustes visuais mobile ficam para melhoria posterior.
 
-Task atual: [E07 — Validação integrada](02-equipe-acesso/07-validacao-integrada.md). E01–E06 concluídas: conta admin dev, modelo, consultas administrativas, convites/aceite, promoção/revogação e interfaces Shadcn em `/equipe` e `/convite/aceitar`. Migrações `0002` e `0003` aplicadas ao banco dev; SMTP Mailpit, autorização tenant e concorrência foram validados. E07 ainda precisa percorrer a interface com duas contas e registrar validações visuais/dispositivos.
+Slice atual: nenhuma. As slices 01 e 02 estão concluídas. Próximas tarefas serão detalhadas progressivamente quando o próximo domínio do produto for iniciado.
 
 ## Convenção de execução
 

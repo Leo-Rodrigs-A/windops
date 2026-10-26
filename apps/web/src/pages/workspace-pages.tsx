@@ -57,9 +57,9 @@ import {
   getWorkspaceDirectory,
   getWorkspaceInvitations,
   getWorkspaceMembers,
-  promoteWorkspaceMember,
   resendWorkspaceInvitation,
   revokeWorkspaceMember,
+  updateWorkspaceMemberRole,
 } from '../lib/workspace-api';
 
 const homeNavigation: WorkspaceNavigationItem[] = [
@@ -324,7 +324,10 @@ export function TeamManagementPage() {
   const [inviteError, setInviteError] = useState('');
   const [notice, setNotice] = useState('');
   const [actionTarget, setActionTarget] = useState<WorkspaceMember | null>(null);
-  const [memberAction, setMemberAction] = useState<'promote' | 'revoke' | null>(null);
+  const [memberAction, setMemberAction] = useState<
+    'promote' | 'demote' | 'revoke' | 'leave' | null
+  >(null);
+  const [activeAdminCount, setActiveAdminCount] = useState(0);
   const [busyId, setBusyId] = useState('');
   const [actionError, setActionError] = useState('');
 
@@ -350,6 +353,7 @@ export function TeamManagementPage() {
         if (requestId !== membersRequest.current) return;
         setMembers((previous) => (append ? [...previous, ...page.items] : page.items));
         setMemberCursor(page.nextCursor);
+        setActiveAdminCount(page.activeAdminCount);
       } catch (error) {
         if (requestId !== membersRequest.current) return;
         setMembersError(pageErrorMessage(error, 'carregar a equipe'));
@@ -491,18 +495,42 @@ export function TeamManagementPage() {
     setBusyId(actionTarget.membershipId);
     setActionError('');
     try {
-      if (memberAction === 'promote') {
-        await promoteWorkspaceMember(workspaceId, actionTarget.membershipId, actionTarget.revision);
-        setNotice(`${actionTarget.user.name} agora é administrador.`);
+      if (memberAction === 'promote' || memberAction === 'demote') {
+        const role = memberAction === 'promote' ? 'admin' : 'technician';
+        await updateWorkspaceMemberRole(
+          workspaceId,
+          actionTarget.membershipId,
+          role,
+          actionTarget.revision,
+        );
+        setNotice(
+          memberAction === 'promote'
+            ? `${actionTarget.user.name} agora é administrador.`
+            : 'Seu cargo foi alterado para Técnico.',
+        );
+      } else if (memberAction === 'leave') {
+        await revokeWorkspaceMember(workspaceId, actionTarget.membershipId, actionTarget.revision);
+        setNotice('Você saiu do workspace. Sua conta e seu histórico foram preservados.');
       } else {
         await revokeWorkspaceMember(workspaceId, actionTarget.membershipId, actionTarget.revision);
         setNotice(`O acesso de ${actionTarget.user.name} ao workspace foi revogado.`);
       }
+      const isSelfAction = actionTarget.user.id === me.user.id;
       setActionTarget(null);
       setMemberAction(null);
-      await refreshLists();
+      if (isSelfAction) {
+        await refresh();
+      } else {
+        await refreshLists();
+      }
     } catch (error) {
-      setActionError(pageErrorMessage(error, 'alterar o acesso'));
+      setActionError(
+        error instanceof ApiRequestError &&
+          error.status === 409 &&
+          (memberAction === 'demote' || memberAction === 'leave')
+          ? 'Você precisa promover outro técnico a administrador antes de sair ou se rebaixar.'
+          : pageErrorMessage(error, 'alterar o acesso'),
+      );
       if (error instanceof ApiRequestError && error.status === 403) await refresh();
       await refreshLists();
     } finally {
@@ -664,6 +692,41 @@ export function TeamManagementPage() {
                                 >
                                   Revogar
                                 </Button>
+                              </div>
+                            )}
+                            {member.role === 'admin' && member.user.id === me.user.id && (
+                              <div className="flex flex-col items-end gap-2">
+                                <div className="flex justify-end gap-2">
+                                  <Button
+                                    disabled={Boolean(busyId) || activeAdminCount <= 1}
+                                    onClick={() => {
+                                      setActionTarget(member);
+                                      setMemberAction('demote');
+                                      setActionError('');
+                                    }}
+                                    size="sm"
+                                    variant="outline"
+                                  >
+                                    Rebaixar
+                                  </Button>
+                                  <Button
+                                    disabled={Boolean(busyId) || activeAdminCount <= 1}
+                                    onClick={() => {
+                                      setActionTarget(member);
+                                      setMemberAction('leave');
+                                      setActionError('');
+                                    }}
+                                    size="sm"
+                                    variant="ghost"
+                                  >
+                                    Sair do workspace
+                                  </Button>
+                                </div>
+                                {activeAdminCount <= 1 && (
+                                  <span className="max-w-64 text-right text-xs text-muted-foreground">
+                                    Promova um técnico a administrador antes de sair ou se rebaixar.
+                                  </span>
+                                )}
                               </div>
                             )}
                           </TableCell>
@@ -937,14 +1000,24 @@ export function TeamManagementPage() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>
-              {memberAction === 'promote' ? 'Promover administrador?' : 'Revogar acesso?'}
+              {memberAction === 'promote'
+                ? 'Promover administrador?'
+                : memberAction === 'demote'
+                  ? 'Rebaixar seu cargo?'
+                  : memberAction === 'leave'
+                    ? 'Sair do workspace?'
+                    : 'Revogar acesso?'}
             </DialogTitle>
             <DialogDescription>
               {actionTarget && memberAction === 'promote'
                 ? `${actionTarget.user.name} receberá permissões de administrador neste workspace.`
-                : actionTarget
-                  ? `${actionTarget.user.name} perderá acesso a este workspace. A conta e o histórico serão preservados.`
-                  : ''}
+                : memberAction === 'demote'
+                  ? 'Você continuará no workspace como Técnico, mas perderá as permissões administrativas.'
+                  : memberAction === 'leave'
+                    ? 'Você perderá acesso a este workspace. Sua conta e seus dados serão preservados.'
+                    : actionTarget
+                      ? `${actionTarget.user.name} perderá acesso a este workspace. A conta e o histórico serão preservados.`
+                      : ''}
             </DialogDescription>
           </DialogHeader>
           {actionError && <Feedback message={actionError} tone="error" />}
@@ -962,13 +1035,19 @@ export function TeamManagementPage() {
             <Button
               disabled={Boolean(busyId)}
               onClick={() => void confirmMemberAction()}
-              variant={memberAction === 'revoke' ? 'destructive' : 'default'}
+              variant={
+                memberAction === 'revoke' || memberAction === 'leave' ? 'destructive' : 'default'
+              }
             >
               {busyId
                 ? 'Salvando…'
                 : memberAction === 'promote'
                   ? 'Confirmar promoção'
-                  : 'Confirmar revogação'}
+                  : memberAction === 'demote'
+                    ? 'Confirmar rebaixamento'
+                    : memberAction === 'leave'
+                      ? 'Sair do workspace'
+                      : 'Confirmar revogação'}
             </Button>
           </DialogFooter>
         </DialogContent>

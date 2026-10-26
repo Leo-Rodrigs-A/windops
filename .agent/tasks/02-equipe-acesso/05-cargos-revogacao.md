@@ -15,7 +15,7 @@ Permitir que admin promova técnico e revogue membership técnica sem excluir id
 - [x] Implementar comandos pelo serviço público de workspaces, validando sessão completa e cargo admin no servidor.
 - [x] Promover técnico ativo do mesmo workspace; promoção repetida do mesmo alvo já admin retorna estado atual sem incremento adicional.
 - [x] Revogar membership por `revoked_at`, preservando a linha para referências históricas. Não apagar conta, sessões globais ou registros de outros tenants.
-- [x] Rejeitar remoção de admin e auto-revogação. A rota de cargo aceita somente promoção a admin; rebaixamento, exclusão global e sucessão ficam fora desta slice.
+- [x] Proteger outro admin e o último administrador. Permitir auto rebaixamento para Técnico ou saída quando restar outro admin ativo.
 - [x] Adicionar `revision` à membership. Cada mudança de cargo, revogação e reativação incrementa o valor; comandos exigem a revisão que o admin observou. Locks são workspace → membership do ator admin → membership alvo.
 - [x] Invalidar convites não terminais para o e-mail do membro revogado dentro da mesma transação. Aceite posterior usa o lock de workspace e só reintegra com convite emitido depois da revogação.
 - [x] Confirmar perda de acesso na próxima requisição e manter sessões/identidade globais; limpeza de cache offline permanece para a slice offline.
@@ -25,7 +25,7 @@ Permitir que admin promova técnico e revogue membership técnica sem excluir id
 ## Validação e aceite
 
 - [x] Admin promove/remove técnico no workspace; técnico recebe 403 e membership de outro workspace recebe 404.
-- [x] Outro admin e o próprio ator não podem ser removidos; nenhuma regra depende do singleton para autorização.
+- [x] O próprio admin pode se rebaixar ou sair se outro admin ativo permanecer; o último admin recebe conflito e deve promover um técnico antes.
 - [x] Corridas promoção/remoção e aceite/remoção serializam pelo workspace; retry após reintegração não altera o estado mais novo.
 - [x] Conta removida permanece autenticável e `/api/me` não lista o workspace; histórico/membership permanece no banco.
 - [x] Convite antigo é invalidado; convite novo pode reintegrar e incrementa revisão.
@@ -34,6 +34,6 @@ Permitir que admin promova técnico e revogue membership técnica sem excluir id
 
 ## Evidências
 
-Implementadas as rotas `PATCH /api/workspaces/:workspaceId/members/:membershipId/role` e `POST /api/workspaces/:workspaceId/members/:membershipId/revoke`, com autorização tenant no serviço público de `workspaces`, transações e respostas OpenAPI estruturadas. `workspace_members.revision` é monotônica; alteração exige `expectedRevision`, retry de remoção só repete o resultado quando não houve transição posterior. Revogação marca `revoked_at`, incrementa revisão e invalida convites pendentes para o endereço do membro atomicamente. A identidade e sessões permanecem intactas. Nenhum admin ou o próprio ator pode ser removido.
+As rotas `PATCH /api/workspaces/:workspaceId/members/:membershipId/role` e `POST /api/workspaces/:workspaceId/members/:membershipId/revoke` usam autorização tenant, transações e `expectedRevision`. Um admin só altera o próprio cargo para Técnico; outro admin não pode rebaixá-lo nem removê-lo. Auto rebaixamento/saída verifica sob lock do workspace se há outro admin ativo, serializando alterações concorrentes e protegendo o último. Revogação incrementa revisão e invalida convites pendentes do endereço na transação; identidade e sessões globais são preservadas.
 
-Validação: suíte `test:workspaces-integration` passou em PostgreSQL/Mailpit descartáveis com isolamento, promoção, promoção repetida sem efeitos, bloqueio de admin/auto-revogação, técnico e membership estrangeira, corrida promoção/revogação, invalidação de convite, próxima requisição negada, reintegração por convite novo e retry antigo conflitante. Migração `0003_workspace_member_revision` aplicada ao dev persistente; `db:permissions` passou. 16 testes Vitest, Biome, limites de módulos, TypeScript de contracts/API/web e builds passaram. A chamada literal `pnpm check` ficou indisponível nesta sessão porque o executável pnpm local aponta para arquivo temporário removido; executados diretamente lint, typecheck, testes e builds equivalentes. Frontend de equipe e limpeza de cache offline não fazem parte da E05; seguem para E06 e slice offline. Nenhuma alteração foi aplicada a convites/usuários reais.
+Validação em 25/10 passou em banco descartável: admin se rebaixa quando outro admin permanece, o segundo admin pode promovê-lo novamente, saída própria revoga o acesso na requisição seguinte e o admin restante não consegue sair nem se rebaixar. Os mesmos bloqueios de último admin foram exercitados antes de haver sucessor. A regra não exige migração; nenhum dado dev real foi alterado.

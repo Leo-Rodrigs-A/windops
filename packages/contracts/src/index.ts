@@ -81,7 +81,7 @@ export const acceptWorkspaceInvitationSchema = z
   .object({ token: z.string().regex(/^[A-Za-z0-9_-]{43}$/) })
   .strict();
 export const updateWorkspaceMemberRoleSchema = z
-  .object({ role: z.literal('admin'), expectedRevision: z.number().int().positive() })
+  .object({ role: workspaceRoleSchema, expectedRevision: z.number().int().positive() })
   .strict();
 export const revokeWorkspaceMemberSchema = z
   .object({ expectedRevision: z.number().int().positive() })
@@ -108,6 +108,7 @@ export const workspaceMembersPageSchema = z
   .object({
     items: z.array(workspaceMemberSchema),
     nextCursor: z.uuid().nullable(),
+    activeAdminCount: z.number().int().nonnegative(),
   })
   .strict();
 export const workspaceDirectoryAccountSchema = z

@@ -115,7 +115,7 @@ async function deliverInvitation(
   invitation: InvitationRow,
   token: string,
 ): Promise<WorkspaceOperationResult<WorkspaceInvitation>> {
-  const link = new URL('/invite/accept', appOrigin);
+  const link = new URL('/convite/aceitar', appOrigin);
   link.hash = new URLSearchParams({ token }).toString();
   try {
     await emailSender.send({
@@ -189,10 +189,11 @@ export interface WorkspaceAuthorizationService {
     token: AcceptWorkspaceInvitation['token'],
     clientIp: string,
   ): Promise<WorkspaceOperationResult<WorkspaceContext>>;
-  promoteMember(
+  updateMemberRole(
     headers: IncomingHttpHeaders,
     workspaceId: string,
     membershipId: string,
+    role: WorkspaceRole,
     expectedRevision: number,
   ): Promise<WorkspaceOperationResult<WorkspaceMemberMutation>>;
   revokeMember(
@@ -301,7 +302,19 @@ export function createWorkspaceAuthorizationService(
       }
       return {
         status: 'ok',
-        value: { items, nextCursor },
+        value: {
+          items,
+          nextCursor,
+          activeAdminCount: Number(
+            (
+              await pool.query<{ count: string }>(
+                `SELECT count(*)::text AS count FROM public.workspace_members
+                 WHERE workspace_id = $1 AND role = 'admin' AND revoked_at IS NULL`,
+                [workspaceId],
+              )
+            ).rows[0]?.count ?? 0,
+          ),
+        },
       };
     },
 
@@ -596,7 +609,7 @@ export function createWorkspaceAuthorizationService(
       };
     },
 
-    async promoteMember(headers, workspaceId, membershipId, expectedRevision) {
+    async updateMemberRole(headers, workspaceId, membershipId, role, expectedRevision) {
       const actor = await identity.resolveAuthenticatedUser(headers);
       if (!actor) return { status: 'unauthenticated' };
       const client = await pool.connect();
@@ -623,11 +636,16 @@ export function createWorkspaceAuthorizationService(
           await client.query('ROLLBACK');
           return { status: 'not_found' };
         }
-        if (target.userId === actor.id || target.revokedAt) {
+        if (target.revokedAt) {
           await client.query('ROLLBACK');
           return { status: 'conflict' };
         }
-        if (target.role === 'admin') {
+        const isSelf = target.userId === actor.id;
+        if ((isSelf && role !== 'technician') || (!isSelf && role !== 'admin')) {
+          await client.query('ROLLBACK');
+          return { status: 'conflict' };
+        }
+        if (target.role === role) {
           const value = {
             membershipId: target.id,
             role: target.role,
@@ -636,6 +654,17 @@ export function createWorkspaceAuthorizationService(
           } satisfies WorkspaceMemberMutation;
           await client.query('COMMIT');
           return { status: 'ok', value };
+        }
+        if (target.role === 'admin' && role === 'technician') {
+          const admins = await client.query<{ count: string }>(
+            `SELECT count(*)::text AS count FROM public.workspace_members
+             WHERE workspace_id = $1 AND role = 'admin' AND revoked_at IS NULL`,
+            [workspaceId],
+          );
+          if (Number(admins.rows[0]?.count ?? 0) <= 1) {
+            await client.query('ROLLBACK');
+            return { status: 'conflict' };
+          }
         }
         if (target.revision !== expectedRevision) {
           await client.query('ROLLBACK');
@@ -648,10 +677,10 @@ export function createWorkspaceAuthorizationService(
           revision: number;
         }>(
           `UPDATE public.workspace_members
-           SET role = 'admin', revision = revision + 1
+           SET role = $4, revision = revision + 1
            WHERE id = $1 AND workspace_id = $2 AND revision = $3 AND revoked_at IS NULL
            RETURNING id AS "membershipId", role, revoked_at AS "revokedAt", revision`,
-          [membershipId, workspaceId, expectedRevision],
+          [membershipId, workspaceId, expectedRevision, role],
         );
         const row = updated.rows[0];
         if (!row) {
@@ -699,7 +728,8 @@ export function createWorkspaceAuthorizationService(
           await client.query('ROLLBACK');
           return { status: 'not_found' };
         }
-        if (target.userId === actor.id || target.role === 'admin') {
+        const isSelf = target.userId === actor.id;
+        if (target.role === 'admin' && !isSelf) {
           await client.query('ROLLBACK');
           return { status: 'conflict' };
         }
@@ -716,6 +746,17 @@ export function createWorkspaceAuthorizationService(
           }
           await client.query('ROLLBACK');
           return { status: 'conflict' };
+        }
+        if (isSelf && target.role === 'admin') {
+          const admins = await client.query<{ count: string }>(
+            `SELECT count(*)::text AS count FROM public.workspace_members
+             WHERE workspace_id = $1 AND role = 'admin' AND revoked_at IS NULL`,
+            [workspaceId],
+          );
+          if (Number(admins.rows[0]?.count ?? 0) <= 1) {
+            await client.query('ROLLBACK');
+            return { status: 'conflict' };
+          }
         }
         if (target.revision !== expectedRevision) {
           await client.query('ROLLBACK');

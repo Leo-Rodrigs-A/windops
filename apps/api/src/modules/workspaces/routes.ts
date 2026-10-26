@@ -123,11 +123,12 @@ export function registerWorkspaceRoutes(
     },
     async (request, reply) => {
       const { workspaceId, membershipId } = memberParams.parse(request.params);
-      const { expectedRevision } = updateWorkspaceMemberRoleSchema.parse(request.body);
-      const result = await authorization.promoteMember(
+      const { role, expectedRevision } = updateWorkspaceMemberRoleSchema.parse(request.body);
+      const result = await authorization.updateMemberRole(
         request.headers,
         workspaceId,
         membershipId,
+        role,
         expectedRevision,
       );
       if (result.status !== 'ok') return operationError(reply, request, result.status, 'member');

@@ -581,6 +581,7 @@ try {
   );
   assert.equal(members.statusCode, 200, members.body);
   assert.equal(members.json().items.length, 3);
+  assert.equal(members.json().activeAdminCount, 1);
   assert.deepEqual(
     Object.keys(members.json().items[0].user).sort(),
     ['email', 'id', 'name'],
@@ -602,6 +603,32 @@ try {
   assert.notEqual(
     membersSecondPage.json().items[0].membershipId,
     membersFirstPage.json().items[0].membershipId,
+  );
+  const initialAdminMembership = members.json().items.find((item) => item.user.id === admin.id);
+  assert.ok(initialAdminMembership);
+  assert.equal(
+    (
+      await call(
+        'PATCH',
+        `/api/workspaces/${workspaceA}/members/${initialAdminMembership.membershipId}/role`,
+        sessions.get(admin.id),
+        { role: 'technician', expectedRevision: initialAdminMembership.revision },
+      )
+    ).statusCode,
+    409,
+    'the last active admin cannot demote themselves',
+  );
+  assert.equal(
+    (
+      await call(
+        'POST',
+        `/api/workspaces/${workspaceA}/members/${initialAdminMembership.membershipId}/revoke`,
+        sessions.get(admin.id),
+        { expectedRevision: initialAdminMembership.revision },
+      )
+    ).statusCode,
+    409,
+    'the last active admin cannot leave the workspace',
   );
   const searchedMembers = await call(
     'GET',
@@ -1023,13 +1050,6 @@ try {
     { expectedRevision: promoted.json().revision },
   );
   assert.equal(adminCannotBeRemoved.statusCode, 409);
-  const selfRemoval = await call(
-    'POST',
-    `/api/workspaces/${workspaceA}/members/${membershipFor(admin.id).membershipId}/revoke`,
-    sessions.get(admin.id),
-    { expectedRevision: membershipFor(admin.id).revision },
-  );
-  assert.equal(selfRemoval.statusCode, 409);
   const foreignMembership = await pool.query(
     `SELECT id FROM public.workspace_members WHERE workspace_id = $1 AND user_id = $2`,
     [workspaceB, workspaceBUser.id],
@@ -1193,6 +1213,92 @@ try {
       .statusCode,
     403,
     'a concurrent invitation acceptance cannot bypass completed revocation',
+  );
+  const beforeSelfChanges = await call(
+    'GET',
+    `/api/workspaces/${workspaceA}/members?limit=100`,
+    sessions.get(admin.id),
+  );
+  const adminMembership = beforeSelfChanges.json().items.find((item) => item.user.id === admin.id);
+  assert.ok(adminMembership);
+  assert.ok(beforeSelfChanges.json().activeAdminCount >= 2);
+  const demotedSelf = await call(
+    'PATCH',
+    `/api/workspaces/${workspaceA}/members/${adminMembership.membershipId}/role`,
+    sessions.get(admin.id),
+    { role: 'technician', expectedRevision: adminMembership.revision },
+  );
+  assert.equal(demotedSelf.statusCode, 200, demotedSelf.body);
+  assert.equal(demotedSelf.json().role, 'technician');
+  const restoredAdmin = await call(
+    'PATCH',
+    `/api/workspaces/${workspaceA}/members/${adminMembership.membershipId}/role`,
+    sessions.get(revokedPlusActive.id),
+    { role: 'admin', expectedRevision: demotedSelf.json().revision },
+  );
+  assert.equal(restoredAdmin.statusCode, 200, restoredAdmin.body);
+  const leftByAdmin = await call(
+    'POST',
+    `/api/workspaces/${workspaceA}/members/${adminMembership.membershipId}/revoke`,
+    sessions.get(admin.id),
+    { expectedRevision: restoredAdmin.json().revision },
+  );
+  assert.equal(leftByAdmin.statusCode, 200, leftByAdmin.body);
+  assert.ok(leftByAdmin.json().revokedAt);
+  assert.equal(
+    (await call('GET', `/api/workspaces/${workspaceA}/context`, sessions.get(admin.id))).statusCode,
+    403,
+    'a self-departing admin loses workspace access on the next request',
+  );
+  const adminsAfterSelfLeave = await call(
+    'GET',
+    `/api/workspaces/${workspaceA}/members?limit=100`,
+    sessions.get(revokedPlusActive.id),
+  );
+  for (const extraAdmin of adminsAfterSelfLeave
+    .json()
+    .items.filter((item) => item.role === 'admin' && item.user.id !== revokedPlusActive.id)) {
+    const selfDemotion = await call(
+      'PATCH',
+      `/api/workspaces/${workspaceA}/members/${extraAdmin.membershipId}/role`,
+      sessions.get(extraAdmin.user.id),
+      { role: 'technician', expectedRevision: extraAdmin.revision },
+    );
+    assert.equal(selfDemotion.statusCode, 200, selfDemotion.body);
+  }
+  const onlyAdminMembers = await call(
+    'GET',
+    `/api/workspaces/${workspaceA}/members?limit=100`,
+    sessions.get(revokedPlusActive.id),
+  );
+  assert.equal(onlyAdminMembers.json().activeAdminCount, 1);
+  const lastAdminMembership = onlyAdminMembers
+    .json()
+    .items.find((item) => item.user.id === revokedPlusActive.id);
+  assert.ok(lastAdminMembership);
+  assert.equal(
+    (
+      await call(
+        'PATCH',
+        `/api/workspaces/${workspaceA}/members/${lastAdminMembership.membershipId}/role`,
+        sessions.get(revokedPlusActive.id),
+        { role: 'technician', expectedRevision: lastAdminMembership.revision },
+      )
+    ).statusCode,
+    409,
+    'the remaining last admin cannot demote themselves',
+  );
+  assert.equal(
+    (
+      await call(
+        'POST',
+        `/api/workspaces/${workspaceA}/members/${lastAdminMembership.membershipId}/revoke`,
+        sessions.get(revokedPlusActive.id),
+        { expectedRevision: lastAdminMembership.revision },
+      )
+    ).statusCode,
+    409,
+    'the remaining last admin cannot leave the workspace',
   );
   runAdminSql(`UPDATE public.workspace_members SET revoked_at = clock_timestamp()
     WHERE workspace_id = '${workspaceA}' AND user_id = '${admin.id}'`);

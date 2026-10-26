@@ -232,7 +232,14 @@ try {
     '-Atc',
     'SELECT count(*) FROM drizzle.__drizzle_migrations',
   ]);
-  assert.equal(migrationCount, '2', 'both migrations must survive a PostgreSQL restart');
+  const expectedMigrationCount = JSON.parse(
+    readFileSync(new URL('../drizzle/meta/_journal.json', import.meta.url), 'utf8'),
+  ).entries.length;
+  assert.equal(
+    Number(migrationCount),
+    expectedMigrationCount,
+    'every current migration must survive a PostgreSQL restart',
+  );
 
   docker([
     'compose',

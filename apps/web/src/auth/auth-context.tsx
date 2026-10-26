@@ -165,6 +165,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       hasPendingInvitation() &&
       (snapshot.status === 'authenticated' || snapshot.status === 'orphan') &&
       path !== '/convite/aceitar' &&
+      path !== '/invite/accept' &&
       !invitationAuthRoutes.has(path)
     ) {
       void navigate({ to: '/convite/aceitar', replace: true });
@@ -179,6 +180,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       snapshot.status === 'orphan' &&
       path !== '/' &&
       path !== '/sem-workspace' &&
+      path !== '/convite/aceitar' &&
+      path !== '/invite/accept' &&
       path !== '/redefinir-senha'
     ) {
       void navigate({ to: '/sem-workspace', replace: true });

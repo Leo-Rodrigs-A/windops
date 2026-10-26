@@ -68,7 +68,7 @@ it('documents protected identity and workspace context routes', async () => {
     async acceptInvitation() {
       return { status: 'unauthenticated' };
     },
-    async promoteMember() {
+    async updateMemberRole() {
       return { status: 'unauthenticated' };
     },
     async revokeMember() {

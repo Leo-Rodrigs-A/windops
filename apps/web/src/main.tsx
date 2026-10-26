@@ -81,6 +81,12 @@ const invitationAcceptRoute = createRoute({
   path: '/convite/aceitar',
   component: lazyRouteComponent(workspacePages, 'InvitationAcceptPage'),
 });
+// Keep invitations already delivered with the previous URL working until they expire.
+const legacyInvitationAcceptRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/invite/accept',
+  component: lazyRouteComponent(workspacePages, 'InvitationAcceptPage'),
+});
 const router = createRouter({
   routeTree: rootRoute.addChildren([
     indexRoute,
@@ -94,6 +100,7 @@ const router = createRouter({
     appRoute,
     teamRoute,
     invitationAcceptRoute,
+    legacyInvitationAcceptRoute,
   ]),
 });
 declare module '@tanstack/react-router' {

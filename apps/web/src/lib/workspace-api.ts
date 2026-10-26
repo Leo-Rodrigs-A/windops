@@ -60,15 +60,16 @@ export async function resendWorkspaceInvitation(workspaceId: string, invitationI
   ) as WorkspaceInvitation;
 }
 
-export async function promoteWorkspaceMember(
+export async function updateWorkspaceMemberRole(
   workspaceId: string,
   membershipId: string,
+  role: 'admin' | 'technician',
   expectedRevision: number,
 ) {
   return workspaceMemberMutationSchema.parse(
     await requestJson(`${workspacePath(workspaceId)}/members/${membershipId}/role`, {
       method: 'PATCH',
-      body: JSON.stringify({ role: 'admin', expectedRevision }),
+      body: JSON.stringify({ role, expectedRevision }),
     }),
   ) as WorkspaceMemberMutation;
 }
