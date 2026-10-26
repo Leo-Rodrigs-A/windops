@@ -1,2 +1,7 @@
-// Public module entrypoint. Business behavior belongs to its documented slice.
-export {};
+export { registerParksRoutes } from './routes.js';
+export {
+  type CatalogReadResult,
+  createParksCatalogService,
+  type ParksCatalogService,
+  type ParksQueryExecutor,
+} from './service.js';

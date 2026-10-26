@@ -1,5 +1,6 @@
 import { buildApp } from './app.js';
 import { createIdentityProvider, createIdentityService } from './modules/identity/index.js';
+import { createParksCatalogService } from './modules/parks/index.js';
 import { createWorkspaceAuthorizationService } from './modules/workspaces/index.js';
 import { loadEnvironment } from './platform/config.js';
 import { createDatabase } from './platform/database/client.js';
@@ -41,6 +42,7 @@ const app = buildApp({
   trustProxy: env.NODE_ENV === 'production',
   ...(identity ? { identity } : {}),
   workspaceAuthorization,
+  parksCatalog: createParksCatalogService(pool),
   authOrigin: env.APP_ORIGIN,
   ready: async () => {
     await pool.query('SELECT 1');

@@ -2,7 +2,7 @@
 
 ## Status
 
-Em andamento. P01 e P02 concluídas em 26/10/2026; P03–P06 pendentes.
+Em andamento. P01–P03 concluídas em 26/10/2026; P04–P06 pendentes.
 
 - [ ] Slice concluída
 
@@ -24,7 +24,7 @@ As slices [01](../01-fundacao/README.md) e [02](../02-equipe-acesso/README.md) e
 | [P06 — Validação integrada e encerramento](06-validacao-integrada.md) | Validação integrada e encerramento | P01–P05 concluídas.        |
 - [x] P01 — Modelo e contratos — concluída em 26/10/2026; contratos e matriz documentados, Biome/boundaries/typecheck/Vitest aprovados diretamente.
 - [x] P02 — Schema, migração e privilégios — concluída em 26/10/2026; `0004` aplicada e integração de schema/grants aprovada.
-- [ ] P03 — Consultas do catálogo
+- [x] P03 — Consultas do catálogo — concluída em 26/10/2026; GETs e autorização tenant validados em integração.
 - [ ] P04 — Cadastro e edição administrativa
 - [ ] P05 — Interface de parques e turbinas
 - [ ] P06 — Validação integrada e encerramento

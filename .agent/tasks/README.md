@@ -11,15 +11,17 @@ Cada nova slice fica em uma pasta `NN-nome/`, com um `README.md` que define resu
 - [x] [01 — Fundação](01-fundacao/README.md): F01–F08 concluídas em 25/10/2026, com validação local e Android físico.
 - [x] [02 — Equipe e acesso ao workspace](02-equipe-acesso/README.md): E01–E07 concluídas; integrações, desktop, Android e ações entre cargos validados. Ajustes visuais mobile ficam para melhoria posterior.
 
-- [ ] [03 — Parques e turbinas](03-parques-turbinas/README.md): P01–P02 concluídas; P03–P06 pendentes. Modelo e schema do catálogo persistidos; endpoints, cadastro/consulta e interface ainda pendentes.
+- [ ] [03 — Parques e turbinas](03-parques-turbinas/README.md): P01–P03 concluídas; P04–P06 pendentes. Schema e consultas tenant-scoped implementados; escrita e interface pendentes.
 
-Slice atual: 03, em andamento. Próxima task: [P03 — Consultas do catálogo](03-parques-turbinas/03-consultas-autorizadas.md). Desativação depende da integração com issues e catálogo offline permanece na etapa 07 do roadmap.
+Slice atual: 03, em andamento. Próxima task: [P04 — Cadastro e edição administrativa](03-parques-turbinas/04-cadastro-edicao.md). Desativação depende da integração com issues e catálogo offline permanece na etapa 07 do roadmap.
 
 Verificação do planejamento em 26/10/2026: links locais dos documentos alterados e consistência das seis tasks conferidos; `git diff --check` passou. Testes da aplicação não executados, pois esta entrega é somente documental.
 
 P01 concluída em 26/10/2026: contratos Zod e modelo de banco registrados; equivalentes diretos de lint, boundaries, typecheck e testes passaram. `pnpm check` ficou sem saída. Sem migração ou alteração de dados dev.
 
 P02 concluída em 26/10/2026: migração `0004_parks_turbines` aplicada ao banco dev sem inserir inventário; instalação vazia, upgrade e privilégios validados em bancos descartáveis e no dev. Ver evidências na task P02.
+
+P03 concluída em 26/10/2026: consultas GET de parks/turbines com autorização tenant, paginação, busca e erros que não revelam recursos de outros workspaces. Integração PostgreSQL descartável aprovada. Ver evidências na task P03.
 
 ## Convenção de execução
 

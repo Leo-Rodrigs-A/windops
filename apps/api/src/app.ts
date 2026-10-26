@@ -9,6 +9,7 @@ import {
   type ZodTypeProvider,
 } from 'fastify-type-provider-zod';
 import { type IdentityProvider, registerIdentityRoutes } from './modules/identity/index.js';
+import { type ParksCatalogService, registerParksRoutes } from './modules/parks/index.js';
 import { registerSyncRoutes } from './modules/sync/routes.js';
 import {
   registerWorkspaceRoutes,
@@ -21,6 +22,7 @@ export function buildApp(options: {
   trustProxy?: boolean;
   identity?: IdentityProvider;
   workspaceAuthorization?: WorkspaceAuthorizationService;
+  parksCatalog?: ParksCatalogService;
   authOrigin?: string;
 }) {
   const app = Fastify({
@@ -88,6 +90,8 @@ export function buildApp(options: {
       registerIdentityRoutes(app, options.identity, options.authOrigin);
     if (options.workspaceAuthorization)
       registerWorkspaceRoutes(app, options.workspaceAuthorization);
+    if (options.workspaceAuthorization && options.parksCatalog)
+      registerParksRoutes(app, options.workspaceAuthorization, options.parksCatalog);
     if (options.docs) app.register(scalar, { routePrefix: '/api/docs' });
   });
   return app;
