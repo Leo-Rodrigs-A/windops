@@ -25,8 +25,9 @@ Comandos admin para parks/turbines; não arquiva, conclui ou reativa issues.
 ## Plano de implementação
 
 - [ ] Implementar comandos explícitos com revisão, recibo idempotente e resultado discriminado excluído/arquivado. Restauração só para recurso arquivado; técnico nunca escreve.
-- [ ] Sem nenhuma associação atual ou histórica, excluir definitivamente turbina; para parque considerar agregado inteiro e remover dependências sem deixar órfãos. Com qualquer associação, arquivar preservando recursos e histórico.
-- [ ] Aplicar decisão registrada em I01 sobre atividade herdada, turbinas individualmente arquivadas e restauração; não reativar implicitamente equipamentos que já estavam arquivados.
+- [ ] Sem nenhuma referência atual ou histórica, excluir definitivamente turbina; para parque considerar agregado inteiro e remover dependências sem deixar órfãos. Com histórico e sem issue aberta atualmente localizada, arquivar preservando recursos e histórico.
+- [ ] Antes de arquivar turbina, bloquear se ela tiver issue aberta atualmente associada; antes de arquivar parque, bloquear se qualquer turbina descendente tiver issue aberta. Retornar conflito explícito sem mutação.
+- [ ] Aplicar decisão registrada em I01 sobre atividade herdada, turbinas individualmente arquivadas e restauração; parque arquivado torna turbinas efetivamente indisponíveis e restaurá-lo não reativa turbinas antes arquivadas individualmente.
 - [ ] Usar serviços públicos de issues/audit e parks, sem imports privados ou consultas SQL diretas às tabelas de outro módulo; composição transacional explícita sem dependência circular de inicialização.
 - [ ] Serializar exclusão/arquivo com criação e mudança de localização de issue, e arquivo de parque com cadastro/edição/restauração de turbina. Revisar consultas e comandos existentes da slice 03 para atividade efetiva.
 - [ ] Preservar unicidade de código arquivado; registrar ator e resultado do lifecycle de equipamento em registro durável apropriado definido em I01, sem inventar uma issue para auditá-lo.
@@ -37,7 +38,7 @@ Contratos de issues, audit, sync e/ou parks conforme o escopo acima e decisões 
 
 ## Testes e aceite
 
-- [ ] Testar parque vazio, com turbinas sem histórico, com issue em uma turbina, equipamento somente referenciado no histórico e combinações de arquivo/restauração de pai/filha.
+- [ ] Testar parque vazio, com turbinas sem histórico, com issue aberta em uma turbina, equipamento somente referenciado em histórico fechado e combinações de arquivo/restauração de pai/filha.
 - [ ] Exercitar ambos os resultados das corridas criação/edição versus exclusão/arquivo e criação/restauração de turbina versus arquivo de parque; verificar rollback integral, ausência de órfãos/deadlocks e novas issues negadas em localização inativa.
 - [ ] Testar retry após exclusão física usando recibo autorizado, revisão obsoleta, isolamento tenant e permissões; executar pnpm check e integrações issues/parks.
 - [ ] Registrar arquivos alterados, comandos/resultados e limitações antes de marcar conclusão.

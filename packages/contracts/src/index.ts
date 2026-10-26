@@ -179,6 +179,103 @@ export const turbinesPageSchema = z
   .object({ items: z.array(turbineSchema), nextCursor: z.uuid().nullable() })
   .strict();
 
+export const issueStatusSchema = z.enum(['pending', 'in_progress']);
+export const issueEventTypeSchema = z.enum([
+  'created',
+  'edited',
+  'started',
+  'returned',
+  'released',
+]);
+export const issueLocationSchema = z.object({ parkId: z.uuid(), turbineId: z.uuid() }).strict();
+const issueTextSchema = z.string().trim().min(1).max(10_000);
+export const issueSchema = z
+  .object({
+    id: z.uuid(),
+    workspaceId: z.uuid(),
+    parkId: z.uuid(),
+    turbineId: z.uuid(),
+    creatorMembershipId: z.uuid(),
+    creator: authenticatedUserSchema,
+    handlerMembershipId: z.uuid().nullable(),
+    handler: authenticatedUserSchema.nullable(),
+    text: issueTextSchema,
+    status: issueStatusSchema,
+    createdAt: z.iso.datetime(),
+    updatedAt: z.iso.datetime(),
+    revision: z.number().int().positive(),
+  })
+  .strict();
+export const issueEventSchema = z
+  .object({
+    id: z.uuid(),
+    issueId: z.uuid(),
+    workspaceId: z.uuid(),
+    actorMembershipId: z.uuid().nullable(),
+    actorLabel: z.string().min(1),
+    type: issueEventTypeSchema,
+    occurredAt: z.iso.datetime(),
+    before: z.record(z.string(), z.unknown()).nullable(),
+    after: z.record(z.string(), z.unknown()).nullable(),
+  })
+  .strict();
+export const issueEventPageSchema = z
+  .object({ items: z.array(issueEventSchema), nextCursor: z.uuid().nullable() })
+  .strict();
+export const issuesQuerySchema = z
+  .object({
+    limit: z.coerce.number().int().min(1).max(100).default(25),
+    cursor: z.uuid().optional(),
+    status: issueStatusSchema.optional(),
+    parkId: z.uuid().optional(),
+    turbineId: z.uuid().optional(),
+  })
+  .strict();
+export const issueEventQuerySchema = z
+  .object({
+    limit: z.coerce.number().int().min(1).max(100).default(25),
+    cursor: z.uuid().optional(),
+  })
+  .strict();
+export const issueParamsSchema = z.object({ issueId: z.uuid() }).strict();
+export const issuesPageSchema = z
+  .object({ items: z.array(issueSchema), nextCursor: z.uuid().nullable() })
+  .strict();
+export const createIssueSchema = z
+  .object({
+    commandId: z.uuid(),
+    issueId: z.uuid(),
+    ...issueLocationSchema.shape,
+    text: issueTextSchema,
+  })
+  .strict();
+export const updateIssueSchema = z
+  .object({
+    commandId: z.uuid(),
+    expectedRevision: z.number().int().positive(),
+    text: issueTextSchema.optional(),
+    ...issueLocationSchema.partial().shape,
+  })
+  .strict()
+  .refine(
+    ({ text, parkId, turbineId }) =>
+      text !== undefined || (parkId !== undefined && turbineId !== undefined),
+    'Informe o texto ou a localização completa.',
+  );
+const issueActionSchema = z
+  .object({ commandId: z.uuid(), expectedRevision: z.number().int().positive() })
+  .strict();
+export const startIssueSchema = issueActionSchema;
+export const returnIssueSchema = issueActionSchema;
+export const releaseIssueSchema = issueActionSchema;
+export type IssueStatus = z.infer<typeof issueStatusSchema>;
+export type IssueEventType = z.infer<typeof issueEventTypeSchema>;
+export type Issue = z.infer<typeof issueSchema>;
+export type IssueEvent = z.infer<typeof issueEventSchema>;
+export type IssuesQuery = z.infer<typeof issuesQuerySchema>;
+export type CreateIssue = z.infer<typeof createIssueSchema>;
+export type UpdateIssue = z.infer<typeof updateIssueSchema>;
+
 export type WorkspaceRole = z.infer<typeof workspaceRoleSchema>;
 export type AuthenticatedUser = z.infer<typeof authenticatedUserSchema>;
 export type AuthorizedWorkspace = z.infer<typeof authorizedWorkspaceSchema>;

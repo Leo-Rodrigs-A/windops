@@ -2,15 +2,20 @@ import { randomUUID } from 'node:crypto';
 import { expect, it } from 'vitest';
 import {
   acceptWorkspaceInvitationSchema,
+  createIssueSchema,
   createParkSchema,
   createTurbineSchema,
   createWorkspaceInvitationSchema,
   errorSchema,
   healthSchema,
+  issueEventQuerySchema,
+  issueSchema,
+  issuesQuerySchema,
   parkSchema,
   parksQuerySchema,
   revokeWorkspaceMemberSchema,
   turbineSchema,
+  updateIssueSchema,
   updateParkSchema,
   updateTurbineSchema,
   updateWorkspaceMemberRoleSchema,
@@ -139,4 +144,94 @@ it('validates catalog DTOs, pagination, and optimistic revisions', () => {
   expect(parksQuerySchema.safeParse({ limit: 101 }).success).toBe(false);
   expect(parksQuerySchema.safeParse({ search: 'x'.repeat(101) }).success).toBe(false);
   expect(parksQuerySchema.safeParse({ workspaceId: randomUUID() }).success).toBe(false);
+});
+
+it('validates issue contracts, strict fields, text limits, location pairs, and pagination', () => {
+  const workspaceId = randomUUID();
+  const user = { id: randomUUID(), name: 'Tech', email: 'tech@example.com' };
+  const issue = {
+    id: randomUUID(),
+    workspaceId,
+    parkId: randomUUID(),
+    turbineId: randomUUID(),
+    creatorMembershipId: randomUUID(),
+    creator: user,
+    handlerMembershipId: null,
+    handler: null,
+    text: 'Elevador parado',
+    status: 'pending',
+    createdAt: '2026-10-26T12:00:00.000Z',
+    updatedAt: '2026-10-26T12:00:00.000Z',
+    revision: 1,
+  };
+  expect(issueSchema.safeParse(issue).success).toBe(true);
+  expect(issueSchema.safeParse({ ...issue, status: 'completed' }).success).toBe(false);
+  expect(issueSchema.safeParse({ ...issue, password: 'private' }).success).toBe(false);
+  expect(issuesQuerySchema.parse({})).toEqual({ limit: 25 });
+  expect(issuesQuerySchema.safeParse({ limit: 101 }).success).toBe(false);
+  expect(issuesQuerySchema.safeParse({ where: 'workspace_id=...' }).success).toBe(false);
+  expect(issuesQuerySchema.safeParse({ cursor: 'invalid' }).success).toBe(false);
+  expect(issueEventQuerySchema.parse({})).toEqual({ limit: 25 });
+  expect(issueEventQuerySchema.safeParse({ limit: 101 }).success).toBe(false);
+  expect(
+    createIssueSchema.safeParse({
+      commandId: randomUUID(),
+      issueId: randomUUID(),
+      parkId: randomUUID(),
+      turbineId: randomUUID(),
+      text: '  problema  ',
+    }).success,
+  ).toBe(true);
+  expect(
+    createIssueSchema.safeParse({
+      commandId: randomUUID(),
+      issueId: randomUUID(),
+      parkId: randomUUID(),
+      turbineId: randomUUID(),
+      text: '   ',
+    }).success,
+  ).toBe(false);
+  expect(
+    createIssueSchema.safeParse({
+      commandId: 'invalid',
+      issueId: randomUUID(),
+      parkId: randomUUID(),
+      turbineId: randomUUID(),
+      text: 'problema',
+    }).success,
+  ).toBe(false);
+  expect(
+    createIssueSchema.safeParse({
+      commandId: randomUUID(),
+      issueId: randomUUID(),
+      parkId: randomUUID(),
+      turbineId: randomUUID(),
+      text: 'x'.repeat(10_001),
+    }).success,
+  ).toBe(false);
+  expect(
+    createIssueSchema.safeParse({
+      commandId: randomUUID(),
+      issueId: randomUUID(),
+      workspaceId,
+      parkId: randomUUID(),
+      turbineId: randomUUID(),
+      text: 'problema',
+    }).success,
+  ).toBe(false);
+  expect(
+    updateIssueSchema.safeParse({ commandId: randomUUID(), expectedRevision: 1, text: 'ok' })
+      .success,
+  ).toBe(true);
+  expect(
+    updateIssueSchema.safeParse({
+      commandId: randomUUID(),
+      expectedRevision: 1,
+      parkId: randomUUID(),
+    }).success,
+  ).toBe(false);
+  expect(
+    updateIssueSchema.safeParse({ commandId: randomUUID(), expectedRevision: 0, text: 'ok' })
+      .success,
+  ).toBe(false);
 });

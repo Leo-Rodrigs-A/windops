@@ -22,4 +22,4 @@ A [slice 01 — Fundação](../01-fundacao/README.md) consolida a base da etapa 
 
 O status detalhado fica nas tasks executáveis; estas etapas registram a cobertura agregada e suas pendências. Nenhuma etapa é concluída apenas porque um plano foi escrito.
 
-Slices 01–03 concluídas. Próxima execução: [slice 04 — Registro e atendimento](../04-registro-atendimento/README.md), planejada em 26/10/2026, começando pela I01. Detalha o recorte online da etapa 06 e o lifecycle de equipamentos pendente da 05; antecipa apenas eventos e recibos necessários, sem concluir as etapas 07–09.
+Slices 01–03 concluídas. A [slice 04 — Registro e atendimento](../04-registro-atendimento/README.md) está em andamento; I01 concluída e I02 é a próxima. Detalha o recorte online da etapa 06 e o lifecycle de equipamentos pendente da 05; antecipa apenas eventos e recibos necessários, sem concluir as etapas 07–09.

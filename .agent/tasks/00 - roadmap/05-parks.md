@@ -16,13 +16,13 @@ Cadastros de códigos P/T e vínculo obrigatório da turbina ao parque, administ
 
 ## Critérios de aceite
 
-Número configurável; código de turbina único no parque; excluir definitivamente somente sem issues; preservar e arquivar equipamento com qualquer histórico de issue, com possibilidade de restauração; não criar entidade elevador desnecessária.
+Número configurável; código de turbina único no parque; excluir definitivamente somente sem referências atuais/históricas; arquivar com histórico fechado, bloqueando arquivo enquanto houver issue aberta no equipamento ou em qualquer turbina do parque; preservar histórico e permitir restauração sem reativar turbinas antes arquivadas individualmente; não criar entidade elevador desnecessária.
 
 ## Testes
 
 Permissões, unicidade, relações entre tenants, exclusão/arquivamento conforme histórico e corrida com criação de issue, catálogo sem itens.
 
-Lifecycle integrado a issues agora planejado na [slice 04](../04-registro-atendimento/README.md), especialmente I01/I06. Regras do agregado devem ser resolvidas antes do schema. Planejamento não conclui essa pendência; catálogo offline continua na etapa 07.
+Lifecycle integrado a issues está planejado na [slice 04](../04-registro-atendimento/README.md), especialmente I06; I01 registrou as regras em 26/10/2026. A implementação e o catálogo offline continuam pendentes; catálogo offline permanece na etapa 07.
 
 ## Referências e atualização
 

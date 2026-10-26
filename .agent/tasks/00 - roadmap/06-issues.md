@@ -2,7 +2,7 @@
 
 ## Status
 
-Planejada
+Em andamento — I01 da slice 04 concluída em 26/10/2026; I02 é a próxima task executável.
 
 ## Objetivo e escopo
 
@@ -12,7 +12,7 @@ Texto obrigatório, parque/turbina, status Pendente, edição pelo criador, inic
 
 04, 05; 02 para visual
 
-A slice executável 03 prepara cadastro/consulta/edição de equipamentos, mas não habilita exclusão/arquivamento. Por decisão do proprietário em 26/10/2026: admin exclui parque/turbina definitivamente quando não há issues associadas; se existir qualquer issue/histórico, arquiva o equipamento preservando todos os registros e permitindo restauração. Ao detalhar issues, modelar esse lifecycle no mesmo limite transacional que protege a criação concorrente de issues. Usar serviços públicos entre módulos. Definir como um parque arquivado afeta suas turbinas e como a restauração preserva o estado anterior delas. Não considerar a etapa 05 integralmente concluída antes dessa validação.
+A slice executável 03 prepara cadastro/consulta/edição de equipamentos, mas não habilita exclusão/arquivamento. Por decisão do proprietário em 26/10/2026: admin exclui parque/turbina somente quando não há referências atuais ou históricas; com histórico e sem issues abertas, arquiva preservando todos os registros e permitindo restauração; qualquer issue aberta bloqueia arquivamento da turbina ou do parque que a contenha. Arquivar parque torna turbinas efetivamente inativas sem alterar estado individual; restaurar parque não reativa turbinas antes arquivadas individualmente. Serializar com criação/edição/atendimento por serviços públicos entre módulos.
 
 ## Critérios de aceite
 
@@ -22,7 +22,7 @@ Sem atribuição a terceiros; somente ator ativo conclui/devolve; admin libera a
 
 Permissões por ator, edições concorrentes, transições inválidas, parque/turbina de outro workspace, repetição de comando.
 
-Execução detalhada na [slice 04 — Registro e atendimento](../04-registro-atendimento/README.md), I01–I08, planejada em 26/10/2026. Recorte online inclui histórico básico e recibos idempotentes; conclusão permanece na etapa 08. Nenhuma implementação desta etapa foi concluída pelo planejamento.
+Execução detalhada na [slice 04 — Registro e atendimento](../04-registro-atendimento/README.md), I01–I08. I01 concluída em 26/10/2026; recorte online inclui histórico básico e recibos idempotentes; conclusão permanece na etapa 08.
 
 ## Referências e atualização
 
