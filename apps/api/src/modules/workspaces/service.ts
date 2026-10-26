@@ -155,6 +155,12 @@ export interface WorkspaceAuthorizationService {
     workspaceId: string,
     allowedRoles?: readonly WorkspaceRole[],
   ): Promise<AuthorizationResult<AuthorizedWorkspacePrincipal>>;
+  authorizeWorkspaceInTransaction(
+    client: PoolClient,
+    headers: IncomingHttpHeaders,
+    workspaceId: string,
+    allowedRoles?: readonly WorkspaceRole[],
+  ): Promise<AuthorizationResult<AuthorizedWorkspacePrincipal>>;
   getContext(
     headers: IncomingHttpHeaders,
     workspaceId: string,
@@ -828,6 +834,33 @@ export function createWorkspaceAuthorizationService(
         value: {
           user,
           workspace: { id: membership.id, name: membership.name, role: membership.role },
+        },
+      };
+    },
+
+    async authorizeWorkspaceInTransaction(client, headers, workspaceId, allowedRoles) {
+      const user = await identity.resolveAuthenticatedUser(headers);
+      if (!user) return { status: 'unauthenticated' };
+      const workspaceResult = await client.query<{ id: string; name: string }>(
+        'SELECT id, name FROM public.workspaces WHERE id = $1 FOR UPDATE',
+        [workspaceId],
+      );
+      const workspace = workspaceResult.rows[0];
+      if (!workspace) return { status: 'forbidden' };
+      const membershipResult = await client.query<{ role: WorkspaceRole }>(
+        `SELECT role FROM public.workspace_members
+         WHERE workspace_id = $1 AND user_id = $2 AND revoked_at IS NULL
+         FOR UPDATE`,
+        [workspaceId, user.id],
+      );
+      const membership = membershipResult.rows[0];
+      if (!membership || (allowedRoles && !allowedRoles.includes(membership.role)))
+        return { status: 'forbidden' };
+      return {
+        status: 'ok',
+        value: {
+          user,
+          workspace: { ...workspace, role: membership.role },
         },
       };
     },

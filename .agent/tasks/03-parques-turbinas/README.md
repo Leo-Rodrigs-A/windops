@@ -2,7 +2,7 @@
 
 ## Status
 
-Em andamento. P01–P03 concluídas em 26/10/2026; P04–P06 pendentes.
+Em andamento. P01–P04 concluídas em 26/10/2026; P05–P06 pendentes.
 
 - [ ] Slice concluída
 
@@ -25,7 +25,7 @@ As slices [01](../01-fundacao/README.md) e [02](../02-equipe-acesso/README.md) e
 - [x] P01 — Modelo e contratos — concluída em 26/10/2026; contratos e matriz documentados, Biome/boundaries/typecheck/Vitest aprovados diretamente.
 - [x] P02 — Schema, migração e privilégios — concluída em 26/10/2026; `0004` aplicada e integração de schema/grants aprovada.
 - [x] P03 — Consultas do catálogo — concluída em 26/10/2026; GETs e autorização tenant validados em integração.
-- [ ] P04 — Cadastro e edição administrativa
+- [x] P04 — Cadastro e edição administrativa — concluída em 26/10/2026; autorização transacional, conflitos de revisão/código e corridas validados em PostgreSQL descartável.
 - [ ] P05 — Interface de parques e turbinas
 - [ ] P06 — Validação integrada e encerramento
 
@@ -52,4 +52,4 @@ As slices [01](../01-fundacao/README.md) e [02](../02-equipe-acesso/README.md) e
 
 ## Evidência do planejamento
 
-Planejamento criado em 26/10/2026 após leitura do roadmap, arquitetura, memória, modelo relacional e entrypoint vazio de parks. P01 implementada: contratos e documentação do modelo concluídos, sem tabelas, migrações ou alterações nos dados de desenvolvimento. `pnpm check` ficou sem saída; equivalentes diretos passaram. Testes de integração de banco não se aplicam sem schema/endpoints.
+P01–P04 concluídas em 26/10/2026. P04 adiciona escrita administrativa com autorização revalidada na transação e controle otimista de revisão; integração PostgreSQL descartável passou incluindo corrida com revogação. `pnpm check` ficou sem saída e foi interrompido; equivalentes diretos passaram. Próxima task: P05, interface Shadcn para parques e turbinas.

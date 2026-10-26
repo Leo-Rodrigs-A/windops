@@ -42,7 +42,7 @@ const app = buildApp({
   trustProxy: env.NODE_ENV === 'production',
   ...(identity ? { identity } : {}),
   workspaceAuthorization,
-  parksCatalog: createParksCatalogService(pool),
+  parksCatalog: createParksCatalogService(pool, workspaceAuthorization),
   authOrigin: env.APP_ORIGIN,
   ready: async () => {
     await pool.query('SELECT 1');

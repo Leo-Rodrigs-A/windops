@@ -47,6 +47,9 @@ it('documents protected identity and workspace context routes', async () => {
     async authorizeWorkspace() {
       return { status: 'unauthenticated' };
     },
+    async authorizeWorkspaceInTransaction() {
+      return { status: 'unauthenticated' };
+    },
     async getContext() {
       return { status: 'unauthenticated' };
     },

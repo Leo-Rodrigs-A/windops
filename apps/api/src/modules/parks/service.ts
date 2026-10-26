@@ -1,12 +1,18 @@
+import type { IncomingHttpHeaders } from 'node:http';
 import type {
+  CreatePark,
+  CreateTurbine,
   Park,
   ParksPage,
   ParksQuery,
   Turbine,
   TurbinesPage,
   TurbinesQuery,
+  UpdatePark,
+  UpdateTurbine,
 } from '@windops/contracts';
 import type { Pool, PoolClient, QueryResultRow } from 'pg';
+import type { WorkspaceAuthorizationService } from '../workspaces/index.js';
 
 interface ParkRow extends QueryResultRow {
   id: string;
@@ -27,6 +33,13 @@ export type CatalogReadResult<T> =
   | { status: 'ok'; value: T }
   | { status: 'not_found' }
   | { status: 'invalid_cursor' };
+export type CatalogWriteResult<T> =
+  | { status: 'ok'; value: T }
+  | { status: 'unauthenticated' }
+  | { status: 'forbidden' }
+  | { status: 'not_found' }
+  | { status: 'conflict' }
+  | { status: 'revision_conflict' };
 
 export interface ParksCatalogService {
   listParks(workspaceId: string, query: ParksQuery): Promise<CatalogReadResult<ParksPage>>;
@@ -41,6 +54,30 @@ export interface ParksCatalogService {
     parkId: string,
     turbineId: string,
   ): Promise<CatalogReadResult<Turbine>>;
+  createPark(
+    headers: IncomingHttpHeaders,
+    workspaceId: string,
+    input: CreatePark,
+  ): Promise<CatalogWriteResult<Park>>;
+  updatePark(
+    headers: IncomingHttpHeaders,
+    workspaceId: string,
+    parkId: string,
+    input: UpdatePark,
+  ): Promise<CatalogWriteResult<Park>>;
+  createTurbine(
+    headers: IncomingHttpHeaders,
+    workspaceId: string,
+    parkId: string,
+    input: CreateTurbine,
+  ): Promise<CatalogWriteResult<Turbine>>;
+  updateTurbine(
+    headers: IncomingHttpHeaders,
+    workspaceId: string,
+    parkId: string,
+    turbineId: string,
+    input: UpdateTurbine,
+  ): Promise<CatalogWriteResult<Turbine>>;
   getTurbineLocation(
     executor: ParksQueryExecutor,
     workspaceId: string,
@@ -100,7 +137,45 @@ async function getCursor(
   return result.rows[0] ?? null;
 }
 
-export function createParksCatalogService(pool: Pool): ParksCatalogService {
+export function createParksCatalogService(
+  pool: Pool,
+  authorization: WorkspaceAuthorizationService,
+): ParksCatalogService {
+  async function withAdminTransaction<T>(
+    headers: IncomingHttpHeaders,
+    workspaceId: string,
+    operation: (client: PoolClient) => Promise<CatalogWriteResult<T>>,
+  ): Promise<CatalogWriteResult<T>> {
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+      const permission = await authorization.authorizeWorkspaceInTransaction(
+        client,
+        headers,
+        workspaceId,
+        ['admin'],
+      );
+      if (permission.status !== 'ok') {
+        await client.query('ROLLBACK');
+        return permission;
+      }
+      const result = await operation(client);
+      if (result.status !== 'ok') {
+        await client.query('ROLLBACK');
+        return result;
+      }
+      await client.query('COMMIT');
+      return result;
+    } catch (error) {
+      await client.query('ROLLBACK').catch(() => undefined);
+      if (error && typeof error === 'object' && 'code' in error && error.code === '23505')
+        return { status: 'conflict' };
+      throw error;
+    } finally {
+      client.release();
+    }
+  }
+
   return {
     async listParks(workspaceId, query) {
       const cursor = query.cursor
@@ -174,6 +249,84 @@ export function createParksCatalogService(pool: Pool): ParksCatalogService {
       );
       const row = result.rows[0];
       return row ? { status: 'ok', value: toTurbine(row) } : { status: 'not_found' };
+    },
+
+    createPark(headers, workspaceId, input) {
+      return withAdminTransaction(headers, workspaceId, async (client) => {
+        const result = await client.query<ParkRow>(
+          `INSERT INTO public.parks (workspace_id, code)
+           VALUES ($1, $2) RETURNING ${parkColumns}`,
+          [workspaceId, input.code],
+        );
+        const row = result.rows[0];
+        if (!row) throw new Error('Park creation returned no row.');
+        return { status: 'ok', value: toPark(row) };
+      });
+    },
+
+    updatePark(headers, workspaceId, parkId, input) {
+      return withAdminTransaction(headers, workspaceId, async (client) => {
+        const current = await client.query<{ revision: number }>(
+          `SELECT revision FROM public.parks
+           WHERE workspace_id = $1 AND id = $2 FOR UPDATE`,
+          [workspaceId, parkId],
+        );
+        const row = current.rows[0];
+        if (!row) return { status: 'not_found' };
+        if (row.revision !== input.expectedRevision) return { status: 'revision_conflict' };
+        const result = await client.query<ParkRow>(
+          `UPDATE public.parks
+           SET code = $3, revision = revision + 1, updated_at = clock_timestamp()
+           WHERE workspace_id = $1 AND id = $2
+           RETURNING ${parkColumns}`,
+          [workspaceId, parkId, input.code],
+        );
+        const updated = result.rows[0];
+        if (!updated) throw new Error('Park update returned no row.');
+        return { status: 'ok', value: toPark(updated) };
+      });
+    },
+
+    createTurbine(headers, workspaceId, parkId, input) {
+      return withAdminTransaction(headers, workspaceId, async (client) => {
+        const park = await client.query<{ id: string }>(
+          `SELECT id FROM public.parks
+           WHERE workspace_id = $1 AND id = $2 AND deactivated_at IS NULL`,
+          [workspaceId, parkId],
+        );
+        if (!park.rows[0]) return { status: 'not_found' };
+        const result = await client.query<TurbineRow>(
+          `INSERT INTO public.turbines (workspace_id, park_id, code)
+           VALUES ($1, $2, $3) RETURNING ${turbineColumns}`,
+          [workspaceId, parkId, input.code],
+        );
+        const row = result.rows[0];
+        if (!row) throw new Error('Turbine creation returned no row.');
+        return { status: 'ok', value: toTurbine(row) };
+      });
+    },
+
+    updateTurbine(headers, workspaceId, parkId, turbineId, input) {
+      return withAdminTransaction(headers, workspaceId, async (client) => {
+        const current = await client.query<{ revision: number }>(
+          `SELECT revision FROM public.turbines
+           WHERE workspace_id = $1 AND park_id = $2 AND id = $3 FOR UPDATE`,
+          [workspaceId, parkId, turbineId],
+        );
+        const row = current.rows[0];
+        if (!row) return { status: 'not_found' };
+        if (row.revision !== input.expectedRevision) return { status: 'revision_conflict' };
+        const result = await client.query<TurbineRow>(
+          `UPDATE public.turbines
+           SET code = $4, revision = revision + 1, updated_at = clock_timestamp()
+           WHERE workspace_id = $1 AND park_id = $2 AND id = $3
+           RETURNING ${turbineColumns}`,
+          [workspaceId, parkId, turbineId, input.code],
+        );
+        const updated = result.rows[0];
+        if (!updated) throw new Error('Turbine update returned no row.');
+        return { status: 'ok', value: toTurbine(updated) };
+      });
     },
 
     async getTurbineLocation(executor, workspaceId, parkId, turbineId) {

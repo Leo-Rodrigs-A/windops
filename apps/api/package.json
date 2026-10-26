@@ -12,7 +12,7 @@
     "db:migrate": "tsx src/platform/database/migrate.ts",
     "db:parks-check": "node scripts/parks-schema-check.mjs",
     "test:integration": "node scripts/integration.mjs",
-    "test:parks-integration": "node --import tsx scripts/parks-read-flow.mjs"
+    "test:parks-integration": "node --import tsx scripts/parks-catalog-flow.mjs"
   },
   "dependencies": {
     "@windops/contracts": "workspace:*",

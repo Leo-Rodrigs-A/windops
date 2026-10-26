@@ -1,4 +1,6 @@
 import {
+  createParkSchema,
+  createTurbineSchema,
   errorSchema,
   parkSchema,
   parksPageSchema,
@@ -6,6 +8,8 @@ import {
   turbineSchema,
   turbinesPageSchema,
   turbinesQuerySchema,
+  updateParkSchema,
+  updateTurbineSchema,
 } from '@windops/contracts';
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import { z } from 'zod';
@@ -44,6 +48,22 @@ function respondCatalogError(
       requestId: request.id,
     },
   });
+}
+
+function respondWriteError(
+  reply: FastifyReply,
+  request: FastifyRequest,
+  status: 'unauthenticated' | 'forbidden' | 'not_found' | 'conflict' | 'revision_conflict',
+): FastifyReply {
+  const responses = {
+    unauthenticated: [401, 'AUTHENTICATION_REQUIRED', 'Authentication required.'],
+    forbidden: [403, 'WORKSPACE_ACCESS_DENIED', 'Workspace access denied.'],
+    not_found: [404, 'RESOURCE_NOT_FOUND', 'Resource not found.'],
+    conflict: [409, 'CATALOG_CODE_TAKEN', 'A catalog code already exists in this scope.'],
+    revision_conflict: [409, 'REVISION_CONFLICT', 'The catalog record changed. Reload and retry.'],
+  } as const;
+  const [statusCode, code, message] = responses[status];
+  return reply.code(statusCode).send({ error: { code, message, requestId: request.id } });
 }
 
 export function registerParksRoutes(
@@ -172,6 +192,121 @@ export function registerParksRoutes(
       const result = await catalog.getTurbine(workspaceId, parkId, turbineId);
       if (result.status === 'not_found') return respondCatalogError(reply, request, 404);
       if (result.status === 'invalid_cursor') return respondCatalogError(reply, request, 400);
+      return reply.send(result.value);
+    },
+  );
+
+  app.post(
+    '/api/workspaces/:workspaceId/parks',
+    {
+      schema: {
+        params: workspaceParamsSchema,
+        body: createParkSchema,
+        response: {
+          201: parkSchema,
+          400: errorSchema,
+          401: errorSchema,
+          403: errorSchema,
+          409: errorSchema,
+        },
+      },
+    },
+    async (request, reply) => {
+      const { workspaceId } = workspaceParamsSchema.parse(request.params);
+      const result = await catalog.createPark(
+        request.headers,
+        workspaceId,
+        createParkSchema.parse(request.body),
+      );
+      if (result.status !== 'ok') return respondWriteError(reply, request, result.status);
+      return reply.code(201).send(result.value);
+    },
+  );
+
+  app.patch(
+    '/api/workspaces/:workspaceId/parks/:parkId',
+    {
+      schema: {
+        params: parkPathParamsSchema,
+        body: updateParkSchema,
+        response: {
+          200: parkSchema,
+          400: errorSchema,
+          401: errorSchema,
+          403: errorSchema,
+          404: errorSchema,
+          409: errorSchema,
+        },
+      },
+    },
+    async (request, reply) => {
+      const { workspaceId, parkId } = parkPathParamsSchema.parse(request.params);
+      const result = await catalog.updatePark(
+        request.headers,
+        workspaceId,
+        parkId,
+        updateParkSchema.parse(request.body),
+      );
+      if (result.status !== 'ok') return respondWriteError(reply, request, result.status);
+      return reply.send(result.value);
+    },
+  );
+
+  app.post(
+    '/api/workspaces/:workspaceId/parks/:parkId/turbines',
+    {
+      schema: {
+        params: parkPathParamsSchema,
+        body: createTurbineSchema,
+        response: {
+          201: turbineSchema,
+          400: errorSchema,
+          401: errorSchema,
+          403: errorSchema,
+          404: errorSchema,
+          409: errorSchema,
+        },
+      },
+    },
+    async (request, reply) => {
+      const { workspaceId, parkId } = parkPathParamsSchema.parse(request.params);
+      const result = await catalog.createTurbine(
+        request.headers,
+        workspaceId,
+        parkId,
+        createTurbineSchema.parse(request.body),
+      );
+      if (result.status !== 'ok') return respondWriteError(reply, request, result.status);
+      return reply.code(201).send(result.value);
+    },
+  );
+
+  app.patch(
+    '/api/workspaces/:workspaceId/parks/:parkId/turbines/:turbineId',
+    {
+      schema: {
+        params: turbinePathParamsSchema,
+        body: updateTurbineSchema,
+        response: {
+          200: turbineSchema,
+          400: errorSchema,
+          401: errorSchema,
+          403: errorSchema,
+          404: errorSchema,
+          409: errorSchema,
+        },
+      },
+    },
+    async (request, reply) => {
+      const { workspaceId, parkId, turbineId } = turbinePathParamsSchema.parse(request.params);
+      const result = await catalog.updateTurbine(
+        request.headers,
+        workspaceId,
+        parkId,
+        turbineId,
+        updateTurbineSchema.parse(request.body),
+      );
+      if (result.status !== 'ok') return respondWriteError(reply, request, result.status);
       return reply.send(result.value);
     },
   );
