@@ -2,7 +2,7 @@
 
 ## Status
 
-Em andamento — I01 da slice 04 concluída em 26/10/2026; I02 é a próxima task executável.
+Em andamento — I01–I02 da slice 04 concluídas em 26/10/2026; I03 é a próxima task executável.
 
 ## Objetivo e escopo
 

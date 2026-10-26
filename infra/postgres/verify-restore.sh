@@ -20,10 +20,19 @@ source_counts=$(docker compose -f "$compose_file" exec -T postgres psql -U windo
   "SELECT (SELECT count(*) FROM public.workspaces)::text || ':' || (SELECT count(*) FROM drizzle.__drizzle_migrations)::text")
 restored_counts=$(docker compose -f "$compose_file" exec -T postgres psql -U windops -d "$restore_database" -Atc \
   "SELECT (SELECT count(*) FROM public.workspaces)::text || ':' || (SELECT count(*) FROM drizzle.__drizzle_migrations)::text")
+source_issue_schema=$(docker compose -f "$compose_file" exec -T postgres psql -U windops -d windops -Atc \
+  "SELECT concat_ws(',', to_regclass('public.issues')::text, to_regclass('public.issue_events')::text, to_regclass('public.issue_location_references')::text, to_regclass('public.sync_commands')::text)")
+restored_issue_schema=$(docker compose -f "$compose_file" exec -T postgres psql -U windops -d "$restore_database" -Atc \
+  "SELECT concat_ws(',', to_regclass('public.issues')::text, to_regclass('public.issue_events')::text, to_regclass('public.issue_location_references')::text, to_regclass('public.sync_commands')::text)")
 
 if [ "$source_counts" != "$restored_counts" ]; then
   printf 'Restore mismatch: source=%s restored=%s\n' "$source_counts" "$restored_counts" >&2
   exit 1
 fi
 
-printf 'Disposable restore verified: workspaces:migrations=%s\n' "$restored_counts"
+if [ "$source_issue_schema" != "$restored_issue_schema" ]; then
+  printf 'Issue schema restore mismatch: source=%s restored=%s\n' "$source_issue_schema" "$restored_issue_schema" >&2
+  exit 1
+fi
+
+printf 'Disposable restore verified: workspaces:migrations=%s; issue schema=%s\n' "$restored_counts" "$restored_issue_schema"

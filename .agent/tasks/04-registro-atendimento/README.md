@@ -2,7 +2,7 @@
 
 ## Status
 
-Em andamento desde 26/10/2026; I01 concluída e I02 é a próxima task.
+Em andamento desde 26/10/2026; I01 e I02 concluídas, I03 é a próxima task.
 
 - [ ] Slice concluída
 
@@ -14,19 +14,18 @@ Membros ativos registram chamados de texto em parque/turbina, consultam históri
 
 Slices [01](../01-fundacao/README.md), [02](../02-equipe-acesso/README.md) e [03](../03-parques-turbinas/README.md) concluídas. Começar pela I01 e executar na ordem abaixo. O lifecycle pendente do roadmap 05 é resolvido dentro desta slice; não exigir conclusão integral da etapa 05 (que inclui offline) para iniciar issues.
 
-| Task | Dependências |
-| --- | --- |
-| [I01 — Modelo, regras e contratos](01-modelo-contratos.md) | Slices 01–03 concluídas. |
-| [I02 — Schema, migrações e privilégios](02-schema-migracoes.md) | I01 concluída, incluindo decisões do agregado. |
-| [I03 — Consultas autorizadas e histórico](03-consultas-historico.md) | I01 e I02 concluídas. |
-| [I04 — Registro, edição e comandos idempotentes](04-registro-edicao.md) | I01–I03 concluídas. |
-| [I05 — Início, devolução e liberação de atendimento](05-atendimento.md) | I04 concluída. |
-| [I06 — Exclusão, arquivamento e restauração de equipamentos](06-lifecycle-equipamentos.md) | I01–I05 concluídas. |
-| [I07 — Interfaces de chamados e lifecycle do catálogo](07-interfaces.md) | I03–I06 concluídas. |
-| [I08 — Validação integrada e encerramento](08-validacao-integrada.md) | I01–I07 concluídas. |
-
+| Task                                                                                       | Dependências                                   |
+| ------------------------------------------------------------------------------------------ | ---------------------------------------------- |
+| [I01 — Modelo, regras e contratos](01-modelo-contratos.md)                                 | Slices 01–03 concluídas.                       |
+| [I02 — Schema, migrações e privilégios](02-schema-migracoes.md)                            | I01 concluída, incluindo decisões do agregado. |
+| [I03 — Consultas autorizadas e histórico](03-consultas-historico.md)                       | I01 e I02 concluídas.                          |
+| [I04 — Registro, edição e comandos idempotentes](04-registro-edicao.md)                    | I01–I03 concluídas.                            |
+| [I05 — Início, devolução e liberação de atendimento](05-atendimento.md)                    | I04 concluída.                                 |
+| [I06 — Exclusão, arquivamento e restauração de equipamentos](06-lifecycle-equipamentos.md) | I01–I05 concluídas.                            |
+| [I07 — Interfaces de chamados e lifecycle do catálogo](07-interfaces.md)                   | I03–I06 concluídas.                            |
+| [I08 — Validação integrada e encerramento](08-validacao-integrada.md)                      | I01–I07 concluídas.                            |
 - [x] I01 — Modelo, regras e contratos — concluída em 26/10/2026; contratos Zod e decisões do agregado registrados.
-- [ ] I02 — Schema, migrações e privilégios
+- [x] I02 — Schema, migrações e privilégios — concluída em 26/10/2026; migrations 0005/0006 aplicadas no dev e validadas.
 - [ ] I03 — Consultas autorizadas e histórico
 - [ ] I04 — Registro, edição e comandos idempotentes
 - [ ] I05 — Início, devolução e liberação de atendimento

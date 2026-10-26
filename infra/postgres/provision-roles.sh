@@ -57,7 +57,12 @@ BEGIN
     SELECT tablename FROM pg_tables WHERE schemaname = 'public'
   LOOP
     EXECUTE format('ALTER TABLE public.%I OWNER TO windops_migrator', object_record.tablename);
-    EXECUTE format('GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.%I TO windops_app', object_record.tablename);
+    IF object_record.tablename IN ('issue_events', 'issue_location_references', 'sync_commands') THEN
+      EXECUTE format('GRANT SELECT, INSERT ON TABLE public.%I TO windops_app', object_record.tablename);
+      EXECUTE format('REVOKE UPDATE, DELETE ON TABLE public.%I FROM windops_app', object_record.tablename);
+    ELSE
+      EXECUTE format('GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.%I TO windops_app', object_record.tablename);
+    END IF;
   END LOOP;
 
   IF to_regclass('public.workspaces') IS NOT NULL THEN

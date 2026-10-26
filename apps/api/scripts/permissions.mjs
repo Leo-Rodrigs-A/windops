@@ -48,7 +48,24 @@ try {
   await app.query('SELECT id FROM public.workspace_invitations LIMIT 0');
   await app.query('SELECT id FROM public.parks LIMIT 0');
   await app.query('SELECT id FROM public.turbines LIMIT 0');
+  await app.query('SELECT id FROM public.issues LIMIT 0');
+  await app.query('SELECT id FROM public.issue_events LIMIT 0');
+  await app.query('SELECT event_id FROM public.issue_location_references LIMIT 0');
+  await app.query('SELECT id FROM public.sync_commands LIMIT 0');
   await app.query('UPDATE public.workspaces SET name = name WHERE false');
+  await app.query('UPDATE public.issues SET text = text WHERE false');
+  for (const table of ['issue_events', 'issue_location_references', 'sync_commands']) {
+    await expectDenied(
+      app,
+      `UPDATE public.${table} SET ${table === 'issue_location_references' ? 'event_id' : table === 'sync_commands' ? 'command_id' : 'type'} = ${table === 'issue_location_references' ? 'event_id' : table === 'sync_commands' ? 'command_id' : 'type'} WHERE false`,
+      `runtime update of append-only ${table}`,
+    );
+    await expectDenied(
+      app,
+      `DELETE FROM public.${table} WHERE false`,
+      `runtime delete of append-only ${table}`,
+    );
+  }
   await expectDenied(app, 'CREATE TABLE public.f02_runtime_probe (id integer)', 'runtime DDL');
   await expectDenied(
     app,
@@ -109,6 +126,10 @@ try {
     'workspace_invitations',
     'parks',
     'turbines',
+    'issues',
+    'issue_events',
+    'issue_location_references',
+    'sync_commands',
   ]) {
     await expectDenied(
       replication,

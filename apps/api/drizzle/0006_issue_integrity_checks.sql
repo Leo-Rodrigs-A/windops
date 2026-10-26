@@ -1,0 +1,4 @@
+ALTER TABLE "issue_events" ADD CONSTRAINT "issue_events_before_object_check" CHECK ("issue_events"."before" IS NULL OR jsonb_typeof("issue_events"."before") = 'object');--> statement-breakpoint
+ALTER TABLE "issue_events" ADD CONSTRAINT "issue_events_after_object_check" CHECK ("issue_events"."after" IS NULL OR jsonb_typeof("issue_events"."after") = 'object');--> statement-breakpoint
+ALTER TABLE "issues" ADD CONSTRAINT "issues_status_handler_consistency_check" CHECK (("issues"."status" = 'pending' AND "issues"."handler_membership_id" IS NULL AND "issues"."handler_user_id" IS NULL) OR ("issues"."status" = 'in_progress' AND "issues"."handler_membership_id" IS NOT NULL AND "issues"."handler_user_id" IS NOT NULL));--> statement-breakpoint
+ALTER TABLE "sync_commands" ADD CONSTRAINT "sync_commands_result_object_check" CHECK (jsonb_typeof("sync_commands"."result") = 'object');

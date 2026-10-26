@@ -44,6 +44,7 @@ export const turbines = pgTable(
   (table) => [
     uniqueIndex('turbines_park_code_unique').on(table.parkId, table.code),
     uniqueIndex('turbines_id_workspace_unique').on(table.id, table.workspaceId),
+    uniqueIndex('turbines_id_park_workspace_unique').on(table.id, table.parkId, table.workspaceId),
     index('turbines_workspace_park_code_idx').on(
       table.workspaceId,
       table.parkId,

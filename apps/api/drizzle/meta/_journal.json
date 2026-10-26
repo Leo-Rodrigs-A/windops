@@ -36,6 +36,20 @@
       "when": 1793030111660,
       "tag": "0004_parks_turbines",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1793057276020,
+      "tag": "0005_issues_audit_sync",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1793057324052,
+      "tag": "0006_issue_integrity_checks",
+      "breakpoints": true
     }
   ]
 }
