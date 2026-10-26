@@ -22,6 +22,8 @@ Número configurável; código de turbina único no parque; excluir definitivame
 
 Permissões, unicidade, relações entre tenants, exclusão/arquivamento conforme histórico e corrida com criação de issue, catálogo sem itens.
 
+Lifecycle integrado a issues agora planejado na [slice 04](../04-registro-atendimento/README.md), especialmente I01/I06. Regras do agregado devem ser resolvidas antes do schema. Planejamento não conclui essa pendência; catálogo offline continua na etapa 07.
+
 ## Referências e atualização
 
 Seguir [memória](../../memory.md) e [arquitetura](../../architeture.md). Este arquivo descreve uma etapa do roadmap; a execução é detalhada nas slices de [tasks](../README.md). Atualizar status e registrar evidência ao concluir. Não marcar integração pronta apenas por instalar dependências.

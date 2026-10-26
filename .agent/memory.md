@@ -153,3 +153,7 @@ Criar repositório GitHub, VPS, domínio/DNS, Neon, conta/domínio Resend, aplic
 ## Verificação local posterior — 24/10/2026
 
 Esta observação de 24/10 atualizou o bloqueio de Docker do registro histórico: `docker compose -f infra/compose.dev.yml ps` mostrou PostgreSQL, Electric e Mailpit ativos/saudáveis no WSL. Naquele momento, migração do zero/reaplicação, shape, grants, restauração e build ainda não tinham sido executados; F02 agora cobre as validações de privilégios locais. Containers saudáveis não comprovam autenticação funcionando.
+
+## Planejamento da slice 04 — 26/10/2026
+
+A pedido do proprietário, detalhada a [slice 04 — Registro e atendimento](tasks/04-registro-atendimento/README.md), com oito tasks I01–I08. Próxima task: I01. Escopo online: modelo/contratos, schema, consultas/histórico, criação/edição, início/devolução/liberação, lifecycle de equipamentos, interfaces e validação. Núcleo de eventos e recibos idempotentes é antecipado para garantir transação e retry; não entrega offline nem notificações. Conclusão e demais transições de issues ficam na etapa 08. I01 deve conciliar com o proprietário o comportamento parque/turbinas na restauração e atendimento de issues em equipamento arquivado; propostas no plano não são decisões aprovadas. Associações históricas de localização também protegem equipamento de exclusão. Nenhuma task de implementação concluída, mudança de fonte, migração ou teste de aplicação nesta preparação documental.

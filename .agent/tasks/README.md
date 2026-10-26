@@ -13,7 +13,9 @@ Cada nova slice fica em uma pasta `NN-nome/`, com um `README.md` que define resu
 
 - [x] [03 — Parques e turbinas](03-parques-turbinas/README.md): P01–P06 concluídas em 26/10/2026; lifecycle com issues e catálogo offline permanecem nas etapas futuras.
 
-Slice 03 concluída. Próxima slice ainda não detalhada. Lifecycle com issues fica para a integração ao domínio issues; catálogo offline permanece na etapa 07.
+- [ ] [04 — Registro e atendimento](04-registro-atendimento/README.md): I01–I08 planejadas em 26/10/2026; próxima task I01. Recorte online com histórico, recibos idempotentes e lifecycle de equipamentos integrado a issues.
+
+Slice 03 concluída; slice 04 planejada, sem implementação iniciada. Catálogo offline permanece na etapa 07; conclusão e demais transições de lifecycle de issues permanecem na etapa 08.
 
 Verificação documental do planejamento inicial em 26/10/2026: links locais dos documentos alterados e consistência das seis tasks conferidos; `git diff --check` passou. As validações de implementação da P06 estão registradas na task específica.
 
@@ -28,6 +30,8 @@ P04 concluída em 26/10/2026: criação/edição de parks e turbines restrita a 
 P05 concluída em 26/10/2026: página `/parques` com leitura, cadastro sequencial por confirmação, edição administrativa, busca/paginação e navegação desktop/mobile. Proprietário confirmou admin/técnico, navegação responsiva e preview `Parque P002` sem gravação. Biome, boundaries, typechecks, 18 testes e build passaram. Ver task P05.
 
 P06 e slice 03 concluídas em 26/10/2026. Integrações, migrations, restore, permissões, PostgreSQL/Electric, builds e testes passaram; proprietário confirmou o fluxo admin/técnico em desktop e Android físico. `pnpm check` foi interrompido sem saída após 30s; equivalentes diretos passaram. Servidores, portproxy e regra de firewall temporários foram encerrados/removidos e verificados. Roadmap 05 permanece parcial pelo lifecycle futuro integrado a issues e pelo catálogo offline.
+
+Verificação documental da slice 04 em 26/10/2026: 23 documentos e 103 links locais conferidos, oito tasks com seções obrigatórias e checkboxes de implementação abertos; `git diff --check` passou. Nenhuma fonte/infraestrutura alterada; `pnpm check` e testes da aplicação não executados nesta preparação.
 
 ## Convenção de execução
 

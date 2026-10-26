@@ -22,6 +22,8 @@ Sem atribuição a terceiros; somente ator ativo conclui/devolve; admin libera a
 
 Permissões por ator, edições concorrentes, transições inválidas, parque/turbina de outro workspace, repetição de comando.
 
+Execução detalhada na [slice 04 — Registro e atendimento](../04-registro-atendimento/README.md), I01–I08, planejada em 26/10/2026. Recorte online inclui histórico básico e recibos idempotentes; conclusão permanece na etapa 08. Nenhuma implementação desta etapa foi concluída pelo planejamento.
+
 ## Referências e atualização
 
 Seguir [memória](../../memory.md) e [arquitetura](../../architeture.md). Este arquivo descreve uma etapa do roadmap; a execução é detalhada nas slices de [tasks](../README.md). Atualizar status e registrar evidência ao concluir. Não marcar integração pronta apenas por instalar dependências.
