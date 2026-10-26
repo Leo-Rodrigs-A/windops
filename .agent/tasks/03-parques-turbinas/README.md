@@ -2,7 +2,7 @@
 
 ## Status
 
-Em andamento. P01–P04 concluídas em 26/10/2026; P05–P06 pendentes.
+Em andamento. P01–P05 concluídas em 26/10/2026; P06 pendente.
 
 - [ ] Slice concluída
 
@@ -26,7 +26,7 @@ As slices [01](../01-fundacao/README.md) e [02](../02-equipe-acesso/README.md) e
 - [x] P02 — Schema, migração e privilégios — concluída em 26/10/2026; `0004` aplicada e integração de schema/grants aprovada.
 - [x] P03 — Consultas do catálogo — concluída em 26/10/2026; GETs e autorização tenant validados em integração.
 - [x] P04 — Cadastro e edição administrativa — concluída em 26/10/2026; autorização transacional, conflitos de revisão/código e corridas validados em PostgreSQL descartável.
-- [ ] P05 — Interface de parques e turbinas
+- [x] P05 — Interface de parques e turbinas — concluída em 26/10/2026; proprietário confirmou admin/técnico, sidebar desktop e navegação mobile; captura validou o diálogo de código sugerido.
 - [ ] P06 — Validação integrada e encerramento
 
 ## Limites e decisões de escopo
@@ -34,8 +34,8 @@ As slices [01](../01-fundacao/README.md) e [02](../02-equipe-acesso/README.md) e
 - Operação online; nenhum catálogo local durável, PWA, proxy Electric ou outbox nesta slice. Não ampliar publicação/grants de replicação antecipadamente.
 - Quantidades configuráveis, sem limite fixo de oito; código de parque único no workspace e código de turbina único no parque. Cada turbina representa um elevador, sem entidade adicional.
 - Admin cria/edita; ambos os cargos consultam com membership ativa e sessão completa. Sem novo superadmin ou criação pública de workspace.
-- Edição preserva identidade e parque da turbina; transferência, importação em lote e exclusão física ficam fora deste recorte.
-- **Desativação adiada até integração com issues:** exige impedir a ação quando houver chamados Pendentes/Em andamento e proteger a corrida com novas issues. Não substituir essa verificação por retorno fixo, tabela fictícia ou guard permissivo. Não expor endpoint/botão nesta slice. A regra original permanece obrigatória e deverá constar no planejamento do domínio issues; definir reativação de equipamentos antes de expô-la.
+- Edição preserva identidade e parque da turbina; transferência e importação em lote ficam fora deste recorte.
+- **Exclusão/arquivamento adiado até integração com issues:** por decisão do proprietário em 26/10, admin exclui definitivamente equipamento sem issues associadas; se houver qualquer histórico de issue, o equipamento é arquivado, todo histórico permanece e pode ser restaurado. Não expor endpoint/botão nesta slice: a decisão depende de issue schema/serviço e proteção contra corrida com criação de issues. Planejar no domínio issues. Definir efeito de arquivar parque sobre turbinas e restauração do agregado antes de implementar.
 - Assim, a [etapa 05 do roadmap](<../00 - roadmap/05-parks.md>) continuará parcialmente atendida após esta slice. Catálogo offline pertence à etapa 07.
 - Não popular dev com inventário fictício automaticamente. Testes automatizados usam bancos descartáveis; dados do percurso manual são combinados com o proprietário.
 - UI usa Shadcn e padrões existentes; referências Pencil ficam no Windows e devem ser reconfirmadas na P05. Não há alteração de designs neste planejamento.
@@ -48,8 +48,8 @@ As slices [01](../01-fundacao/README.md) e [02](../02-equipe-acesso/README.md) e
 - [ ] Códigos duplicados e revisões obsoletas produzem conflito, sem perda silenciosa.
 - [ ] Serviços públicos de parks permitem futura validação de localização sem imports internos entre módulos.
 - [ ] Interface integrada validada em desktop e Android, com temas e acessibilidade; limitações de dispositivos registradas.
-- [ ] Testes e evidências documentados; desativação, issues e offline continuam explicitamente pendentes.
+- [ ] Testes e evidências documentados; lifecycle com issues e catálogo offline continuam explicitamente pendentes para as etapas dependentes.
 
 ## Evidência do planejamento
 
-P01–P04 concluídas em 26/10/2026. P04 adiciona escrita administrativa com autorização revalidada na transação e controle otimista de revisão; integração PostgreSQL descartável passou incluindo corrida com revogação. `pnpm check` ficou sem saída e foi interrompido; equivalentes diretos passaram. Próxima task: P05, interface Shadcn para parques e turbinas.
+P01–P05 concluídas em 26/10/2026. P05 implementa catálogo Shadcn responsivo; cadastro confirma código sequencial sugerido e edição mantém controle de revisão. Proprietário confirmou os cargos e navegação desktop/mobile; captura confirmou `Parque P002` sem digitação e sem confirmar gravação. Biome, boundaries, typechecks, 18 testes e build passaram; `pnpm check` sem saída, equivalentes diretos passaram. P06 é a próxima task. Exclusão/arquivamento com issues ficou definido como requisito futuro e não foi exposto nesta slice.

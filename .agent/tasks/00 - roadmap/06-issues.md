@@ -12,7 +12,7 @@ Texto obrigatório, parque/turbina, status Pendente, edição pelo criador, inic
 
 04, 05; 02 para visual
 
-A slice executável 03 prepara cadastro/consulta/edição de equipamentos, mas não habilita desativação. Ao detalhar issues, incluir a integração de desativação de parques/turbinas: bloqueio com Pendentes/Em andamento, rejeição de novas issues em equipamentos desativados e teste concorrente criação/desativação sob protocolo transacional comum. Usar serviços públicos entre módulos; não considerar a etapa 05 integralmente concluída antes dessa validação.
+A slice executável 03 prepara cadastro/consulta/edição de equipamentos, mas não habilita exclusão/arquivamento. Por decisão do proprietário em 26/10/2026: admin exclui parque/turbina definitivamente quando não há issues associadas; se existir qualquer issue/histórico, arquiva o equipamento preservando todos os registros e permitindo restauração. Ao detalhar issues, modelar esse lifecycle no mesmo limite transacional que protege a criação concorrente de issues. Usar serviços públicos entre módulos. Definir como um parque arquivado afeta suas turbinas e como a restauração preserva o estado anterior delas. Não considerar a etapa 05 integralmente concluída antes dessa validação.
 
 ## Critérios de aceite
 

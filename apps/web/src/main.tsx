@@ -76,6 +76,11 @@ const teamRoute = createRoute({
   path: '/equipe',
   component: lazyRouteComponent(workspacePages, 'TeamManagementPage'),
 });
+const parksRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/parques',
+  component: lazyRouteComponent(() => import('./pages/parks-page'), 'ParksCatalogPage'),
+});
 const invitationAcceptRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/convite/aceitar',
@@ -98,6 +103,7 @@ const router = createRouter({
     resetRoute,
     noWorkspaceRoute,
     appRoute,
+    parksRoute,
     teamRoute,
     invitationAcceptRoute,
     legacyInvitationAcceptRoute,

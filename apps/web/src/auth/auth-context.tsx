@@ -159,7 +159,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (snapshot.status === 'loading' || snapshot.status === 'error') return;
     const path = location.pathname;
-    const isProtected = path === '/app' || path === '/sem-workspace' || path === '/equipe';
+    const isProtected =
+      path === '/app' || path === '/parques' || path === '/sem-workspace' || path === '/equipe';
 
     if (
       hasPendingInvitation() &&

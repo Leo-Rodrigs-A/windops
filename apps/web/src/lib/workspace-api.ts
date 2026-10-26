@@ -1,6 +1,20 @@
 import {
   acceptWorkspaceInvitationSchema,
+  createParkSchema,
+  createTurbineSchema,
   createWorkspaceInvitationSchema,
+  type Park,
+  type ParksPage,
+  type ParksQuery,
+  parkSchema,
+  parksPageSchema,
+  type Turbine,
+  type TurbinesPage,
+  type TurbinesQuery,
+  turbineSchema,
+  turbinesPageSchema,
+  updateParkSchema,
+  updateTurbineSchema,
   type WorkspaceContext,
   type WorkspaceDirectoryPage,
   type WorkspaceInvitation,
@@ -16,7 +30,88 @@ import {
 } from '@windops/contracts';
 import { requestJson } from './auth-api';
 
-type PageQuery = { cursor?: string; limit?: number };
+type PageQuery = { cursor?: string | undefined; limit?: number | undefined };
+
+export async function getParks(workspaceId: string, query: Partial<ParksQuery> = {}) {
+  return parksPageSchema.parse(
+    await requestJson(`${workspacePath(workspaceId)}/parks${queryString(query)}`),
+  ) as ParksPage;
+}
+
+export async function getPark(workspaceId: string, parkId: string) {
+  return parkSchema.parse(
+    await requestJson(`${workspacePath(workspaceId)}/parks/${encodeURIComponent(parkId)}`),
+  ) as Park;
+}
+
+export async function getParkTurbines(
+  workspaceId: string,
+  parkId: string,
+  query: Partial<TurbinesQuery> = {},
+) {
+  return turbinesPageSchema.parse(
+    await requestJson(
+      `${workspacePath(workspaceId)}/parks/${encodeURIComponent(parkId)}/turbines${queryString(query)}`,
+    ),
+  ) as TurbinesPage;
+}
+
+export async function getTurbine(workspaceId: string, parkId: string, turbineId: string) {
+  return turbineSchema.parse(
+    await requestJson(
+      `${workspacePath(workspaceId)}/parks/${encodeURIComponent(parkId)}/turbines/${encodeURIComponent(turbineId)}`,
+    ),
+  ) as Turbine;
+}
+
+export async function createPark(workspaceId: string, input: { code: string }) {
+  const body = createParkSchema.parse(input);
+  return parkSchema.parse(
+    await requestJson(`${workspacePath(workspaceId)}/parks`, {
+      method: 'POST',
+      body: JSON.stringify(body),
+    }),
+  ) as Park;
+}
+
+export async function updatePark(
+  workspaceId: string,
+  parkId: string,
+  input: { code: string; expectedRevision: number },
+) {
+  const body = updateParkSchema.parse(input);
+  return parkSchema.parse(
+    await requestJson(`${workspacePath(workspaceId)}/parks/${encodeURIComponent(parkId)}`, {
+      method: 'PATCH',
+      body: JSON.stringify(body),
+    }),
+  ) as Park;
+}
+
+export async function createTurbine(workspaceId: string, parkId: string, input: { code: string }) {
+  const body = createTurbineSchema.parse(input);
+  return turbineSchema.parse(
+    await requestJson(
+      `${workspacePath(workspaceId)}/parks/${encodeURIComponent(parkId)}/turbines`,
+      { method: 'POST', body: JSON.stringify(body) },
+    ),
+  ) as Turbine;
+}
+
+export async function updateTurbine(
+  workspaceId: string,
+  parkId: string,
+  turbineId: string,
+  input: { code: string; expectedRevision: number },
+) {
+  const body = updateTurbineSchema.parse(input);
+  return turbineSchema.parse(
+    await requestJson(
+      `${workspacePath(workspaceId)}/parks/${encodeURIComponent(parkId)}/turbines/${encodeURIComponent(turbineId)}`,
+      { method: 'PATCH', body: JSON.stringify(body) },
+    ),
+  ) as Turbine;
+}
 
 export async function getWorkspaceMembers(workspaceId: string, query: PageQuery = {}) {
   return workspaceMembersPageSchema.parse(
@@ -101,7 +196,7 @@ function workspacePath(workspaceId: string) {
   return `/api/workspaces/${encodeURIComponent(workspaceId)}`;
 }
 
-function queryString(query: PageQuery & { search?: string }) {
+function queryString(query: PageQuery & { search?: string | undefined }) {
   const params = new URLSearchParams();
   if (query.limit) params.set('limit', String(query.limit));
   if (query.cursor) params.set('cursor', query.cursor);

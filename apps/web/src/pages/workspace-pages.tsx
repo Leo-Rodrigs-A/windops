@@ -4,7 +4,16 @@ import type {
   WorkspaceInvitation,
   WorkspaceMember,
 } from '@windops/contracts';
-import { Check, CircleHelp, House, Search, ShieldCheck, UsersRound, Wind } from 'lucide-react';
+import {
+  Check,
+  CircleHelp,
+  House,
+  Search,
+  ShieldCheck,
+  Trees,
+  UsersRound,
+  Wind,
+} from 'lucide-react';
 import { type FormEvent, useCallback, useEffect, useRef, useState } from 'react';
 import { useAuth } from '../auth/auth-context';
 import { SignOutButton } from '../components/sign-out-button';
@@ -64,6 +73,7 @@ import {
 
 const homeNavigation: WorkspaceNavigationItem[] = [
   { href: '/app', label: 'Visão geral', icon: House },
+  { href: '/parques', label: 'Parques', icon: Trees },
 ];
 
 export function WorkspaceHomePage() {
@@ -265,6 +275,7 @@ export function NoWorkspacePage() {
 
 const teamNavigation: WorkspaceNavigationItem[] = [
   { href: '/app', label: 'Visão geral', icon: House },
+  { href: '/parques', label: 'Parques', icon: Trees },
   { href: '/equipe', label: 'Equipe', icon: UsersRound },
 ];
 
