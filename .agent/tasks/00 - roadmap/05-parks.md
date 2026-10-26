@@ -4,6 +4,8 @@
 
 Planejada
 
+Execução inicial detalhada na [slice 03 — Parques e turbinas](../03-parques-turbinas/README.md), com P01–P06 ainda pendentes. Esse recorte entrega cadastro, consulta e edição online. Desativação permanece pendente até a integração transacional com issues, sem endpoint permissivo provisório; catálogo local durável depende da etapa 07. Concluir a slice 03 não conclui toda esta etapa do roadmap.
+
 ## Objetivo e escopo
 
 Cadastros de códigos P/T e vínculo obrigatório da turbina ao parque, administrados por admin. Catálogos locais preparados.

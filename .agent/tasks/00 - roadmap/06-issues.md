@@ -12,6 +12,8 @@ Texto obrigatório, parque/turbina, status Pendente, edição pelo criador, inic
 
 04, 05; 02 para visual
 
+A slice executável 03 prepara cadastro/consulta/edição de equipamentos, mas não habilita desativação. Ao detalhar issues, incluir a integração de desativação de parques/turbinas: bloqueio com Pendentes/Em andamento, rejeição de novas issues em equipamentos desativados e teste concorrente criação/desativação sob protocolo transacional comum. Usar serviços públicos entre módulos; não considerar a etapa 05 integralmente concluída antes dessa validação.
+
 ## Critérios de aceite
 
 Sem atribuição a terceiros; somente ator ativo conclui/devolve; admin libera atendimento; criador edita aberta com antes/depois; contrato preparado para comandos idempotentes.
