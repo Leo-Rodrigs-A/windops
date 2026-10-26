@@ -2,9 +2,9 @@
 
 ## Status
 
-Em andamento. P01–P05 concluídas em 26/10/2026; P06 pendente.
+Concluída em 26/10/2026.
 
-- [ ] Slice concluída
+- [x] Slice concluída
 
 ## Resultado esperado
 
@@ -27,7 +27,7 @@ As slices [01](../01-fundacao/README.md) e [02](../02-equipe-acesso/README.md) e
 - [x] P03 — Consultas do catálogo — concluída em 26/10/2026; GETs e autorização tenant validados em integração.
 - [x] P04 — Cadastro e edição administrativa — concluída em 26/10/2026; autorização transacional, conflitos de revisão/código e corridas validados em PostgreSQL descartável.
 - [x] P05 — Interface de parques e turbinas — concluída em 26/10/2026; proprietário confirmou admin/técnico, sidebar desktop e navegação mobile; captura validou o diálogo de código sugerido.
-- [ ] P06 — Validação integrada e encerramento
+- [x] P06 — Validação integrada e encerramento — integrações, dev desktop/Android e limpeza de portproxy/firewall confirmados em 26/10/2026.
 
 ## Limites e decisões de escopo
 
@@ -43,13 +43,13 @@ As slices [01](../01-fundacao/README.md) e [02](../02-equipe-acesso/README.md) e
 
 ## Aceite da slice
 
-- [ ] Schema/migrações preservam dados e impedem relações entre tenants.
-- [ ] Admin cadastra/edita; técnico consulta, sem escrita pela API.
-- [ ] Códigos duplicados e revisões obsoletas produzem conflito, sem perda silenciosa.
-- [ ] Serviços públicos de parks permitem futura validação de localização sem imports internos entre módulos.
-- [ ] Interface integrada validada em desktop e Android, com temas e acessibilidade; limitações de dispositivos registradas.
-- [ ] Testes e evidências documentados; lifecycle com issues e catálogo offline continuam explicitamente pendentes para as etapas dependentes.
+- [x] Schema/migrações preservam dados e impedem relações entre tenants.
+- [x] Admin cadastra/edita; técnico consulta, sem escrita pela API.
+- [x] Códigos duplicados e revisões obsoletas produzem conflito, sem perda silenciosa.
+- [x] Serviços públicos de parks permitem futura validação de localização sem imports internos entre módulos.
+- [x] Interface integrada validada em desktop e Android, com temas e acessibilidade; limitações de dispositivos registradas.
+- [x] Testes e evidências documentados; lifecycle com issues e catálogo offline continuam explicitamente pendentes para as etapas dependentes.
 
 ## Evidência do planejamento
 
-P01–P05 concluídas em 26/10/2026. P05 implementa catálogo Shadcn responsivo; cadastro confirma código sequencial sugerido e edição mantém controle de revisão. Proprietário confirmou os cargos e navegação desktop/mobile; captura confirmou `Parque P002` sem digitação e sem confirmar gravação. Biome, boundaries, typechecks, 18 testes e build passaram; `pnpm check` sem saída, equivalentes diretos passaram. P06 é a próxima task. Exclusão/arquivamento com issues ficou definido como requisito futuro e não foi exposto nesta slice.
+P01–P06 concluídas em 26/10/2026. P06 passou integrações de catálogo, workspaces e autenticação, instalação/upgrade/restart, restore, permissões, PostgreSQL/Electric, Biome, boundaries, typechecks, builds e 18 testes. `pnpm check` permaneceu sem saída e foi interrompido; equivalentes diretos passaram. Proprietário confirmou admin criar/editar parque e turbina e técnico consultar sem editar em desktop e Android. Os servidores temporários foram encerrados, e portproxy/regra de firewall foram removidos e verificados ausentes. Lifecycle de issues e catálogo offline continuam fora desta slice e do roadmap 05 integral.

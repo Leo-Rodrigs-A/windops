@@ -2,9 +2,9 @@
 
 ## Status
 
-Planejada
+Em andamento — a slice executável 03 foi concluída em 26/10/2026; lifecycle com issues e catálogo offline permanecem pendentes.
 
-Execução detalhada na [slice 03 — Parques e turbinas](../03-parques-turbinas/README.md). P01–P05 concluídas; falta P06. Exclusão definitiva quando não há issues e arquivamento/restauração quando há histórico foram solicitados pelo proprietário e dependem da integração transacional com o domínio issues. Catálogo local durável depende da etapa 07. Concluir a slice 03 não conclui toda esta etapa do roadmap.
+Execução detalhada na [slice 03 — Parques e turbinas](../03-parques-turbinas/README.md). P01–P06 concluídas em 26/10/2026. A etapa permanece parcialmente atendida: exclusão definitiva sem issues e arquivamento/restauração com histórico dependem da integração transacional com issues; catálogo local durável depende da etapa 07.
 
 ## Objetivo e escopo
 

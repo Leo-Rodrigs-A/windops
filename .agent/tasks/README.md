@@ -11,11 +11,11 @@ Cada nova slice fica em uma pasta `NN-nome/`, com um `README.md` que define resu
 - [x] [01 — Fundação](01-fundacao/README.md): F01–F08 concluídas em 25/10/2026, com validação local e Android físico.
 - [x] [02 — Equipe e acesso ao workspace](02-equipe-acesso/README.md): E01–E07 concluídas; integrações, desktop, Android e ações entre cargos validados. Ajustes visuais mobile ficam para melhoria posterior.
 
-- [ ] [03 — Parques e turbinas](03-parques-turbinas/README.md): P01–P05 concluídas; P06 pendente.
+- [x] [03 — Parques e turbinas](03-parques-turbinas/README.md): P01–P06 concluídas em 26/10/2026; lifecycle com issues e catálogo offline permanecem nas etapas futuras.
 
-Slice atual: 03, em andamento. Próxima task: [P06 — Validação integrada e encerramento](03-parques-turbinas/06-validacao-integrada.md). Exclusão definitiva sem issues e arquivamento restaurável com histórico ficam para integração ao domínio issues; catálogo offline permanece na etapa 07.
+Slice 03 concluída. Próxima slice ainda não detalhada. Lifecycle com issues fica para a integração ao domínio issues; catálogo offline permanece na etapa 07.
 
-Verificação do planejamento em 26/10/2026: links locais dos documentos alterados e consistência das seis tasks conferidos; `git diff --check` passou. Testes da aplicação não executados, pois esta entrega é somente documental.
+Verificação documental do planejamento inicial em 26/10/2026: links locais dos documentos alterados e consistência das seis tasks conferidos; `git diff --check` passou. As validações de implementação da P06 estão registradas na task específica.
 
 P01 concluída em 26/10/2026: contratos Zod e modelo de banco registrados; equivalentes diretos de lint, boundaries, typecheck e testes passaram. `pnpm check` ficou sem saída. Sem migração ou alteração de dados dev.
 
@@ -26,6 +26,8 @@ P03 concluída em 26/10/2026: consultas GET de parks/turbines com autorização 
 P04 concluída em 26/10/2026: criação/edição de parks e turbines restrita a admin, autorização e escrita na mesma transação, revisão otimista e conflitos úteis. Integração descartável cobriu corridas, revogação, isolamento e persistência após reconstrução da API. `pnpm check` sem saída; equivalentes diretos passaram. Ver task P04.
 
 P05 concluída em 26/10/2026: página `/parques` com leitura, cadastro sequencial por confirmação, edição administrativa, busca/paginação e navegação desktop/mobile. Proprietário confirmou admin/técnico, navegação responsiva e preview `Parque P002` sem gravação. Biome, boundaries, typechecks, 18 testes e build passaram. Ver task P05.
+
+P06 e slice 03 concluídas em 26/10/2026. Integrações, migrations, restore, permissões, PostgreSQL/Electric, builds e testes passaram; proprietário confirmou o fluxo admin/técnico em desktop e Android físico. `pnpm check` foi interrompido sem saída após 30s; equivalentes diretos passaram. Servidores, portproxy e regra de firewall temporários foram encerrados/removidos e verificados. Roadmap 05 permanece parcial pelo lifecycle futuro integrado a issues e pelo catálogo offline.
 
 ## Convenção de execução
 
