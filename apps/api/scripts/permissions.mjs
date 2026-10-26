@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { config } from 'dotenv';
 import { Pool } from 'pg';
@@ -28,8 +29,25 @@ async function expectDenied(pool, sql, label) {
 }
 
 try {
+  const catalog = await app.query(
+    `SELECT to_regclass('public.parks') AS parks, to_regclass('public.turbines') AS turbines`,
+  );
+  assert.ok(catalog.rows[0]?.parks && catalog.rows[0]?.turbines, 'parks migration must be applied');
+  const migrationCount = await migrator.query(
+    'SELECT count(*)::int AS count FROM drizzle.__drizzle_migrations',
+  );
+  const journal = JSON.parse(
+    readFileSync(new URL('../drizzle/meta/_journal.json', import.meta.url), 'utf8'),
+  );
+  assert.equal(
+    migrationCount.rows[0].count,
+    journal.entries.length,
+    'migration journal must be current',
+  );
   await app.query('SELECT id FROM public.workspaces LIMIT 1');
   await app.query('SELECT id FROM public.workspace_invitations LIMIT 0');
+  await app.query('SELECT id FROM public.parks LIMIT 0');
+  await app.query('SELECT id FROM public.turbines LIMIT 0');
   await app.query('UPDATE public.workspaces SET name = name WHERE false');
   await expectDenied(app, 'CREATE TABLE public.f02_runtime_probe (id integer)', 'runtime DDL');
   await expectDenied(
@@ -89,6 +107,8 @@ try {
     'auth_login_challenges',
     'workspace_members',
     'workspace_invitations',
+    'parks',
+    'turbines',
   ]) {
     await expectDenied(
       replication,

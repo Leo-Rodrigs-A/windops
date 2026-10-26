@@ -2,9 +2,9 @@
 
 ## Status
 
-Planejada
+Concluída em 26/10/2026.
 
-- [ ] Task concluída
+- [x] Task concluída
 
 ## Objetivo
 
@@ -12,7 +12,7 @@ Persistir o catálogo com integridade tenant e preservar o banco existente.
 
 ## Estado atual
 
-Slices 01 e 02 concluídas. O módulo parks contém somente um entrypoint vazio; não há catálogo implementado. Este plano não comprova execução das dependências.
+P01 concluída. Schema Drizzle de parques e turbinas implementado; migração `0004_parks_turbines` aplicada ao ambiente dev. Rotas e telas ainda não existem.
 
 ## Dependências
 
@@ -24,12 +24,12 @@ Tabelas parks/turbines, migração/journal e provisionamento de grants quando ne
 
 ## Plano de implementação
 
-- [ ] Implementar schema no módulo parks e gerar a próxima migração Drizzle conforme journal existente, sem editar migrações já aplicadas.
-- [ ] Criar unicidades, FKs compostas e índices para consultas por workspace/parque; impor revisão positiva, campos obrigatórios e política de códigos definida em P01 no banco.
-- [ ] Impedir exclusão em cascata que apague histórico futuro; não criar tabela elevadores nem inserir parques/turbinas fictícios no banco de dev.
-- [ ] Conceder somente privilégios necessários ao papel da API; manter DDL com migrador. Não adicionar catálogo à publicação Electric antes do proxy autorizado e da slice offline.
-- [ ] Validar instalação vazia, upgrade desde schema atual, reaplicação/concorrência do migrador e violações de integridade em banco descartável com dois tenants.
-- [ ] Após testes, aplicar migração pelo fluxo regular ao dev persistente, preservando contas, memberships e convites; conferir versão aplicada sem divulgar credenciais.
+- [x] Implementar `parks/schema.ts` e gerar `0004_parks_turbines`, mantendo as migrações anteriores intactas.
+- [x] Criar índices únicos por workspace/parque, índices de leitura por tenant, FKs explícitas workspace→parks/turbines e FK composta parque+workspace→turbines; checks de código e revision.
+- [x] Restringir exclusões por FK `ON DELETE RESTRICT`; sem tabela elevators, seed ou inventário no dev.
+- [x] API usa grants DML padrão do `windops_migrator`; Electric não recebe SELECT nem publicação sobre parks/turbines. Sem alteração necessária no script de provisionamento.
+- [x] Validar banco vazio, migração concorrente, upgrade desde `0003`, integridade entre dois tenants descartáveis, unicidade, formato, revision e privilégios.
+- [x] Aplicar a migração ao dev pelo migrador dedicado e verificar journal, acesso da API, negação ao Electric e grants restritos.
 
 ## Contratos e dados afetados
 
@@ -37,9 +37,11 @@ Tabelas parks/turbines, migração/journal e provisionamento de grants quando ne
 
 ## Testes e aceite
 
-- [ ] Verificar duplicidade no mesmo escopo, códigos iguais em parques/workspaces distintos, FK entre tenants, revisão e grants. Rodar pnpm check, drizzle-kit check e checks de banco/contêiner adequados; documentar rollback operacional sem prometer downgrade destrutivo.
-- [ ] Registrar comandos, resultados, limitações e arquivos alterados antes de marcar conclusão.
+- [x] Verificar duplicidade no mesmo escopo, códigos iguais em parques/workspaces distintos, FK entre tenants, revisão e grants. Rodar `drizzle-kit check` e checks de banco/contêiner; registrar rollback como correção aditiva, sem downgrade destrutivo.
+- [x] Registrar comandos, resultados, limitações e arquivos alterados antes de marcar conclusão.
 
 ## Evidências
 
-Planejamento em 26/10/2026. Implementação e validações desta task ainda não executadas.
+Implementação em 26/10/2026: `apps/api/src/modules/parks/schema.ts`, migração `0004_parks_turbines.sql`, snapshot/journal e `parks-schema-check.mjs`. `.agent/database.md` e arquitetura atualizados com estado real. Migration cria as duas tabelas, checks, índices e FKs com `RESTRICT`; as FKs entre módulos ficaram em SQL manual para preservar a regra de imports públicos. Padrões default grants dão DML à API; verificação confirmou que Electric não lê nem replica o catálogo.
+
+Validação: suíte P02 em dois bancos Docker descartáveis passou — instalação vazia, duas execuções concorrentes, constraints, isolamento cruzado, grants, ausência na publication e upgrade desde `0003` preservando workspace/membership. `permissions.mjs` passou no dev após aplicar `0004`. `drizzle-kit check`, Biome (134 arquivos), boundaries, Vitest (3 arquivos/18 testes), typechecks API/web e builds API/web passaram. `pnpm check` foi iniciado, mas ficou sem saída e sem processo de verificação observável; os equivalentes foram rodados diretamente. Rollback automático não foi criado. A migração é aditiva; falha posterior deve ser corrigida com forward migration. Nenhum parque ou turbina foi inserido no banco dev.

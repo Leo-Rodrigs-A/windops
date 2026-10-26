@@ -10,6 +10,7 @@
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "tsx src/platform/database/migrate.ts",
+    "db:parks-check": "node scripts/parks-schema-check.mjs",
     "test:integration": "node scripts/integration.mjs"
   },
   "dependencies": {
