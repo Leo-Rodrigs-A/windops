@@ -2,7 +2,7 @@
 
 ## Status
 
-Planejada em 26/10/2026. Apenas planejamento; nenhuma funcionalidade desta slice implementada.
+Em andamento. P01 concluída em 26/10/2026; P02–P06 pendentes.
 
 - [ ] Slice concluída
 
@@ -14,16 +14,15 @@ Administradores cadastram e editam códigos de parques e turbinas no workspace; 
 
 As slices [01](../01-fundacao/README.md) e [02](../02-equipe-acesso/README.md) estão concluídas. Executar na ordem abaixo; começar pela P01.
 
-| Task | Entrega | Dependências |
-| --- | --- | --- |
-| [P01 — Modelo e contratos](01-modelo-contratos.md) | Modelo e contratos | Slices 01 e 02 concluídas. |
-| [P02 — Schema, migração e privilégios](02-schema-migracao.md) | Schema, migração e privilégios | P01 concluída. |
-| [P03 — Consultas do catálogo](03-consultas-autorizadas.md) | Consultas do catálogo | P01 e P02 concluídas. |
-| [P04 — Cadastro e edição administrativa](04-cadastro-edicao.md) | Cadastro e edição administrativa | P01–P03 concluídas. |
-| [P05 — Interface de parques e turbinas](05-interface-catalogo.md) | Interface de parques e turbinas | P03 e P04 concluídas |
-| [P06 — Validação integrada e encerramento](06-validacao-integrada.md) | Validação integrada e encerramento | P01–P05 concluídas. |
-
-- [ ] P01 — Modelo e contratos
+| Task                                                                  | Entrega                            | Dependências               |
+| --------------------------------------------------------------------- | ---------------------------------- | -------------------------- |
+| [P01 — Modelo e contratos](01-modelo-contratos.md)                    | Modelo e contratos                 | Slices 01 e 02 concluídas. |
+| [P02 — Schema, migração e privilégios](02-schema-migracao.md)         | Schema, migração e privilégios     | P01 concluída.             |
+| [P03 — Consultas do catálogo](03-consultas-autorizadas.md)            | Consultas do catálogo              | P01 e P02 concluídas.      |
+| [P04 — Cadastro e edição administrativa](04-cadastro-edicao.md)       | Cadastro e edição administrativa   | P01–P03 concluídas.        |
+| [P05 — Interface de parques e turbinas](05-interface-catalogo.md)     | Interface de parques e turbinas    | P03 e P04 concluídas       |
+| [P06 — Validação integrada e encerramento](06-validacao-integrada.md) | Validação integrada e encerramento | P01–P05 concluídas.        |
+- [x] P01 — Modelo e contratos — concluída em 26/10/2026; contratos e matriz documentados, Biome/boundaries/typecheck/Vitest aprovados diretamente.
 - [ ] P02 — Schema, migração e privilégios
 - [ ] P03 — Consultas do catálogo
 - [ ] P04 — Cadastro e edição administrativa
@@ -53,5 +52,4 @@ As slices [01](../01-fundacao/README.md) e [02](../02-equipe-acesso/README.md) e
 
 ## Evidência do planejamento
 
-Planos criados em 26/10/2026 após leitura do roadmap, arquitetura, memória, modelo relacional e entrypoint vazio de parks. Apenas documentos alterados; não foram criadas tabelas, aplicadas migrações ou alterados dados de desenvolvimento. Verificação documental registrada no índice geral após execução; testes da aplicação não se aplicam a esta mudança documental.
-
+Planejamento criado em 26/10/2026 após leitura do roadmap, arquitetura, memória, modelo relacional e entrypoint vazio de parks. P01 implementada: contratos e documentação do modelo concluídos, sem tabelas, migrações ou alterações nos dados de desenvolvimento. `pnpm check` ficou sem saída; equivalentes diretos passaram. Testes de integração de banco não se aplicam sem schema/endpoints.

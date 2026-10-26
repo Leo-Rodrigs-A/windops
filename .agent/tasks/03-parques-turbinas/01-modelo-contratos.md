@@ -2,9 +2,9 @@
 
 ## Status
 
-Planejada
+Concluída em 26/10/2026.
 
-- [ ] Task concluída
+- [x] Task concluída
 
 ## Objetivo
 
@@ -24,13 +24,13 @@ Contratos compartilhados e documentação do banco; sem migração aplicada, SQL
 
 ## Plano de implementação
 
-- [ ] Registrar em `.agent/database.md` o modelo de parks e turbines: UUID estável, workspace_id, code, created_at, updated_at e revision; park_id obrigatório na turbina. Definir representação de atividade para integração futura, sem habilitar desativação.
-- [ ] Definir normalização e validação de códigos P01…PX/T01…TX, limites e equivalência de zeros à esquerda; registrar exemplos válidos/inválidos antes de gerar a migração. Não fixar quantidade de equipamentos em oito.
-- [ ] Definir unicidade de parque por workspace e de turbina por parque, incluindo FK composta tenant. Manter park_id imutável na edição; transferência entre parques fica fora do escopo.
-- [ ] Definir contratos Zod de leitura, criação e edição; expectedRevision obrigatório na edição, respostas mínimas e erros padronizados. Escolher paginação com ordenação estável e limites explícitos.
-- [ ] Documentar matriz: admin cria/edita/consulta; técnico consulta; órfão, revogado e sessão sem segunda etapa não acessam. Workspace recebido nunca substitui autorização.
-- [ ] Especificar serviços públicos de parks para futuras issues validarem localização e atividade no contexto de uma transação. Documentar estratégia de locks para futura corrida criação de issue versus desativação, sem implementar issues.
-- [ ] Registrar endpoints planejados: GET/POST parks, GET/PATCH parks/:parkId e GET/POST parks/:parkId/turbines, GET/PATCH parks/:parkId/turbines/:turbineId, todos sob /api/workspaces/:workspaceId.
+- [x] Registrar modelo relacional e marcador futuro de atividade em `.agent/database.md`.
+- [x] Definir normalização: remover espaços externos, uppercase ASCII, formato `P|T` + 2–6 algarismos ASCII, zeros significativos e sem limite fixo de quantidade.
+- [x] Definir unicidade, integridade tenant, UUID estável, parque imutável da turbina e exclusão física fora do escopo.
+- [x] Definir DTOs Zod estritos, create/update, revisão obrigatória, paginação `limit` 1–100, busca até 100 caracteres e ordenação `code ASC, id ASC` com cursor UUID.
+- [x] Documentar matriz: admin escreve; ambos os cargos consultam; sessão completa e membership ativa são obrigatórias.
+- [x] Especificar API pública futura de parks e ordem de locks parque→turbina para concorrência com issues.
+- [x] Registrar endpoints previstos sob `/api/workspaces/:workspaceId`.
 
 ## Contratos e dados afetados
 
@@ -38,10 +38,11 @@ Contratos compartilhados e documentação do banco; sem migração aplicada, SQL
 
 ## Testes e aceite
 
-- [ ] Testar validações, limites, normalização, paginação e expectedRevision. Conferir matriz de permissão e executar pnpm check para alterações de contratos.
-- [ ] Registrar comandos, resultados, limitações e arquivos alterados antes de marcar conclusão.
+- [x] Testar validações, limites, normalização, paginação e expectedRevision. Conferir matriz de permissão e executar `pnpm check`.
+- [x] Registrar comandos, resultados, limitações e arquivos alterados antes de marcar conclusão.
 
 ## Evidências
 
-Planejamento em 26/10/2026. Implementação e validações desta task ainda não executadas.
+Implementação em 26/10/2026: adicionados schemas/tipos Zod estritos para parques, turbinas, parâmetros, criação/edição e páginas; normalização de códigos e queries coberta por testes. `.agent/database.md` registra colunas, integridade tenant, revisão otimista, paginação, autorização, endpoints planejados e protocolo futuro de concorrência com issues.
 
+Validação: `pnpm check` foi iniciado, mas ficou sem saída e sem processo de verificação observável, então foi interrompido. Os equivalentes executados diretamente passaram: Biome em 132 arquivos, checagem de boundaries, typecheck de contracts e Vitest (9 testes). `git diff --check` passou. Sem migração SQL, rotas, acesso ao banco ou alteração do banco dev. Constraints e locks serão confirmados em P02/P04 e na integração com issues; ainda não estão implementados.

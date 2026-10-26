@@ -43,4 +43,3 @@ Tabelas parks/turbines, migração/journal e provisionamento de grants quando ne
 ## Evidências
 
 Planejamento em 26/10/2026. Implementação e validações desta task ainda não executadas.
-

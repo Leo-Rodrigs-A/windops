@@ -44,4 +44,3 @@ POST/PATCH de parks/turbines, revisão e erros de conflito; sem histórico de is
 ## Evidências
 
 Planejamento em 26/10/2026. Implementação e validações desta task ainda não executadas.
-

@@ -44,4 +44,3 @@ Evidências de testes, documentação e eventuais correções necessárias; não
 ## Evidências
 
 Planejamento em 26/10/2026. Implementação e validações desta task ainda não executadas.
-

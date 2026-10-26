@@ -44,4 +44,3 @@ Rotas web, cliente API e componentes Shadcn para catálogo; sem telas de chamado
 ## Evidências
 
 Planejamento em 26/10/2026. Implementação e validações desta task ainda não executadas.
-

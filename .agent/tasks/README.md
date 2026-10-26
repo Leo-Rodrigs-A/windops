@@ -11,11 +11,13 @@ Cada nova slice fica em uma pasta `NN-nome/`, com um `README.md` que define resu
 - [x] [01 — Fundação](01-fundacao/README.md): F01–F08 concluídas em 25/10/2026, com validação local e Android físico.
 - [x] [02 — Equipe e acesso ao workspace](02-equipe-acesso/README.md): E01–E07 concluídas; integrações, desktop, Android e ações entre cargos validados. Ajustes visuais mobile ficam para melhoria posterior.
 
-- [ ] [03 — Parques e turbinas](03-parques-turbinas/README.md): P01–P06 planejadas; catálogo online com cadastro e edição administrativa, consulta para ambos os cargos e autorização tenant.
+- [ ] [03 — Parques e turbinas](03-parques-turbinas/README.md): P01 concluída; P02–P06 pendentes. Catálogo online com cadastro e edição administrativa, consulta para ambos os cargos e autorização tenant.
 
-Slice atual: 03, em planejamento concluído e implementação pendente. Próxima task: [P01 — Modelo e contratos](03-parques-turbinas/01-modelo-contratos.md). Desativação depende da integração com issues e catálogo offline permanece na etapa 07 do roadmap.
+Slice atual: 03, em andamento. Próxima task: [P02 — Schema, migração e privilégios](03-parques-turbinas/02-schema-migracao.md). Desativação depende da integração com issues e catálogo offline permanece na etapa 07 do roadmap.
 
 Verificação do planejamento em 26/10/2026: links locais dos documentos alterados e consistência das seis tasks conferidos; `git diff --check` passou. Testes da aplicação não executados, pois esta entrega é somente documental.
+
+P01 concluída em 26/10/2026: contratos Zod e modelo de banco registrados; equivalentes diretos de lint, boundaries, typecheck e testes passaram. `pnpm check` ficou sem saída. Sem migração ou alteração de dados dev.
 
 ## Convenção de execução
 

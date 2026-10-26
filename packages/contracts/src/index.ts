@@ -124,6 +124,61 @@ export const workspaceDirectoryPageSchema = z
   })
   .strict();
 
+const catalogCodeSchema = (prefix: 'P' | 'T') =>
+  z
+    .string()
+    .trim()
+    .toUpperCase()
+    .regex(new RegExp(`^${prefix}[0-9]{2,6}$`), `Use o formato ${prefix}01.`);
+
+export const parkSchema = z
+  .object({
+    id: z.uuid(),
+    workspaceId: z.uuid(),
+    code: catalogCodeSchema('P'),
+    createdAt: z.iso.datetime(),
+    updatedAt: z.iso.datetime(),
+    revision: z.number().int().positive(),
+    deactivatedAt: z.iso.datetime().nullable(),
+  })
+  .strict();
+export const turbineSchema = z
+  .object({
+    id: z.uuid(),
+    workspaceId: z.uuid(),
+    parkId: z.uuid(),
+    code: catalogCodeSchema('T'),
+    createdAt: z.iso.datetime(),
+    updatedAt: z.iso.datetime(),
+    revision: z.number().int().positive(),
+    deactivatedAt: z.iso.datetime().nullable(),
+  })
+  .strict();
+export const parkParamsSchema = z.object({ parkId: z.uuid() }).strict();
+export const turbineParamsSchema = z.object({ parkId: z.uuid(), turbineId: z.uuid() }).strict();
+export const parksQuerySchema = z
+  .object({
+    limit: z.coerce.number().int().min(1).max(100).default(25),
+    cursor: z.uuid().optional(),
+    search: z.string().trim().min(1).max(100).optional(),
+  })
+  .strict();
+export const turbinesQuerySchema = parksQuerySchema;
+export const createParkSchema = z.object({ code: catalogCodeSchema('P') }).strict();
+export const updateParkSchema = z
+  .object({ code: catalogCodeSchema('P'), expectedRevision: z.number().int().positive() })
+  .strict();
+export const createTurbineSchema = z.object({ code: catalogCodeSchema('T') }).strict();
+export const updateTurbineSchema = z
+  .object({ code: catalogCodeSchema('T'), expectedRevision: z.number().int().positive() })
+  .strict();
+export const parksPageSchema = z
+  .object({ items: z.array(parkSchema), nextCursor: z.uuid().nullable() })
+  .strict();
+export const turbinesPageSchema = z
+  .object({ items: z.array(turbineSchema), nextCursor: z.uuid().nullable() })
+  .strict();
+
 export type WorkspaceRole = z.infer<typeof workspaceRoleSchema>;
 export type AuthenticatedUser = z.infer<typeof authenticatedUserSchema>;
 export type AuthorizedWorkspace = z.infer<typeof authorizedWorkspaceSchema>;
@@ -143,5 +198,15 @@ export type WorkspaceMemberMutation = z.infer<typeof workspaceMemberMutationSche
 export type WorkspaceMembersPage = z.infer<typeof workspaceMembersPageSchema>;
 export type WorkspaceDirectoryAccount = z.infer<typeof workspaceDirectoryAccountSchema>;
 export type WorkspaceDirectoryPage = z.infer<typeof workspaceDirectoryPageSchema>;
+export type Park = z.infer<typeof parkSchema>;
+export type Turbine = z.infer<typeof turbineSchema>;
+export type ParksQuery = z.infer<typeof parksQuerySchema>;
+export type TurbinesQuery = z.infer<typeof turbinesQuerySchema>;
+export type CreatePark = z.infer<typeof createParkSchema>;
+export type UpdatePark = z.infer<typeof updateParkSchema>;
+export type CreateTurbine = z.infer<typeof createTurbineSchema>;
+export type UpdateTurbine = z.infer<typeof updateTurbineSchema>;
+export type ParksPage = z.infer<typeof parksPageSchema>;
+export type TurbinesPage = z.infer<typeof turbinesPageSchema>;
 export type WorkspaceListQuery = z.infer<typeof workspaceListQuerySchema>;
 export type WorkspaceMembersQuery = z.infer<typeof workspaceMembersQuerySchema>;

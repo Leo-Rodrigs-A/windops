@@ -43,4 +43,3 @@ GETs do catálogo, DTOs públicos e serviços parks; sem escrita, sync, cache du
 ## Evidências
 
 Planejamento em 26/10/2026. Implementação e validações desta task ainda não executadas.
-

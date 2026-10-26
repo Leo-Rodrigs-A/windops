@@ -1,10 +1,18 @@
+import { randomUUID } from 'node:crypto';
 import { expect, it } from 'vitest';
 import {
   acceptWorkspaceInvitationSchema,
+  createParkSchema,
+  createTurbineSchema,
   createWorkspaceInvitationSchema,
   errorSchema,
   healthSchema,
+  parkSchema,
+  parksQuerySchema,
   revokeWorkspaceMemberSchema,
+  turbineSchema,
+  updateParkSchema,
+  updateTurbineSchema,
   updateWorkspaceMemberRoleSchema,
   workspaceDirectoryAccountSchema,
   workspaceInvitationSchema,
@@ -91,4 +99,44 @@ it('requires invitation responses to omit raw tokens and include delivery state'
   expect(
     workspaceInvitationSchema.safeParse({ ...response, token: 'should-not-be-returned' }).success,
   ).toBe(false);
+});
+
+it('normalizes park and turbine codes and rejects malformed or forged fields', () => {
+  expect(createParkSchema.parse({ code: ' p01 ' })).toEqual({ code: 'P01' });
+  expect(createTurbineSchema.parse({ code: 't000123' })).toEqual({ code: 'T000123' });
+  for (const code of ['P1', 'P1234567', 'T01', 'P-01', 'P０１']) {
+    expect(createParkSchema.safeParse({ code }).success).toBe(false);
+  }
+  expect(createTurbineSchema.safeParse({ code: 't1' }).success).toBe(false);
+  expect(createParkSchema.safeParse({ code: 'P01', workspaceId: randomUUID() }).success).toBe(
+    false,
+  );
+});
+
+it('validates catalog DTOs, pagination, and optimistic revisions', () => {
+  const timestamp = '2026-10-26T12:00:00.000Z';
+  const parkId = randomUUID();
+  const park = {
+    id: parkId,
+    workspaceId: randomUUID(),
+    code: 'P01',
+    createdAt: timestamp,
+    updatedAt: timestamp,
+    revision: 1,
+    deactivatedAt: null,
+  };
+  expect(parkSchema.safeParse(park).success).toBe(true);
+  expect(turbineSchema.safeParse({ ...park, parkId, code: 'T01' }).success).toBe(true);
+  expect(parkSchema.safeParse({ ...park, revision: 0 }).success).toBe(false);
+  expect(updateParkSchema.safeParse({ code: 'P02', expectedRevision: 1 }).success).toBe(true);
+  expect(updateParkSchema.safeParse({ code: 'P02', expectedRevision: 0 }).success).toBe(false);
+  expect(updateTurbineSchema.safeParse({ code: 'T02', expectedRevision: 1 }).success).toBe(true);
+  expect(parksQuerySchema.parse({})).toEqual({ limit: 25 });
+  expect(parksQuerySchema.parse({ search: ' P0 ', limit: 100 })).toEqual({
+    limit: 100,
+    search: 'P0',
+  });
+  expect(parksQuerySchema.safeParse({ limit: 101 }).success).toBe(false);
+  expect(parksQuerySchema.safeParse({ search: 'x'.repeat(101) }).success).toBe(false);
+  expect(parksQuerySchema.safeParse({ workspaceId: randomUUID() }).success).toBe(false);
 });
