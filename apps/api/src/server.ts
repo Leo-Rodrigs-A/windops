@@ -3,7 +3,7 @@ import { createAuditService } from './modules/audit/index.js';
 import { createIdentityProvider, createIdentityService } from './modules/identity/index.js';
 import { createIssuesService } from './modules/issues/index.js';
 import { createParksCatalogService } from './modules/parks/index.js';
-import { createSyncService } from './modules/sync/index.js';
+import { createSyncService, createSyncShapeProxy } from './modules/sync/index.js';
 import { createWorkspaceAuthorizationService } from './modules/workspaces/index.js';
 import { loadEnvironment } from './platform/config.js';
 import { createDatabase } from './platform/database/client.js';
@@ -54,6 +54,11 @@ const app = buildApp({
     parks: parksCatalog,
     audit: createAuditService(),
     sync,
+  }),
+  syncProxy: createSyncShapeProxy({
+    authorization: workspaceAuthorization,
+    electricUrl: env.ELECTRIC_URL,
+    electricSecret: env.ELECTRIC_SECRET,
   }),
   authOrigin: env.APP_ORIGIN,
   ready: async () => {

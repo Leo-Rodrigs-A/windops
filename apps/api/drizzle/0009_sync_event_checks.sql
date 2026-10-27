@@ -1,0 +1,4 @@
+ALTER TABLE "issue_sync_events" ADD CONSTRAINT "issue_sync_events_type_check" CHECK ("issue_sync_events"."type" IN ('created', 'edited', 'started', 'returned', 'released', 'completed'));--> statement-breakpoint
+ALTER TABLE "issue_sync_events" ADD CONSTRAINT "issue_sync_events_actor_label_check" CHECK (length(btrim("issue_sync_events"."actor_label")) > 0);--> statement-breakpoint
+ALTER TABLE "issue_sync_events" ADD CONSTRAINT "issue_sync_events_before_object_check" CHECK ("issue_sync_events"."before" IS NULL OR jsonb_typeof("issue_sync_events"."before") = 'object');--> statement-breakpoint
+ALTER TABLE "issue_sync_events" ADD CONSTRAINT "issue_sync_events_after_object_check" CHECK ("issue_sync_events"."after" IS NULL OR jsonb_typeof("issue_sync_events"."after") = 'object');

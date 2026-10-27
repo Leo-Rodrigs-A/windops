@@ -18,6 +18,24 @@ export interface AuditService {
   appendIssueEvent(client: PoolClient, input: AppendIssueEventInput): Promise<void>;
 }
 
+const publicSnapshotKeys = [
+  'text',
+  'parkId',
+  'turbineId',
+  'status',
+  'completionReport',
+  'revision',
+] as const;
+
+function publicSnapshot(snapshot: Record<string, unknown> | null) {
+  if (snapshot === null) return null;
+  return Object.fromEntries(
+    publicSnapshotKeys.flatMap((key) =>
+      Object.hasOwn(snapshot, key) ? [[key, snapshot[key]]] : [],
+    ),
+  );
+}
+
 export function createAuditService(): AuditService {
   return {
     async appendIssueEvent(client, input) {
@@ -36,6 +54,19 @@ export function createAuditService(): AuditService {
           input.type,
           input.before === null ? null : JSON.stringify(input.before),
           input.after === null ? null : JSON.stringify(input.after),
+        ],
+      );
+      await client.query(
+        `INSERT INTO public.issue_sync_events
+          (id, workspace_id, issue_id, actor_label, type, occurred_at, before, after)
+         SELECT id, workspace_id, issue_id, actor_label, type, occurred_at, $4::jsonb, $5::jsonb
+         FROM public.issue_events WHERE id = $1 AND workspace_id = $2 AND issue_id = $3`,
+        [
+          input.id,
+          input.workspaceId,
+          input.issueId,
+          input.before === null ? null : JSON.stringify(publicSnapshot(input.before)),
+          input.after === null ? null : JSON.stringify(publicSnapshot(input.after)),
         ],
       );
       if (input.location)

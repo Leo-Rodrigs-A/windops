@@ -49,7 +49,9 @@ try {
   await app.query('SELECT id FROM public.parks LIMIT 0');
   await app.query('SELECT id FROM public.turbines LIMIT 0');
   await app.query('SELECT id FROM public.issues LIMIT 0');
+  await app.query('SELECT id, text, completion_report FROM public.issue_sync_rows LIMIT 0');
   await app.query('SELECT id FROM public.issue_events LIMIT 0');
+  await app.query('SELECT id, actor_label, before, after FROM public.issue_sync_events LIMIT 0');
   await app.query('SELECT event_id FROM public.issue_location_references LIMIT 0');
   await app.query('SELECT id FROM public.sync_commands LIMIT 0');
   await app.query('UPDATE public.workspaces SET name = name WHERE false');
@@ -124,10 +126,8 @@ try {
     'auth_login_challenges',
     'workspace_members',
     'workspace_invitations',
-    'parks',
-    'turbines',
-    'issues',
     'issue_events',
+    'issues',
     'issue_location_references',
     'sync_commands',
   ]) {
@@ -137,6 +137,83 @@ try {
       `replication access to ${table}`,
     );
   }
+  await replication.query('SELECT id, name, created_at FROM public.workspaces LIMIT 0');
+  await replication.query(
+    'SELECT id, workspace_id, code, deactivated_at FROM public.parks LIMIT 0',
+  );
+  await replication.query('SELECT id, workspace_id, park_id, code FROM public.turbines LIMIT 0');
+  await replication.query(
+    'SELECT id, workspace_id, park_id, turbine_id, text, completion_report, status FROM public.issue_sync_rows LIMIT 0',
+  );
+  await replication.query(
+    'SELECT id, workspace_id, issue_id, actor_label, before, after FROM public.issue_sync_events LIMIT 0',
+  );
+  await expectDenied(
+    replication,
+    'SELECT actor_membership_id FROM public.issue_events LIMIT 0',
+    'replication access to raw audit identities',
+  );
+
+  const publishedTables = await app.query(
+    `SELECT tablename
+     FROM pg_publication_tables
+     WHERE pubname = 'electric_publication_default' AND schemaname = 'public'
+     ORDER BY tablename`,
+  );
+  assert.deepEqual(
+    publishedTables.rows.map((row) => row.tablename),
+    ['issue_sync_events', 'issue_sync_rows', 'parks', 'turbines', 'workspaces'],
+  );
+  const publishedColumns = await app.query(
+    `SELECT p.tablename, json_agg(a.attname ORDER BY a.attname) AS columns
+     FROM pg_publication_tables p
+     JOIN pg_class c ON c.relname = p.tablename
+     JOIN pg_namespace n ON n.oid = c.relnamespace AND n.nspname = p.schemaname
+     JOIN pg_attribute a ON a.attrelid = c.oid AND a.attnum > 0 AND NOT a.attisdropped
+     WHERE p.pubname = 'electric_publication_default' AND p.schemaname = 'public'
+       AND (p.attnames IS NULL OR a.attname = ANY(p.attnames))
+     GROUP BY p.tablename ORDER BY p.tablename`,
+  );
+  const expectedColumns = {
+    issue_sync_events: [
+      'actor_label',
+      'after',
+      'before',
+      'id',
+      'issue_id',
+      'occurred_at',
+      'type',
+      'workspace_id',
+    ],
+    issue_sync_rows: [
+      'completion_report',
+      'created_at',
+      'id',
+      'park_id',
+      'revision',
+      'status',
+      'text',
+      'turbine_id',
+      'updated_at',
+      'workspace_id',
+    ],
+    parks: ['code', 'created_at', 'deactivated_at', 'id', 'revision', 'updated_at', 'workspace_id'],
+    turbines: [
+      'code',
+      'created_at',
+      'deactivated_at',
+      'id',
+      'park_id',
+      'revision',
+      'updated_at',
+      'workspace_id',
+    ],
+    workspaces: ['created_at', 'id', 'name'],
+  };
+  assert.deepEqual(
+    Object.fromEntries(publishedColumns.rows.map((row) => [row.tablename, row.columns])),
+    expectedColumns,
+  );
   await expectDenied(
     replication,
     `CREATE TABLE public.${probe}_ddl (id integer)`,

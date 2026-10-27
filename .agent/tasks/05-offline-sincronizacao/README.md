@@ -2,7 +2,7 @@
 
 ## Status
 
-Em andamento desde 27/10/2026, após aprovação da slice 04 pelo proprietário. S01 e S02 concluídas em 27/10; próxima task S03.
+Em andamento desde 27/10/2026, após aprovação da slice 04 pelo proprietário. S01–S03 concluídas em 27/10; próxima task S04.
 
 - [ ] Slice concluída
 
@@ -14,7 +14,7 @@ Um dispositivo previamente autenticado e preparado permite consultar catálogo/i
 
 - Slices [01](../01-fundacao/README.md), [02](../02-equipe-acesso/README.md), [03](../03-parques-turbinas/README.md) e [04](../04-registro-atendimento/README.md) concluídas. A aprovação da slice 04 é funcional online; não comprova durabilidade local nem suporte offline de aparelhos.
 - API de issues tem UUIDs, revisão, mutação/evento/recibo atômicos e retry autorizado. `sync_commands` é recibo remoto; S02 adiciona journal local de projeções/comandos, ainda sem envio.
-- `apps/api/src/modules/sync/routes.ts` responde 503; publicação Electric atual contém somente workspaces. TanStack DB 0.15.2/Electric Collection 0.6.3 estão declarados em `apps/web/package.json`, sem sincronização local do produto. A S01 provou IndexedDB em harness e S02 implementou banco v2 particionado e journal; navegadores reais ainda não foram certificados.
+- `apps/api/src/modules/sync/routes.ts` expõe shapes pelo proxy autenticado; publication Electric contém workspaces, catálogo e projeções sanitizadas de issues/eventos. TanStack DB 0.15.2/Electric Collection 0.6.3 estão declarados em `apps/web/package.json`, sem réplica local integrada ao produto. A S01 provou IndexedDB em harness e S02 implementou banco v2 particionado e journal; navegadores reais ainda não foram certificados.
 - `AuthProvider` consulta sessão online nas transições; `issues-api.ts` usa HTTP diretamente; Cloud reflete apenas `navigator.onLine`. Manifest/ícones existem, mas não há service worker/offline pronto.
 - Regra atual do servidor: autor inicia após uma hora da criação; outros membros iniciam imediatamente; somente responsável devolve/conclui. Sessão com segunda etapa e membership ativa são obrigatórias para upload e shapes.
 
@@ -35,7 +35,7 @@ Executar na ordem S01–S09. A política temporal foi preservada na S01; Indexed
 | [S09 — Validação integrada de campo e encerramento](09-validacao-integrada.md)        | S01–S08                                    |
 - [x] S01 — Prova de persistência e contratos offline — prova com fake IndexedDB passou e retomada manual reportada em Galaxy A12/Android 12 com Brave. O proprietário dispensou validações separadas de Chrome/Android e Safari/iPhone como critério de bloqueio da S01; registrar essa cobertura real sem afirmar testes nesses navegadores.
 - [x] S02 — Armazenamento local e fila durável — journal IndexedDB transacional e particionado, dependências, recuperação, lease, exportação; seis testes passaram incluindo falha por quota simulada e upgrade v1→v2 preservando dados.
-- [ ] S03 — Proxy Electric e publicação autorizada
+- [x] S03 — Proxy Electric e publicação autorizada — proxy tenant-scoped, handles HMAC vinculados a workspace/coleção e projeções sanitizadas; Electric real, grants, migrations e restore validados. Evidências e limite do workspace único em [S03](03-proxy-electric-autorizado.md).
 - [ ] S04 — Réplica local e reconciliação
 - [ ] S05 — Envio, dependências e retries de comandos
 - [ ] S06 — Acesso offline, conflitos e recuperação
@@ -83,3 +83,5 @@ Executar na ordem S01–S09. A política temporal foi preservada na S01; Indexed
 Verificação documental em 26/10/2026: 19 documentos e 85 links locais conferidos; nove tasks com seções obrigatórias, dependências ordenadas e checkboxes abertos. `git diff --check` passou. `pnpm check` e testes de aplicação não foram executados naquela preparação documental.
 
 S02 concluída em 27/10/2026: veja [evidências e limitações](02-armazenamento-outbox.md). Os testes usam fake IndexedDB; quota física e evicção real do navegador não foram provocadas. Formulários e envio da outbox continuam para S05/S07.
+
+S03 concluída em 27/10/2026: veja [evidências e limitações](03-proxy-electric-autorizado.md). Electric 1.8.1 exige publicação de linhas completas e `REPLICA IDENTITY FULL`; issues são espelhadas sem identidade privada antes de entrar na publication. O banco do piloto impõe um workspace, então a integração real rejeitou UUID sem membership e teste unitário cobriu assinatura de handle entre escopos; produção/Neon segue sem validação.

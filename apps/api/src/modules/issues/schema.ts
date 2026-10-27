@@ -64,3 +64,17 @@ export const issues = pgTable(
     ),
   ],
 );
+
+// Sanitized mirror used by Electric; identity fields stay on the private issues table.
+export const issueSyncRows = pgTable('issue_sync_rows', {
+  id: uuid('id').primaryKey(),
+  workspaceId: uuid('workspace_id').notNull(),
+  parkId: uuid('park_id').notNull(),
+  turbineId: uuid('turbine_id').notNull(),
+  text: text('text').notNull(),
+  completionReport: text('completion_report'),
+  status: text('status').notNull(),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull(),
+  revision: integer('revision').notNull(),
+});

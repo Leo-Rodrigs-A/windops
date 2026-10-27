@@ -59,6 +59,7 @@ services:
       ELECTRIC_SECRET: ${ELECTRIC_SECRET:?Set random secret}
       ELECTRIC_STORAGE_DIR: /var/lib/electric/persistent
       ELECTRIC_MANUAL_TABLE_PUBLISHING: "true"
+      ELECTRIC_LONG_POLL_TIMEOUT: "10000"
     volumes: [electric_data:/var/lib/electric]
     restart: unless-stopped
     networks: [private]

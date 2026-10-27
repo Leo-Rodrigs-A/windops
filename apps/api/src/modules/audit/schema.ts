@@ -79,3 +79,38 @@ export const issueLocationReferences = pgTable(
     ),
   ],
 );
+
+export const issueSyncEvents = pgTable(
+  'issue_sync_events',
+  {
+    id: uuid('id').primaryKey(),
+    workspaceId: uuid('workspace_id').notNull(),
+    issueId: uuid('issue_id').notNull(),
+    actorLabel: text('actor_label').notNull(),
+    type: text('type').notNull(),
+    occurredAt: timestamp('occurred_at', { withTimezone: true }).notNull(),
+    before: jsonb('before').$type<Record<string, unknown> | null>(),
+    after: jsonb('after').$type<Record<string, unknown> | null>(),
+  },
+  (table) => [
+    index('issue_sync_events_workspace_issue_occurred_idx').on(
+      table.workspaceId,
+      table.issueId,
+      table.occurredAt,
+      table.id,
+    ),
+    check(
+      'issue_sync_events_type_check',
+      sql`${table.type} IN ('created', 'edited', 'started', 'returned', 'released', 'completed')`,
+    ),
+    check('issue_sync_events_actor_label_check', sql`length(btrim(${table.actorLabel})) > 0`),
+    check(
+      'issue_sync_events_before_object_check',
+      sql`${table.before} IS NULL OR jsonb_typeof(${table.before}) = 'object'`,
+    ),
+    check(
+      'issue_sync_events_after_object_check',
+      sql`${table.after} IS NULL OR jsonb_typeof(${table.after}) = 'object'`,
+    ),
+  ],
+);

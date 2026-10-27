@@ -11,6 +11,7 @@ import {
 import { type IdentityProvider, registerIdentityRoutes } from './modules/identity/index.js';
 import { type IssuesService, registerIssuesRoutes } from './modules/issues/index.js';
 import { type ParksCatalogService, registerParksRoutes } from './modules/parks/index.js';
+import type { SyncShapeProxy } from './modules/sync/index.js';
 import { registerSyncRoutes } from './modules/sync/routes.js';
 import {
   registerWorkspaceRoutes,
@@ -25,6 +26,7 @@ export function buildApp(options: {
   workspaceAuthorization?: WorkspaceAuthorizationService;
   parksCatalog?: ParksCatalogService;
   issues?: IssuesService;
+  syncProxy?: SyncShapeProxy;
   authOrigin?: string;
 }) {
   const app = Fastify({
@@ -87,7 +89,7 @@ export function buildApp(options: {
         }
       },
     );
-    app.register(registerSyncRoutes);
+    app.register(async (instance) => registerSyncRoutes(instance, options.syncProxy));
     if (options.identity && options.authOrigin)
       registerIdentityRoutes(app, options.identity, options.authOrigin);
     if (options.workspaceAuthorization)

@@ -561,11 +561,27 @@ try {
     `SELECT
        (SELECT count(*)::int FROM public.issues WHERE id = $1) AS issues,
        (SELECT count(*)::int FROM public.issue_events WHERE issue_id = $1) AS events,
+       (SELECT count(*)::int FROM public.issue_sync_rows WHERE id = $1) AS sync_rows,
+       (SELECT bool_and(park_id IS NOT NULL AND turbine_id IS NOT NULL AND text = 'Texto revisado')
+          FROM public.issue_sync_rows WHERE id = $1) AS sync_row_matches_issue,
+       (SELECT count(*)::int FROM public.issue_sync_events WHERE issue_id = $1) AS sync_events,
+       (SELECT bool_and(
+          (before IS NULL OR NOT (before ? 'handler') AND NOT (before ? 'handlerMembershipId'))
+          AND (after IS NULL OR NOT (after ? 'handler') AND NOT (after ? 'handlerMembershipId'))
+        ) FROM public.issue_sync_events WHERE issue_id = $1) AS sync_snapshots_sanitized,
        (SELECT count(*)::int FROM public.sync_commands WHERE actor_user_id = $2
          AND command_id = ANY($3::uuid[])) AS receipts`,
     [createdIssueId, ids.tech.id, [createCommandId, updateCommandId]],
   );
-  assert.deepEqual(countsAfterReplay.rows[0], { issues: 1, events: 2, receipts: 2 });
+  assert.deepEqual(countsAfterReplay.rows[0], {
+    issues: 1,
+    events: 2,
+    sync_rows: 1,
+    sync_row_matches_issue: true,
+    sync_events: 2,
+    sync_snapshots_sanitized: true,
+    receipts: 2,
+  });
   await expectError(
     await app.inject({
       method: 'PATCH',

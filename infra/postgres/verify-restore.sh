@@ -21,9 +21,9 @@ source_counts=$(docker compose -f "$compose_file" exec -T postgres psql -U windo
 restored_counts=$(docker compose -f "$compose_file" exec -T postgres psql -U windops -d "$restore_database" -Atc \
   "SELECT (SELECT count(*) FROM public.workspaces)::text || ':' || (SELECT count(*) FROM drizzle.__drizzle_migrations)::text")
 source_issue_schema=$(docker compose -f "$compose_file" exec -T postgres psql -U windops -d windops -Atc \
-  "SELECT concat_ws(',', to_regclass('public.issues')::text, to_regclass('public.issue_events')::text, to_regclass('public.issue_location_references')::text, to_regclass('public.sync_commands')::text)")
+  "SELECT concat_ws(',', to_regclass('public.issues')::text, to_regclass('public.issue_events')::text, to_regclass('public.issue_location_references')::text, to_regclass('public.sync_commands')::text, to_regclass('public.issue_sync_rows')::text, to_regclass('public.issue_sync_events')::text)")
 restored_issue_schema=$(docker compose -f "$compose_file" exec -T postgres psql -U windops -d "$restore_database" -Atc \
-  "SELECT concat_ws(',', to_regclass('public.issues')::text, to_regclass('public.issue_events')::text, to_regclass('public.issue_location_references')::text, to_regclass('public.sync_commands')::text)")
+  "SELECT concat_ws(',', to_regclass('public.issues')::text, to_regclass('public.issue_events')::text, to_regclass('public.issue_location_references')::text, to_regclass('public.sync_commands')::text, to_regclass('public.issue_sync_rows')::text, to_regclass('public.issue_sync_events')::text)")
 
 if [ "$source_counts" != "$restored_counts" ]; then
   printf 'Restore mismatch: source=%s restored=%s\n' "$source_counts" "$restored_counts" >&2
