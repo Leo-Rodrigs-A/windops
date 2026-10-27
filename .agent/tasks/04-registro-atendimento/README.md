@@ -2,7 +2,7 @@
 
 ## Status
 
-Em andamento desde 26/10/2026; I01–I05 concluídas, próxima task I06.
+Em andamento desde 26/10/2026; I01–I06 concluídas, próxima task I07.
 
 - [ ] Slice concluída
 
@@ -21,7 +21,7 @@ Slices [01](../01-fundacao/README.md), [02](../02-equipe-acesso/README.md) e [03
 | [I03 — Consultas autorizadas e histórico](03-consultas-historico.md)                       | I01 e I02 concluídas.                          |
 | [I04 — Registro, edição e comandos idempotentes](04-registro-edicao.md)                    | I01–I03 concluídas.                            |
 | [I05 — Início, devolução e liberação de atendimento](05-atendimento.md)                    | I04 concluída.                                 |
-| [I06 — Exclusão, arquivamento e restauração de equipamentos](06-lifecycle-equipamentos.md) | I01–I05 concluídas.                            |
+| [I06 — Exclusão, arquivamento e restauração de equipamentos](06-lifecycle-equipamentos.md) | I01–I05 concluídas; concluída em 26/10/2026.   |
 | [I07 — Interfaces de chamados e lifecycle do catálogo](07-interfaces.md)                   | I03–I06 concluídas.                            |
 | [I08 — Validação integrada e encerramento](08-validacao-integrada.md)                      | I01–I07 concluídas.                            |
 - [x] I01 — Modelo, regras e contratos — concluída em 26/10/2026; contratos Zod e decisões do agregado registrados.
@@ -29,7 +29,7 @@ Slices [01](../01-fundacao/README.md), [02](../02-equipe-acesso/README.md) e [03
 - [x] I03 — Consultas autorizadas e histórico — concluída em 26/10/2026; lista/detalhe/eventos tenant-scoped e referências atuais/históricas integradas.
 - [x] I04 — Registro, edição e comandos idempotentes — concluída em 26/10/2026; POST/PATCH transacionais com evento e recibo idempotente.
 - [x] I05 — Início, devolução e liberação de atendimento — concluída em 26/10/2026; transições concorrentes e histórico por ação integrados.
-- [ ] I06 — Exclusão, arquivamento e restauração de equipamentos
+- [x] I06 — Exclusão, arquivamento e restauração de equipamentos — concluída em 26/10/2026; exclusão física sem referências, arquivo/restauração com histórico, recibos duráveis e corridas serializadas.
 - [ ] I07 — Interfaces de chamados e lifecycle do catálogo
 - [ ] I08 — Validação integrada e encerramento
 
@@ -41,7 +41,7 @@ Slices [01](../01-fundacao/README.md), [02](../02-equipe-acesso/README.md) e [03
 - Antecipar somente o núcleo de eventos append-only de audit e recibos idempotentes de sync necessário à transação online. A etapa 08 amplia o histórico; a [07](<../00 - roadmap/07-offline.md>) integra persistência local/outbox, proxy Electric e reconciliação. Não duplicar recibos ao evoluir sync.
 - Sem campainha, push, e-mail de eventos ou worker/outbox de notificações agora. Eventos têm IDs estáveis para futura deduplicação; etapa 09 deve integrar agendamento transacional e definir corte de ativação sem notificações retroativas acidentais. Não declarar pipeline completo de notificações entregue.
 - Não ampliar publicação/grants Electric, habilitar PWA ou chamar memória otimista de persistência durável. `/api/sync/:collection` continua fechado até implementação autorizada de shapes.
-- Decisões registradas na I01: arquivo de parque bloqueado se alguma turbina tiver issue aberta; arquivo de turbina bloqueado se tiver issue aberta; turbinas arquivadas individualmente permanecem arquivadas ao restaurar parque. Referências históricas de localização impedem exclusão física. Com os estados desta slice todas as issues são abertas; arquivo com histórico só pode ocorrer após a etapa 08 adicionar status fechado.
+- Decisões registradas na I01: arquivo de parque bloqueado se alguma turbina tiver issue aberta atualmente localizada; arquivo de turbina bloqueado se tiver issue aberta atualmente localizada; turbinas arquivadas individualmente permanecem arquivadas ao restaurar parque. Referências históricas de localização impedem exclusão física; podem ser arquivadas se nenhuma issue aberta estiver atualmente localizada no recurso (por exemplo, após mover a issue).
 - Sessão completa, membership ativa e isolamento tenant em toda operação, inclusive replay. Locks seguem protocolo único com workspaces/parks; módulos só conversam por serviços públicos.
 - UI segue Shadcn e referência Pencil externa reconfirmada na I07. Não inventar layout definitivo nem alterar designs; indisponibilidade impede apenas trabalho visual dependente, sem invalidar trabalho independente de backend.
 - Não popular inventário nem excluir dados dev automaticamente; fixtures descartáveis para corridas e exclusões. Ajustes mobile antigos da slice 02 continuam adiados.

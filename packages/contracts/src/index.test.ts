@@ -6,14 +6,17 @@ import {
   createParkSchema,
   createTurbineSchema,
   createWorkspaceInvitationSchema,
+  equipmentLifecycleCommandSchema,
   errorSchema,
   healthSchema,
   issueEventQuerySchema,
   issueSchema,
   issuesQuerySchema,
+  parkLifecycleResultSchema,
   parkSchema,
   parksQuerySchema,
   revokeWorkspaceMemberSchema,
+  turbineLifecycleResultSchema,
   turbineSchema,
   updateIssueSchema,
   updateParkSchema,
@@ -136,6 +139,14 @@ it('validates catalog DTOs, pagination, and optimistic revisions', () => {
   expect(updateParkSchema.safeParse({ code: 'P02', expectedRevision: 1 }).success).toBe(true);
   expect(updateParkSchema.safeParse({ code: 'P02', expectedRevision: 0 }).success).toBe(false);
   expect(updateTurbineSchema.safeParse({ code: 'T02', expectedRevision: 1 }).success).toBe(true);
+  expect(
+    equipmentLifecycleCommandSchema.safeParse({ commandId: randomUUID(), expectedRevision: 1 })
+      .success,
+  ).toBe(true);
+  expect(
+    equipmentLifecycleCommandSchema.safeParse({ commandId: randomUUID(), expectedRevision: 0 })
+      .success,
+  ).toBe(false);
   expect(parksQuerySchema.parse({})).toEqual({ limit: 25 });
   expect(parksQuerySchema.parse({ search: ' P0 ', limit: 100 })).toEqual({
     limit: 100,
@@ -144,6 +155,20 @@ it('validates catalog DTOs, pagination, and optimistic revisions', () => {
   expect(parksQuerySchema.safeParse({ limit: 101 }).success).toBe(false);
   expect(parksQuerySchema.safeParse({ search: 'x'.repeat(101) }).success).toBe(false);
   expect(parksQuerySchema.safeParse({ workspaceId: randomUUID() }).success).toBe(false);
+  const deletedPark = { result: 'deleted', id: parkId, workspaceId: randomUUID(), code: 'P01' };
+  expect(parkLifecycleResultSchema.safeParse(deletedPark).success).toBe(true);
+  expect(parkLifecycleResultSchema.safeParse({ ...deletedPark, result: 'archived' }).success).toBe(
+    false,
+  );
+  expect(
+    turbineLifecycleResultSchema.safeParse({
+      result: 'deleted',
+      id: randomUUID(),
+      workspaceId: randomUUID(),
+      parkId,
+      code: 'T01',
+    }).success,
+  ).toBe(true);
 });
 
 it('validates issue contracts, strict fields, text limits, location pairs, and pagination', () => {

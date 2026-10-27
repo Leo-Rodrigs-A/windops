@@ -40,7 +40,8 @@ const workspaceAuthorization = createWorkspaceAuthorizationService(
   emailSender,
   env.APP_ORIGIN,
 );
-const parksCatalog = createParksCatalogService(pool, workspaceAuthorization);
+const sync = createSyncService();
+const parksCatalog = createParksCatalogService(pool, workspaceAuthorization, sync);
 const app = buildApp({
   logger: true,
   docs: env.NODE_ENV !== 'production',
@@ -52,7 +53,7 @@ const app = buildApp({
     authorization: workspaceAuthorization,
     parks: parksCatalog,
     audit: createAuditService(),
-    sync: createSyncService(),
+    sync,
   }),
   authOrigin: env.APP_ORIGIN,
   ready: async () => {

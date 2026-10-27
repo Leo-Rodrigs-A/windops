@@ -267,16 +267,18 @@ try {
     { send: async () => {} },
     'http://localhost:5173',
   );
-  const parks = createParksCatalogService(pool, authorization);
+  const sync = createSyncService();
+  const parks = createParksCatalogService(pool, authorization, sync);
   const issues = createIssuesService(pool, identity, {
     authorization,
     parks,
     audit: createAuditService(),
-    sync: createSyncService(),
+    sync,
   });
   app = buildApp({
     ready: async () => {},
     workspaceAuthorization: authorization,
+    parksCatalog: parks,
     issues,
     docs: true,
   });
@@ -819,6 +821,7 @@ try {
   app = buildApp({
     ready: async () => {},
     workspaceAuthorization: authorization,
+    parksCatalog: parks,
     issues: restartedIssues,
     docs: true,
   });
@@ -1013,6 +1016,426 @@ try {
   );
   assert.equal(returnReleaseEventCount.rows[0].count, 3);
 
+  await expectError(
+    await app.inject({
+      method: 'DELETE',
+      url: `${root}/parks/${parkIds.active}/turbines/${turbineIds.active}`,
+      headers: headers(ids.admin),
+      payload: { commandId: randomUUID(), expectedRevision: 1 },
+    }),
+    409,
+    'EQUIPMENT_HAS_OPEN_ISSUES',
+  );
+  await expectError(
+    await app.inject({
+      method: 'DELETE',
+      url: `${root}/parks/${parkIds.active}`,
+      headers: headers(ids.admin),
+      payload: { commandId: randomUUID(), expectedRevision: 1 },
+    }),
+    409,
+    'EQUIPMENT_HAS_OPEN_ISSUES',
+  );
+  await expectError(
+    await app.inject({
+      method: 'DELETE',
+      url: `${root}/parks/${parkIds.other}`,
+      headers: headers(ids.admin),
+      payload: { commandId: randomUUID(), expectedRevision: 1 },
+    }),
+    404,
+    'RESOURCE_NOT_FOUND',
+  );
+  await expectError(
+    await app.inject({
+      method: 'DELETE',
+      url: `${root}/parks/${parkIds.active}/turbines/${turbineIds.active}`,
+      headers: headers(ids.tech),
+      payload: { commandId: randomUUID(), expectedRevision: 1 },
+    }),
+    403,
+    'WORKSPACE_ACCESS_DENIED',
+  );
+
+  let lifecycleCode = 880000;
+  async function createLifecyclePark() {
+    const result = await parks.createPark(headers(ids.admin), ids.workspaceA, {
+      code: `P${++lifecycleCode}`,
+    });
+    assert.equal(result.status, 'ok');
+    return result.value;
+  }
+  async function createLifecycleTurbine(parkId) {
+    const result = await parks.createTurbine(headers(ids.admin), ids.workspaceA, parkId, {
+      code: `T${++lifecycleCode}`,
+    });
+    assert.equal(result.status, 'ok');
+    return result.value;
+  }
+  async function createMovedIssue(parkId, turbineId, text) {
+    const issueId = randomUUID();
+    const createdIssue = await issues.createIssue(headers(ids.admin), ids.workspaceA, {
+      commandId: randomUUID(),
+      issueId,
+      parkId,
+      turbineId,
+      text,
+    });
+    assert.equal(createdIssue.status, 'ok');
+    const movedIssue = await issues.editIssue(headers(ids.admin), ids.workspaceA, issueId, {
+      commandId: randomUUID(),
+      expectedRevision: 1,
+      parkId: parkIds.destination,
+      turbineId: turbineIds.destination,
+    });
+    assert.equal(movedIssue.status, 'ok');
+    return issueId;
+  }
+
+  const emptyPark = await createLifecyclePark();
+  const emptyFirstTurbine = await createLifecycleTurbine(emptyPark.id);
+  const emptySecondTurbine = await createLifecycleTurbine(emptyPark.id);
+  const emptyTurbineDelete = {
+    commandId: randomUUID(),
+    expectedRevision: emptyFirstTurbine.revision,
+  };
+  const deletedEmptyTurbine = await app.inject({
+    method: 'DELETE',
+    url: `${root}/parks/${emptyPark.id}/turbines/${emptyFirstTurbine.id}`,
+    headers: headers(ids.admin),
+    payload: emptyTurbineDelete,
+  });
+  assert.equal(deletedEmptyTurbine.statusCode, 200, deletedEmptyTurbine.body);
+  assert.equal(deletedEmptyTurbine.json().result, 'deleted');
+  const deletedTurbineReplay = await app.inject({
+    method: 'DELETE',
+    url: `${root}/parks/${emptyPark.id}/turbines/${emptyFirstTurbine.id}`,
+    headers: headers(ids.admin),
+    payload: emptyTurbineDelete,
+  });
+  assert.deepEqual(deletedTurbineReplay.json(), deletedEmptyTurbine.json());
+  const emptyParkDelete = { commandId: randomUUID(), expectedRevision: emptyPark.revision };
+  const deletedEmptyPark = await app.inject({
+    method: 'DELETE',
+    url: `${root}/parks/${emptyPark.id}`,
+    headers: headers(ids.admin),
+    payload: emptyParkDelete,
+  });
+  assert.equal(deletedEmptyPark.statusCode, 200, deletedEmptyPark.body);
+  assert.equal(deletedEmptyPark.json().result, 'deleted');
+  const deletedParkReplay = await app.inject({
+    method: 'DELETE',
+    url: `${root}/parks/${emptyPark.id}`,
+    headers: headers(ids.admin),
+    payload: emptyParkDelete,
+  });
+  assert.deepEqual(deletedParkReplay.json(), deletedEmptyPark.json());
+  const orphanCount = await pool.query(
+    'SELECT count(*)::int AS count FROM public.turbines WHERE workspace_id = $1 AND id = ANY($2::uuid[])',
+    [ids.workspaceA, [emptyFirstTurbine.id, emptySecondTurbine.id]],
+  );
+  assert.equal(orphanCount.rows[0].count, 0);
+
+  const historicalPark = await createLifecyclePark();
+  const individuallyArchived = await createLifecycleTurbine(historicalPark.id);
+  const stillActive = await createLifecycleTurbine(historicalPark.id);
+  await createMovedIssue(
+    historicalPark.id,
+    individuallyArchived.id,
+    'Histórico da turbina arquivada',
+  );
+  await createMovedIssue(historicalPark.id, stillActive.id, 'Histórico da turbina ativa');
+  const turbineDeleteBody = {
+    commandId: randomUUID(),
+    expectedRevision: individuallyArchived.revision,
+  };
+  const archivedTurbine = await app.inject({
+    method: 'DELETE',
+    url: `${root}/parks/${historicalPark.id}/turbines/${individuallyArchived.id}`,
+    headers: headers(ids.admin),
+    payload: turbineDeleteBody,
+  });
+  assert.equal(archivedTurbine.statusCode, 200, archivedTurbine.body);
+  assert.equal(archivedTurbine.json().result, 'archived');
+  assert.ok(archivedTurbine.json().turbine.deactivatedAt);
+  const repeatedTurbineArchive = await app.inject({
+    method: 'DELETE',
+    url: `${root}/parks/${historicalPark.id}/turbines/${individuallyArchived.id}`,
+    headers: headers(ids.admin),
+    payload: turbineDeleteBody,
+  });
+  assert.equal(repeatedTurbineArchive.statusCode, 200, repeatedTurbineArchive.body);
+  assert.deepEqual(repeatedTurbineArchive.json(), archivedTurbine.json());
+  await expectError(
+    await app.inject({
+      method: 'POST',
+      url: `${root}/issues`,
+      headers: headers(ids.admin),
+      payload: {
+        commandId: randomUUID(),
+        issueId: randomUUID(),
+        parkId: historicalPark.id,
+        turbineId: individuallyArchived.id,
+        text: 'Não pode abrir em turbina arquivada',
+      },
+    }),
+    409,
+    'EQUIPMENT_UNAVAILABLE',
+  );
+  const historicalParkDelete = {
+    commandId: randomUUID(),
+    expectedRevision: historicalPark.revision,
+  };
+  const archivedPark = await app.inject({
+    method: 'DELETE',
+    url: `${root}/parks/${historicalPark.id}`,
+    headers: headers(ids.admin),
+    payload: historicalParkDelete,
+  });
+  assert.equal(archivedPark.statusCode, 200, archivedPark.body);
+  assert.equal(archivedPark.json().result, 'archived');
+  assert.ok(archivedPark.json().park.deactivatedAt);
+  const lifecycleReceipt = await pool.query(
+    `SELECT actor_user_id AS "actorUserId", result->>'result' AS result
+     FROM public.sync_commands WHERE workspace_id = $1 AND actor_user_id = $2 AND command_id = $3`,
+    [ids.workspaceA, ids.admin.id, historicalParkDelete.commandId],
+  );
+  assert.deepEqual(lifecycleReceipt.rows[0], { actorUserId: ids.admin.id, result: 'archived' });
+  const blockedChildCreate = await app.inject({
+    method: 'POST',
+    url: `${root}/parks/${historicalPark.id}/turbines`,
+    headers: headers(ids.admin),
+    payload: { code: `T${++lifecycleCode}` },
+  });
+  await expectError(blockedChildCreate, 404, 'RESOURCE_NOT_FOUND');
+  const restoreHistoricalPark = await app.inject({
+    method: 'POST',
+    url: `${root}/parks/${historicalPark.id}/restore`,
+    headers: headers(ids.admin),
+    payload: { commandId: randomUUID(), expectedRevision: 2 },
+  });
+  assert.equal(restoreHistoricalPark.statusCode, 200, restoreHistoricalPark.body);
+  assert.equal(restoreHistoricalPark.json().result, 'restored');
+  assert.equal(restoreHistoricalPark.json().park.deactivatedAt, null);
+  const afterParkRestoreTurbines = await app.inject({
+    url: `${root}/parks/${historicalPark.id}/turbines`,
+    headers: headers(ids.admin),
+  });
+  const archivedChildAfterParentRestore = afterParkRestoreTurbines
+    .json()
+    .items.find(({ id }) => id === individuallyArchived.id);
+  const activeChildAfterParentRestore = afterParkRestoreTurbines
+    .json()
+    .items.find(({ id }) => id === stillActive.id);
+  assert.ok(archivedChildAfterParentRestore.deactivatedAt);
+  assert.equal(activeChildAfterParentRestore.deactivatedAt, null);
+  await expectError(
+    await app.inject({
+      method: 'POST',
+      url: `${root}/parks/${historicalPark.id}/turbines`,
+      headers: headers(ids.admin),
+      payload: { code: archivedChildAfterParentRestore.code },
+    }),
+    409,
+    'CATALOG_CODE_TAKEN',
+  );
+  const oldParkDeleteReplay = await app.inject({
+    method: 'DELETE',
+    url: `${root}/parks/${historicalPark.id}`,
+    headers: headers(ids.admin),
+    payload: historicalParkDelete,
+  });
+  assert.deepEqual(oldParkDeleteReplay.json(), archivedPark.json());
+  const stillRestoredPark = await app.inject({
+    url: `${root}/parks/${historicalPark.id}`,
+    headers: headers(ids.admin),
+  });
+  assert.equal(stillRestoredPark.json().deactivatedAt, null);
+  const restoreArchivedChild = await app.inject({
+    method: 'POST',
+    url: `${root}/parks/${historicalPark.id}/turbines/${individuallyArchived.id}/restore`,
+    headers: headers(ids.admin),
+    payload: { commandId: randomUUID(), expectedRevision: 2 },
+  });
+  assert.equal(restoreArchivedChild.statusCode, 200, restoreArchivedChild.body);
+  assert.equal(restoreArchivedChild.json().turbine.deactivatedAt, null);
+  await expectError(
+    await app.inject({
+      method: 'POST',
+      url: `${root}/parks/${historicalPark.id}/turbines/${stillActive.id}/restore`,
+      headers: headers(ids.admin),
+      payload: { commandId: randomUUID(), expectedRevision: 1 },
+    }),
+    409,
+    'EQUIPMENT_NOT_ARCHIVED',
+  );
+  await expectError(
+    await app.inject({
+      method: 'DELETE',
+      url: `${root}/parks/${historicalPark.id}`,
+      headers: headers(ids.admin),
+      payload: { commandId: randomUUID(), expectedRevision: 1 },
+    }),
+    409,
+    'REVISION_CONFLICT',
+  );
+
+  const concurrentCreatePark = await createLifecyclePark();
+  const concurrentCreateTurbine = await createLifecycleTurbine(concurrentCreatePark.id);
+  const concurrentIssueId = randomUUID();
+  const [raceIssueCreate, raceTurbineDelete] = await Promise.all([
+    issues.createIssue(headers(ids.admin), ids.workspaceA, {
+      commandId: randomUUID(),
+      issueId: concurrentIssueId,
+      parkId: concurrentCreatePark.id,
+      turbineId: concurrentCreateTurbine.id,
+      text: 'Corrida de abertura e exclusão',
+    }),
+    parks.deleteTurbine(
+      headers(ids.admin),
+      ids.workspaceA,
+      concurrentCreatePark.id,
+      concurrentCreateTurbine.id,
+      { commandId: randomUUID(), expectedRevision: concurrentCreateTurbine.revision },
+      issues,
+    ),
+  ]);
+  if (raceIssueCreate.status === 'ok') assert.equal(raceTurbineDelete.status, 'open_issues');
+  else {
+    assert.equal(raceIssueCreate.status, 'equipment_unavailable');
+    assert.equal(raceTurbineDelete.status, 'ok');
+    assert.equal(raceTurbineDelete.value.result, 'deleted');
+  }
+
+  const concurrentMovePark = await createLifecyclePark();
+  const concurrentMoveTurbine = await createLifecycleTurbine(concurrentMovePark.id);
+  const concurrentMoveIssueId = await createMovedIssue(
+    concurrentMovePark.id,
+    concurrentMoveTurbine.id,
+    'Movida para teste de corrida',
+  );
+  // Put a fresh open issue on this turbine, then race moving it away against archive.
+  const raceMoveIssueId = randomUUID();
+  const raceMoveCreated = await issues.createIssue(headers(ids.admin), ids.workspaceA, {
+    commandId: randomUUID(),
+    issueId: raceMoveIssueId,
+    parkId: concurrentMovePark.id,
+    turbineId: concurrentMoveTurbine.id,
+    text: 'Edição versus arquivo',
+  });
+  assert.equal(raceMoveCreated.status, 'ok');
+  const [raceMove, raceArchive] = await Promise.all([
+    issues.editIssue(headers(ids.admin), ids.workspaceA, raceMoveIssueId, {
+      commandId: randomUUID(),
+      expectedRevision: 1,
+      parkId: parkIds.destination,
+      turbineId: turbineIds.destination,
+    }),
+    parks.deleteTurbine(
+      headers(ids.admin),
+      ids.workspaceA,
+      concurrentMovePark.id,
+      concurrentMoveTurbine.id,
+      { commandId: randomUUID(), expectedRevision: concurrentMoveTurbine.revision },
+      issues,
+    ),
+  ]);
+  assert.equal(raceMove.status, 'ok');
+  assert.ok(['open_issues', 'ok'].includes(raceArchive.status));
+  if (raceArchive.status === 'ok') assert.equal(raceArchive.value.result, 'archived');
+  const movedIssueAfterRace = await issues.getIssue(ids.workspaceA, raceMoveIssueId);
+  assert.equal(movedIssueAfterRace.status, 'ok');
+  assert.equal(movedIssueAfterRace.value.turbineId, turbineIds.destination);
+  assert.notEqual(concurrentMoveIssueId, raceMoveIssueId);
+
+  const [turbineCreationRace, parkArchiveRace] = await Promise.all([
+    parks.createTurbine(headers(ids.admin), ids.workspaceA, historicalPark.id, {
+      code: `T${++lifecycleCode}`,
+    }),
+    parks.deletePark(
+      headers(ids.admin),
+      ids.workspaceA,
+      historicalPark.id,
+      { commandId: randomUUID(), expectedRevision: stillRestoredPark.json().revision },
+      issues,
+    ),
+  ]);
+  assert.equal(parkArchiveRace.status, 'ok');
+  assert.equal(parkArchiveRace.value.result, 'archived');
+  assert.ok(['ok', 'not_found'].includes(turbineCreationRace.status));
+  if (turbineCreationRace.status === 'ok') {
+    const effectivelyInactiveCreate = await issues.createIssue(headers(ids.admin), ids.workspaceA, {
+      commandId: randomUUID(),
+      issueId: randomUUID(),
+      parkId: historicalPark.id,
+      turbineId: turbineCreationRace.value.id,
+      text: 'Parent arquivado durante a criação',
+    });
+    assert.equal(effectivelyInactiveCreate.status, 'equipment_unavailable');
+  }
+  const archivedAfterConcurrentCreate = await parks.getPark(ids.workspaceA, historicalPark.id);
+  assert.equal(archivedAfterConcurrentCreate.status, 'ok');
+  const concurrentParentRestore = await parks.restorePark(
+    headers(ids.admin),
+    ids.workspaceA,
+    historicalPark.id,
+    { commandId: randomUUID(), expectedRevision: archivedAfterConcurrentCreate.value.revision },
+  );
+  assert.equal(concurrentParentRestore.status, 'ok');
+  const turbineTwoArchive = await parks.deleteTurbine(
+    headers(ids.admin),
+    ids.workspaceA,
+    historicalPark.id,
+    stillActive.id,
+    { commandId: randomUUID(), expectedRevision: stillActive.revision },
+    issues,
+  );
+  assert.equal(turbineTwoArchive.status, 'ok');
+  assert.equal(turbineTwoArchive.value.result, 'archived');
+  const parentRevisionBeforeRestoreRace = concurrentParentRestore.value.park.revision;
+  const [turbineRestoreRace, parentArchiveRace] = await Promise.all([
+    parks.restoreTurbine(headers(ids.admin), ids.workspaceA, historicalPark.id, stillActive.id, {
+      commandId: randomUUID(),
+      expectedRevision: 2,
+    }),
+    parks.deletePark(
+      headers(ids.admin),
+      ids.workspaceA,
+      historicalPark.id,
+      { commandId: randomUUID(), expectedRevision: parentRevisionBeforeRestoreRace },
+      issues,
+    ),
+  ]);
+  assert.equal(turbineRestoreRace.status, 'ok');
+  assert.equal(turbineRestoreRace.value.result, 'restored');
+  assert.equal(parentArchiveRace.status, 'ok');
+  assert.equal(parentArchiveRace.value.result, 'archived');
+  const parentAfterRestoreRace = await parks.getPark(ids.workspaceA, historicalPark.id);
+  const turbineAfterRestoreRace = await parks.getTurbine(
+    ids.workspaceA,
+    historicalPark.id,
+    stillActive.id,
+  );
+  assert.equal(parentAfterRestoreRace.status, 'ok');
+  assert.ok(parentAfterRestoreRace.value.deactivatedAt);
+  assert.equal(turbineAfterRestoreRace.status, 'ok');
+  assert.equal(turbineAfterRestoreRace.value.deactivatedAt, null);
+  const finalParentRestore = await parks.restorePark(
+    headers(ids.admin),
+    ids.workspaceA,
+    historicalPark.id,
+    { commandId: randomUUID(), expectedRevision: parentAfterRestoreRace.value.revision },
+  );
+  assert.equal(finalParentRestore.status, 'ok');
+  assert.equal(finalParentRestore.value.result, 'restored');
+  const finalRestoredChild = await parks.getTurbine(
+    ids.workspaceA,
+    historicalPark.id,
+    stillActive.id,
+  );
+  assert.equal(finalRestoredChild.status, 'ok');
+  assert.equal(finalRestoredChild.value.deactivatedAt, null);
+
   const revokedHandlerIssueId = randomUUID();
   const revokedHandlerCreate = await issues.createIssue(headers(ids.tech), ids.workspaceA, {
     commandId: randomUUID(),
@@ -1090,7 +1513,6 @@ try {
     403,
     'WORKSPACE_ACCESS_DENIED',
   );
-
   await pool.query(
     `UPDATE public.workspace_members SET revoked_at = clock_timestamp()
      WHERE workspace_id = $1 AND user_id = $2`,
@@ -1102,6 +1524,16 @@ try {
       url: `${root}/issues`,
       headers: headers(ids.admin),
       payload: committedCommand,
+    }),
+    403,
+    'WORKSPACE_ACCESS_DENIED',
+  );
+  await expectError(
+    await app.inject({
+      method: 'DELETE',
+      url: `${root}/parks/${emptyPark.id}`,
+      headers: headers(ids.admin),
+      payload: emptyParkDelete,
     }),
     403,
     'WORKSPACE_ACCESS_DENIED',
@@ -1140,8 +1572,13 @@ try {
   assert.ok(app.swagger().paths['/api/workspaces/{workspaceId}/issues/{issueId}/start']);
   assert.ok(app.swagger().paths['/api/workspaces/{workspaceId}/issues/{issueId}/return']);
   assert.ok(app.swagger().paths['/api/workspaces/{workspaceId}/issues/{issueId}/release']);
+  assert.ok(app.swagger().paths['/api/workspaces/{workspaceId}/parks/{parkId}'].delete);
+  assert.ok(app.swagger().paths['/api/workspaces/{workspaceId}/parks/{parkId}/restore'].post);
+  assert.ok(
+    app.swagger().paths['/api/workspaces/{workspaceId}/parks/{parkId}/turbines/{turbineId}'].delete,
+  );
   console.log(
-    'Authorized issue reads and writes, tenant isolation, deterministic pagination, atomic audit/receipts, idempotent retries, revision conflicts, archived equipment rules, revocation and transactional equipment references verified.',
+    'Authorized issue reads/writes, tenant isolation, pagination, atomic receipts, revision conflicts, equipment lifecycle, revocation and transactional issue/equipment races verified.',
   );
 } finally {
   if (app) await app.close();

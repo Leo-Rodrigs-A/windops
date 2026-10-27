@@ -4,5 +4,6 @@ export {
   type CatalogWriteResult,
   createParksCatalogService,
   type ParksCatalogService,
+  type ParksIssueReferences,
   type ParksQueryExecutor,
 } from './service.js';

@@ -1,18 +1,27 @@
+import { createHash } from 'node:crypto';
 import type { IncomingHttpHeaders } from 'node:http';
 import type {
   CreatePark,
   CreateTurbine,
+  EquipmentLifecycleCommand,
   Park,
+  ParkLifecycleResult,
   ParksPage,
   ParksQuery,
   Turbine,
+  TurbineLifecycleResult,
   TurbinesPage,
   TurbinesQuery,
   UpdatePark,
   UpdateTurbine,
 } from '@windops/contracts';
+import { parkLifecycleResultSchema, turbineLifecycleResultSchema } from '@windops/contracts';
 import type { Pool, PoolClient, QueryResultRow } from 'pg';
-import type { WorkspaceAuthorizationService } from '../workspaces/index.js';
+import type { SyncService } from '../sync/index.js';
+import type {
+  AuthorizedWorkspacePrincipal,
+  WorkspaceAuthorizationService,
+} from '../workspaces/index.js';
 
 interface ParkRow extends QueryResultRow {
   id: string;
@@ -39,7 +48,19 @@ export type CatalogWriteResult<T> =
   | { status: 'forbidden' }
   | { status: 'not_found' }
   | { status: 'conflict' }
-  | { status: 'revision_conflict' };
+  | { status: 'revision_conflict' }
+  | { status: 'idempotency_conflict' }
+  | { status: 'open_issues' }
+  | { status: 'not_archived' };
+
+export interface ParksIssueReferences {
+  getEquipmentIssueReferences(
+    executor: ParksQueryExecutor,
+    workspaceId: string,
+    parkId: string,
+    turbineId?: string,
+  ): Promise<{ hasReferences: boolean; hasOpenIssues: boolean }>;
+}
 
 export interface ParksCatalogService {
   listParks(workspaceId: string, query: ParksQuery): Promise<CatalogReadResult<ParksPage>>;
@@ -95,6 +116,34 @@ export interface ParksCatalogService {
     workspaceId: string,
     locations: Array<{ parkId: string; turbineId: string }>,
   ): Promise<Array<{ parkId: string; turbineId: string; active: boolean }>>;
+  deletePark(
+    headers: IncomingHttpHeaders,
+    workspaceId: string,
+    parkId: string,
+    input: EquipmentLifecycleCommand,
+    issues: ParksIssueReferences,
+  ): Promise<CatalogWriteResult<ParkLifecycleResult>>;
+  restorePark(
+    headers: IncomingHttpHeaders,
+    workspaceId: string,
+    parkId: string,
+    input: EquipmentLifecycleCommand,
+  ): Promise<CatalogWriteResult<ParkLifecycleResult>>;
+  deleteTurbine(
+    headers: IncomingHttpHeaders,
+    workspaceId: string,
+    parkId: string,
+    turbineId: string,
+    input: EquipmentLifecycleCommand,
+    issues: ParksIssueReferences,
+  ): Promise<CatalogWriteResult<TurbineLifecycleResult>>;
+  restoreTurbine(
+    headers: IncomingHttpHeaders,
+    workspaceId: string,
+    parkId: string,
+    turbineId: string,
+    input: EquipmentLifecycleCommand,
+  ): Promise<CatalogWriteResult<TurbineLifecycleResult>>;
 }
 
 function toPark(row: ParkRow): Park {
@@ -145,11 +194,15 @@ async function getCursor(
 export function createParksCatalogService(
   pool: Pool,
   authorization: WorkspaceAuthorizationService,
+  sync: SyncService,
 ): ParksCatalogService {
   async function withAdminTransaction<T>(
     headers: IncomingHttpHeaders,
     workspaceId: string,
-    operation: (client: PoolClient) => Promise<CatalogWriteResult<T>>,
+    operation: (
+      client: PoolClient,
+      principal: AuthorizedWorkspacePrincipal,
+    ) => Promise<CatalogWriteResult<T>>,
   ): Promise<CatalogWriteResult<T>> {
     const client = await pool.connect();
     try {
@@ -164,7 +217,7 @@ export function createParksCatalogService(
         await client.query('ROLLBACK');
         return permission;
       }
-      const result = await operation(client);
+      const result = await operation(client, permission.value);
       if (result.status !== 'ok') {
         await client.query('ROLLBACK');
         return result;
@@ -175,10 +228,59 @@ export function createParksCatalogService(
       await client.query('ROLLBACK').catch(() => undefined);
       if (error && typeof error === 'object' && 'code' in error && error.code === '23505')
         return { status: 'conflict' };
+      if (error && typeof error === 'object' && 'code' in error && error.code === '23503')
+        return { status: 'conflict' };
       throw error;
     } finally {
       client.release();
     }
+  }
+
+  function hashCommand(value: unknown): Buffer {
+    const normalize = (entry: unknown): unknown => {
+      if (Array.isArray(entry)) return entry.map(normalize);
+      if (!entry || typeof entry !== 'object') return entry;
+      return Object.fromEntries(
+        Object.entries(entry)
+          .sort(([left], [right]) => left.localeCompare(right))
+          .map(([key, nested]) => [key, normalize(nested)]),
+      );
+    };
+    return createHash('sha256')
+      .update(JSON.stringify(normalize(value)))
+      .digest();
+  }
+
+  async function getLifecycleReplay<T>(
+    client: PoolClient,
+    workspaceId: string,
+    userId: string,
+    commandId: string,
+    hash: Buffer,
+    parse: (result: Record<string, unknown>) => T,
+  ): Promise<CatalogWriteResult<T> | null> {
+    const receipt = await sync.getCommandReceipt(client, workspaceId, userId, commandId);
+    if (!receipt) return null;
+    if (!receipt.payloadHash.equals(hash)) return { status: 'idempotency_conflict' };
+    return { status: 'ok', value: parse(receipt.result) };
+  }
+
+  async function appendLifecycleReceipt(
+    client: PoolClient,
+    workspaceId: string,
+    principal: { user: { id: string }; membershipId: string },
+    input: EquipmentLifecycleCommand,
+    hash: Buffer,
+    result: Record<string, unknown>,
+  ) {
+    await sync.appendCommandReceipt(client, {
+      workspaceId,
+      actorMembershipId: principal.membershipId,
+      actorUserId: principal.user.id,
+      commandId: input.commandId,
+      payloadHash: hash,
+      result,
+    });
   }
 
   return {
@@ -331,6 +433,280 @@ export function createParksCatalogService(
         const updated = result.rows[0];
         if (!updated) throw new Error('Turbine update returned no row.');
         return { status: 'ok', value: toTurbine(updated) };
+      });
+    },
+
+    deletePark(headers, workspaceId, parkId, input, issues) {
+      return withAdminTransaction(headers, workspaceId, async (client, principal) => {
+        const hash = hashCommand({
+          operation: 'deletePark',
+          parkId,
+          expectedRevision: input.expectedRevision,
+        });
+        const replay = await getLifecycleReplay(
+          client,
+          workspaceId,
+          principal.user.id,
+          input.commandId,
+          hash,
+          (result) => parkLifecycleResultSchema.parse(result),
+        );
+        if (replay) return replay;
+
+        const parkResult = await client.query<ParkRow>(
+          `SELECT ${parkColumns} FROM public.parks
+           WHERE workspace_id = $1 AND id = $2 FOR UPDATE`,
+          [workspaceId, parkId],
+        );
+        const park = parkResult.rows[0];
+        if (!park) return { status: 'not_found' };
+        if (park.revision !== input.expectedRevision) return { status: 'revision_conflict' };
+        await client.query<{ id: string }>(
+          `SELECT id FROM public.turbines
+           WHERE workspace_id = $1 AND park_id = $2
+           ORDER BY id FOR UPDATE`,
+          [workspaceId, parkId],
+        );
+        const references = await issues.getEquipmentIssueReferences(client, workspaceId, parkId);
+        if (references.hasOpenIssues) return { status: 'open_issues' };
+
+        let lifecycleResult: ParkLifecycleResult;
+        if (references.hasReferences) {
+          if (park.deactivatedAt) {
+            lifecycleResult = { result: 'archived', park: toPark(park) };
+          } else {
+            const archived = await client.query<ParkRow>(
+              `UPDATE public.parks
+               SET deactivated_at = clock_timestamp(), revision = revision + 1,
+                   updated_at = clock_timestamp()
+               WHERE workspace_id = $1 AND id = $2
+               RETURNING ${parkColumns}`,
+              [workspaceId, parkId],
+            );
+            const row = archived.rows[0];
+            if (!row) throw new Error('Park archive returned no row.');
+            lifecycleResult = { result: 'archived', park: toPark(row) };
+          }
+        } else {
+          await client.query(
+            'DELETE FROM public.turbines WHERE workspace_id = $1 AND park_id = $2',
+            [workspaceId, parkId],
+          );
+          await client.query('DELETE FROM public.parks WHERE workspace_id = $1 AND id = $2', [
+            workspaceId,
+            parkId,
+          ]);
+          lifecycleResult = {
+            result: 'deleted',
+            id: park.id,
+            workspaceId,
+            code: park.code,
+          };
+        }
+        await appendLifecycleReceipt(
+          client,
+          workspaceId,
+          principal,
+          input,
+          hash,
+          lifecycleResult as unknown as Record<string, unknown>,
+        );
+        return { status: 'ok', value: lifecycleResult };
+      });
+    },
+
+    restorePark(headers, workspaceId, parkId, input) {
+      return withAdminTransaction(headers, workspaceId, async (client, principal) => {
+        const hash = hashCommand({
+          operation: 'restorePark',
+          parkId,
+          expectedRevision: input.expectedRevision,
+        });
+        const replay = await getLifecycleReplay(
+          client,
+          workspaceId,
+          principal.user.id,
+          input.commandId,
+          hash,
+          (result) => parkLifecycleResultSchema.parse(result),
+        );
+        if (replay) return replay;
+
+        const currentResult = await client.query<ParkRow>(
+          `SELECT ${parkColumns} FROM public.parks
+           WHERE workspace_id = $1 AND id = $2 FOR UPDATE`,
+          [workspaceId, parkId],
+        );
+        const current = currentResult.rows[0];
+        if (!current) return { status: 'not_found' };
+        if (current.revision !== input.expectedRevision) return { status: 'revision_conflict' };
+        await client.query(
+          `SELECT id FROM public.turbines
+           WHERE workspace_id = $1 AND park_id = $2
+           ORDER BY id FOR UPDATE`,
+          [workspaceId, parkId],
+        );
+        if (!current.deactivatedAt) return { status: 'not_archived' };
+        const restored = await client.query<ParkRow>(
+          `UPDATE public.parks
+           SET deactivated_at = NULL, revision = revision + 1, updated_at = clock_timestamp()
+           WHERE workspace_id = $1 AND id = $2
+           RETURNING ${parkColumns}`,
+          [workspaceId, parkId],
+        );
+        const row = restored.rows[0];
+        if (!row) throw new Error('Park restore returned no row.');
+        const lifecycleResult: ParkLifecycleResult = { result: 'restored', park: toPark(row) };
+        await appendLifecycleReceipt(
+          client,
+          workspaceId,
+          principal,
+          input,
+          hash,
+          lifecycleResult as unknown as Record<string, unknown>,
+        );
+        return { status: 'ok', value: lifecycleResult };
+      });
+    },
+
+    deleteTurbine(headers, workspaceId, parkId, turbineId, input, issues) {
+      return withAdminTransaction(headers, workspaceId, async (client, principal) => {
+        const hash = hashCommand({
+          operation: 'deleteTurbine',
+          parkId,
+          turbineId,
+          expectedRevision: input.expectedRevision,
+        });
+        const replay = await getLifecycleReplay(
+          client,
+          workspaceId,
+          principal.user.id,
+          input.commandId,
+          hash,
+          (result) => turbineLifecycleResultSchema.parse(result),
+        );
+        if (replay) return replay;
+
+        const parkResult = await client.query<ParkRow>(
+          `SELECT ${parkColumns} FROM public.parks
+           WHERE workspace_id = $1 AND id = $2 FOR UPDATE`,
+          [workspaceId, parkId],
+        );
+        if (!parkResult.rows[0]) return { status: 'not_found' };
+        const turbineResult = await client.query<TurbineRow>(
+          `SELECT ${turbineColumns} FROM public.turbines
+           WHERE workspace_id = $1 AND park_id = $2 AND id = $3 FOR UPDATE`,
+          [workspaceId, parkId, turbineId],
+        );
+        const turbine = turbineResult.rows[0];
+        if (!turbine) return { status: 'not_found' };
+        if (turbine.revision !== input.expectedRevision) return { status: 'revision_conflict' };
+        const references = await issues.getEquipmentIssueReferences(
+          client,
+          workspaceId,
+          parkId,
+          turbineId,
+        );
+        if (references.hasOpenIssues) return { status: 'open_issues' };
+
+        let lifecycleResult: TurbineLifecycleResult;
+        if (references.hasReferences) {
+          if (turbine.deactivatedAt) {
+            lifecycleResult = { result: 'archived', turbine: toTurbine(turbine) };
+          } else {
+            const archived = await client.query<TurbineRow>(
+              `UPDATE public.turbines
+               SET deactivated_at = clock_timestamp(), revision = revision + 1,
+                   updated_at = clock_timestamp()
+               WHERE workspace_id = $1 AND park_id = $2 AND id = $3
+               RETURNING ${turbineColumns}`,
+              [workspaceId, parkId, turbineId],
+            );
+            const row = archived.rows[0];
+            if (!row) throw new Error('Turbine archive returned no row.');
+            lifecycleResult = { result: 'archived', turbine: toTurbine(row) };
+          }
+        } else {
+          await client.query(
+            `DELETE FROM public.turbines
+             WHERE workspace_id = $1 AND park_id = $2 AND id = $3`,
+            [workspaceId, parkId, turbineId],
+          );
+          lifecycleResult = {
+            result: 'deleted',
+            id: turbine.id,
+            workspaceId,
+            parkId,
+            code: turbine.code,
+          };
+        }
+        await appendLifecycleReceipt(
+          client,
+          workspaceId,
+          principal,
+          input,
+          hash,
+          lifecycleResult as unknown as Record<string, unknown>,
+        );
+        return { status: 'ok', value: lifecycleResult };
+      });
+    },
+
+    restoreTurbine(headers, workspaceId, parkId, turbineId, input) {
+      return withAdminTransaction(headers, workspaceId, async (client, principal) => {
+        const hash = hashCommand({
+          operation: 'restoreTurbine',
+          parkId,
+          turbineId,
+          expectedRevision: input.expectedRevision,
+        });
+        const replay = await getLifecycleReplay(
+          client,
+          workspaceId,
+          principal.user.id,
+          input.commandId,
+          hash,
+          (result) => turbineLifecycleResultSchema.parse(result),
+        );
+        if (replay) return replay;
+
+        const parkResult = await client.query<ParkRow>(
+          `SELECT ${parkColumns} FROM public.parks
+           WHERE workspace_id = $1 AND id = $2 FOR UPDATE`,
+          [workspaceId, parkId],
+        );
+        if (!parkResult.rows[0]) return { status: 'not_found' };
+        const currentResult = await client.query<TurbineRow>(
+          `SELECT ${turbineColumns} FROM public.turbines
+           WHERE workspace_id = $1 AND park_id = $2 AND id = $3 FOR UPDATE`,
+          [workspaceId, parkId, turbineId],
+        );
+        const current = currentResult.rows[0];
+        if (!current) return { status: 'not_found' };
+        if (current.revision !== input.expectedRevision) return { status: 'revision_conflict' };
+        if (!current.deactivatedAt) return { status: 'not_archived' };
+        const restored = await client.query<TurbineRow>(
+          `UPDATE public.turbines
+           SET deactivated_at = NULL, revision = revision + 1, updated_at = clock_timestamp()
+           WHERE workspace_id = $1 AND park_id = $2 AND id = $3
+           RETURNING ${turbineColumns}`,
+          [workspaceId, parkId, turbineId],
+        );
+        const row = restored.rows[0];
+        if (!row) throw new Error('Turbine restore returned no row.');
+        const lifecycleResult: TurbineLifecycleResult = {
+          result: 'restored',
+          turbine: toTurbine(row),
+        };
+        await appendLifecycleReceipt(
+          client,
+          workspaceId,
+          principal,
+          input,
+          hash,
+          lifecycleResult as unknown as Record<string, unknown>,
+        );
+        return { status: 'ok', value: lifecycleResult };
       });
     },
 

@@ -6,6 +6,7 @@ import { config } from 'dotenv';
 import { Pool } from 'pg';
 import { buildApp } from '../src/app.ts';
 import { createParksCatalogService } from '../src/modules/parks/index.ts';
+import { createSyncService } from '../src/modules/sync/index.ts';
 import { createWorkspaceAuthorizationService } from '../src/modules/workspaces/index.ts';
 
 config({ path: fileURLToPath(new URL('../../../.env', import.meta.url)), quiet: true });
@@ -166,7 +167,7 @@ try {
     { send: async () => {} },
     'http://localhost:5173',
   );
-  const catalog = createParksCatalogService(pool, authorization);
+  const catalog = createParksCatalogService(pool, authorization, createSyncService());
   app = buildApp({
     ready: async () => {},
     workspaceAuthorization: authorization,

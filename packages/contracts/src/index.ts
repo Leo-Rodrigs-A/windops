@@ -172,6 +172,48 @@ export const createTurbineSchema = z.object({ code: catalogCodeSchema('T') }).st
 export const updateTurbineSchema = z
   .object({ code: catalogCodeSchema('T'), expectedRevision: z.number().int().positive() })
   .strict();
+export const equipmentLifecycleCommandSchema = z
+  .object({ commandId: z.uuid(), expectedRevision: z.number().int().positive() })
+  .strict();
+export const deletedParkSchema = z
+  .object({
+    result: z.literal('deleted'),
+    id: z.uuid(),
+    workspaceId: z.uuid(),
+    code: catalogCodeSchema('P'),
+  })
+  .strict();
+export const archivedParkSchema = z
+  .object({ result: z.literal('archived'), park: parkSchema })
+  .strict();
+export const restoredParkSchema = z
+  .object({ result: z.literal('restored'), park: parkSchema })
+  .strict();
+export const parkLifecycleResultSchema = z.discriminatedUnion('result', [
+  deletedParkSchema,
+  archivedParkSchema,
+  restoredParkSchema,
+]);
+export const deletedTurbineSchema = z
+  .object({
+    result: z.literal('deleted'),
+    id: z.uuid(),
+    workspaceId: z.uuid(),
+    parkId: z.uuid(),
+    code: catalogCodeSchema('T'),
+  })
+  .strict();
+export const archivedTurbineSchema = z
+  .object({ result: z.literal('archived'), turbine: turbineSchema })
+  .strict();
+export const restoredTurbineSchema = z
+  .object({ result: z.literal('restored'), turbine: turbineSchema })
+  .strict();
+export const turbineLifecycleResultSchema = z.discriminatedUnion('result', [
+  deletedTurbineSchema,
+  archivedTurbineSchema,
+  restoredTurbineSchema,
+]);
 export const parksPageSchema = z
   .object({ items: z.array(parkSchema), nextCursor: z.uuid().nullable() })
   .strict();
@@ -310,6 +352,9 @@ export type CreatePark = z.infer<typeof createParkSchema>;
 export type UpdatePark = z.infer<typeof updateParkSchema>;
 export type CreateTurbine = z.infer<typeof createTurbineSchema>;
 export type UpdateTurbine = z.infer<typeof updateTurbineSchema>;
+export type EquipmentLifecycleCommand = z.infer<typeof equipmentLifecycleCommandSchema>;
+export type ParkLifecycleResult = z.infer<typeof parkLifecycleResultSchema>;
+export type TurbineLifecycleResult = z.infer<typeof turbineLifecycleResultSchema>;
 export type ParksPage = z.infer<typeof parksPageSchema>;
 export type TurbinesPage = z.infer<typeof turbinesPageSchema>;
 export type WorkspaceListQuery = z.infer<typeof workspaceListQuerySchema>;

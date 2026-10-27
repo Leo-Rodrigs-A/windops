@@ -93,7 +93,12 @@ export function buildApp(options: {
     if (options.workspaceAuthorization)
       registerWorkspaceRoutes(app, options.workspaceAuthorization);
     if (options.workspaceAuthorization && options.parksCatalog)
-      registerParksRoutes(app, options.workspaceAuthorization, options.parksCatalog);
+      registerParksRoutes(
+        app,
+        options.workspaceAuthorization,
+        options.parksCatalog,
+        options.issues,
+      );
     if (options.workspaceAuthorization && options.issues)
       registerIssuesRoutes(app, options.workspaceAuthorization, options.issues);
     if (options.docs) app.register(scalar, { routePrefix: '/api/docs' });
