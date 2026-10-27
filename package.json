@@ -28,6 +28,7 @@
     "test:auth-google-real": "node --import tsx apps/api/scripts/google-oauth-smoke.mjs",
     "test:workspaces-integration": "node --import tsx apps/api/scripts/workspaces-flow.mjs",
     "test:parks-integration": "node --import tsx apps/api/scripts/parks-catalog-flow.mjs",
+    "test:issues-read-integration": "node --import tsx apps/api/scripts/issues-read-flow.mjs",
     "test:integration": "pnpm --filter @windops/api test:integration"
   },
   "devDependencies": {

@@ -2,7 +2,7 @@
 
 ## Status
 
-Em andamento desde 26/10/2026; I01 e I02 concluídas, I03 é a próxima task.
+Em andamento desde 26/10/2026; I01–I03 concluídas, próxima task I04.
 
 - [ ] Slice concluída
 
@@ -26,7 +26,7 @@ Slices [01](../01-fundacao/README.md), [02](../02-equipe-acesso/README.md) e [03
 | [I08 — Validação integrada e encerramento](08-validacao-integrada.md)                      | I01–I07 concluídas.                            |
 - [x] I01 — Modelo, regras e contratos — concluída em 26/10/2026; contratos Zod e decisões do agregado registrados.
 - [x] I02 — Schema, migrações e privilégios — concluída em 26/10/2026; migrations 0005/0006 aplicadas no dev e validadas.
-- [ ] I03 — Consultas autorizadas e histórico
+- [x] I03 — Consultas autorizadas e histórico — concluída em 26/10/2026; lista/detalhe/eventos tenant-scoped e referências atuais/históricas integradas.
 - [ ] I04 — Registro, edição e comandos idempotentes
 - [ ] I05 — Início, devolução e liberação de atendimento
 - [ ] I06 — Exclusão, arquivamento e restauração de equipamentos

@@ -1,5 +1,6 @@
 import { buildApp } from './app.js';
 import { createIdentityProvider, createIdentityService } from './modules/identity/index.js';
+import { createIssuesService } from './modules/issues/index.js';
 import { createParksCatalogService } from './modules/parks/index.js';
 import { createWorkspaceAuthorizationService } from './modules/workspaces/index.js';
 import { loadEnvironment } from './platform/config.js';
@@ -21,18 +22,19 @@ const identity =
           : undefined,
       )
     : undefined;
+const identityService = identity
+  ? createIdentityService(identity, pool)
+  : {
+      resolveAuthenticatedUser: async () => null,
+      resolveInvitationAcceptor: async () => null,
+      validateInvitationEmail: async () => 'missing' as const,
+      getUsersByIds: async () => [],
+      listVerifiedDirectoryAccounts: async () => ({ items: [], nextCursor: null }),
+      consumeInvitationRateLimit: async () => true,
+    };
 const workspaceAuthorization = createWorkspaceAuthorizationService(
   pool,
-  identity
-    ? createIdentityService(identity, pool)
-    : {
-        resolveAuthenticatedUser: async () => null,
-        resolveInvitationAcceptor: async () => null,
-        validateInvitationEmail: async () => 'missing',
-        getUsersByIds: async () => [],
-        listVerifiedDirectoryAccounts: async () => ({ items: [], nextCursor: null }),
-        consumeInvitationRateLimit: async () => true,
-      },
+  identityService,
   emailSender,
   env.APP_ORIGIN,
 );
@@ -43,6 +45,7 @@ const app = buildApp({
   ...(identity ? { identity } : {}),
   workspaceAuthorization,
   parksCatalog: createParksCatalogService(pool, workspaceAuthorization),
+  issues: createIssuesService(pool, identityService),
   authOrigin: env.APP_ORIGIN,
   ready: async () => {
     await pool.query('SELECT 1');

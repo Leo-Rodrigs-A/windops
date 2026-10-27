@@ -273,6 +273,9 @@ export type IssueEventType = z.infer<typeof issueEventTypeSchema>;
 export type Issue = z.infer<typeof issueSchema>;
 export type IssueEvent = z.infer<typeof issueEventSchema>;
 export type IssuesQuery = z.infer<typeof issuesQuerySchema>;
+export type IssueEventQuery = z.infer<typeof issueEventQuerySchema>;
+export type IssuesPage = z.infer<typeof issuesPageSchema>;
+export type IssueEventPage = z.infer<typeof issueEventPageSchema>;
 export type CreateIssue = z.infer<typeof createIssueSchema>;
 export type UpdateIssue = z.infer<typeof updateIssueSchema>;
 
