@@ -20,6 +20,9 @@ function applyTheme(theme: Theme) {
   document
     .querySelector<HTMLMetaElement>('meta[name="theme-color"]')
     ?.setAttribute('content', theme === 'dark' ? '#09090b' : '#fcffff');
+  document
+    .querySelector<HTMLLinkElement>('link[rel~="icon"]')
+    ?.setAttribute('href', `/windops-mark-${theme}.svg`);
 }
 
 export function ThemeProvider({ children }: { children: ReactNode }) {

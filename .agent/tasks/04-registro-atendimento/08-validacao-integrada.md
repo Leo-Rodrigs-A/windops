@@ -12,11 +12,11 @@ Comprovar o fluxo online completo e documentar a base entregue para offline/sync
 
 ## Estado atual
 
-Planejamento em 26/10/2026. Slice 03 concluída; issues e audit têm somente entrypoints vazios e sync retorna 503. As entregas desta slice ainda não existem. As dependências abaixo precisam ser executadas e verificadas; este documento não comprova implementação.
+Planejada em 26/10/2026. I01–I07 e I09 foram implementadas; falta a validação integrada final, o percurso manual autenticado e as verificações de dispositivo descritas abaixo. Este documento não comprova esses itens.
 
 ## Dependências
 
-I01–I07 concluídas. Ver [índice da slice](README.md).
+I01–I07 e I09 concluídas. Ver [índice da slice](README.md).
 
 ## Escopo e exclusões
 
@@ -30,8 +30,8 @@ Validação, correções necessárias e documentação; não implementar antecip
 - [ ] Comprovar persistência de issues/eventos/recibos após restart e replay sem duplicação; separar essa garantia PostgreSQL de persistência local ainda inexistente.
 - [ ] Combinar percurso manual no dev: admin e técnico criam/atendem, autor edita, admin libera, consulta de logs e lifecycle de equipamento. Não apagar inventário real para produzir evidência; usar fixtures acordadas.
 - [ ] Validar desktop e Android físico; tentar iPhone se disponível e registrar indisponibilidade sem marcar validação feita. Encerrar servidores/exposição temporários e conferir portproxy/firewall quando usados.
-- [ ] Atualizar tasks, índice, memória, arquitetura, database e roadmap com o que efetivamente passou. Etapa 05 mantém pendência offline; etapa 08 recebe apenas histórico básico, sem declaração de lifecycle completo de issues.
-- [ ] Registrar dependências para próxima slice: persistência local/outbox durável, proxy Electric, reconciliação, restart do aparelho, exportação de pendências, expiração/revogação e conflitos; notificações e conclusão continuam posteriores. Sugerir commit em português.
+- [ ] Atualizar tasks, índice, memória, arquitetura, database e roadmap com o que efetivamente passou. Offline, reabertura e arquivo de issues continuam posteriores; não declarar lifecycle completo.
+- [ ] Registrar dependências para próxima slice: persistência local/outbox durável, proxy Electric, reconciliação, restart do aparelho, exportação de pendências, expiração/revogação e conflitos; notificações e reabertura continuam posteriores. Sugerir commit em português.
 
 ## Contratos e dados afetados
 

@@ -184,13 +184,14 @@ it('validates issue contracts, strict fields, text limits, location pairs, and p
     handlerMembershipId: null,
     handler: null,
     text: 'Elevador parado',
+    completionReport: null,
     status: 'pending',
     createdAt: '2026-10-26T12:00:00.000Z',
     updatedAt: '2026-10-26T12:00:00.000Z',
     revision: 1,
   };
   expect(issueSchema.safeParse(issue).success).toBe(true);
-  expect(issueSchema.safeParse({ ...issue, status: 'completed' }).success).toBe(false);
+  expect(issueSchema.safeParse({ ...issue, status: 'completed' }).success).toBe(true);
   expect(issueSchema.safeParse({ ...issue, password: 'private' }).success).toBe(false);
   expect(issuesQuerySchema.parse({})).toEqual({ limit: 25 });
   expect(issuesQuerySchema.safeParse({ limit: 101 }).success).toBe(false);

@@ -221,13 +221,15 @@ export const turbinesPageSchema = z
   .object({ items: z.array(turbineSchema), nextCursor: z.uuid().nullable() })
   .strict();
 
-export const issueStatusSchema = z.enum(['pending', 'in_progress']);
+export const issueStatusSchema = z.enum(['pending', 'in_progress', 'completed']);
+export const issueListStatusSchema = z.enum(['pending', 'in_progress', 'completed', 'active']);
 export const issueEventTypeSchema = z.enum([
   'created',
   'edited',
   'started',
   'returned',
   'released',
+  'completed',
 ]);
 export const issueLocationSchema = z.object({ parkId: z.uuid(), turbineId: z.uuid() }).strict();
 const issueTextSchema = z.string().trim().min(1).max(10_000);
@@ -242,6 +244,7 @@ export const issueSchema = z
     handlerMembershipId: z.uuid().nullable(),
     handler: authenticatedUserSchema.nullable(),
     text: issueTextSchema,
+    completionReport: z.string().max(10_000).nullable(),
     status: issueStatusSchema,
     createdAt: z.iso.datetime(),
     updatedAt: z.iso.datetime(),
@@ -268,7 +271,7 @@ export const issuesQuerySchema = z
   .object({
     limit: z.coerce.number().int().min(1).max(100).default(25),
     cursor: z.uuid().optional(),
-    status: issueStatusSchema.optional(),
+    status: issueListStatusSchema.optional(),
     parkId: z.uuid().optional(),
     turbineId: z.uuid().optional(),
   })
@@ -311,7 +314,11 @@ const issueActionSchema = z
 export const startIssueSchema = issueActionSchema;
 export const returnIssueSchema = issueActionSchema;
 export const releaseIssueSchema = issueActionSchema;
+export const completeIssueSchema = issueActionSchema.extend({
+  report: z.string().trim().max(10_000).optional(),
+});
 export type IssueStatus = z.infer<typeof issueStatusSchema>;
+export type IssueListStatus = z.infer<typeof issueListStatusSchema>;
 export type IssueEventType = z.infer<typeof issueEventTypeSchema>;
 export type Issue = z.infer<typeof issueSchema>;
 export type IssueEvent = z.infer<typeof issueEventSchema>;
@@ -324,6 +331,7 @@ export type UpdateIssue = z.infer<typeof updateIssueSchema>;
 export type StartIssue = z.infer<typeof startIssueSchema>;
 export type ReturnIssue = z.infer<typeof returnIssueSchema>;
 export type ReleaseIssue = z.infer<typeof releaseIssueSchema>;
+export type CompleteIssue = z.infer<typeof completeIssueSchema>;
 
 export type WorkspaceRole = z.infer<typeof workspaceRoleSchema>;
 export type AuthenticatedUser = z.infer<typeof authenticatedUserSchema>;

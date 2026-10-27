@@ -1,7 +1,6 @@
 import { Link, useParams } from '@tanstack/react-router';
 import type { Issue, IssueEvent, IssueStatus, Park, Turbine } from '@windops/contracts';
 import {
-  ArchiveRestore,
   ArrowLeft,
   CalendarClock,
   Check,
@@ -51,6 +50,7 @@ import { WorkspaceSidebarLayout } from '../components/ui/workspace-sidebar';
 import { WorkspaceSystemActions } from '../components/workspace-system-actions';
 import { ApiRequestError } from '../lib/auth-api';
 import {
+  completeIssue,
   createIssue,
   getIssue,
   getIssueEvents,
@@ -63,7 +63,7 @@ import {
 import { getPark, getParks, getParkTurbines, getTurbine } from '../lib/workspace-api';
 
 const navigation = workspaceNavigationItems;
-type StatusFilter = 'all' | IssueStatus;
+type StatusFilter = 'all' | Exclude<IssueStatus, 'completed'>;
 
 function issueErrorMessage(error: unknown, action: string) {
   if (error instanceof ApiRequestError) {
@@ -83,6 +83,8 @@ function issueErrorMessage(error: unknown, action: string) {
       return 'O estado do chamado mudou. Atualize os dados e tente novamente.';
     if (error.code === 'ISSUE_ACTION_FORBIDDEN')
       return 'Esta ação não está disponível para sua conta neste chamado.';
+    if (error.code === 'ISSUE_CREATOR_WAIT')
+      return 'Outro membro pode iniciar agora. Você poderá atender este chamado após uma hora da criação.';
   }
   if (error instanceof Error && error.message.startsWith('Não foi possível conectar'))
     return `Não foi possível confirmar ${action}. Tente novamente; o retry manterá a chave deste comando.`;
@@ -90,11 +92,15 @@ function issueErrorMessage(error: unknown, action: string) {
 }
 
 function statusLabel(status: IssueStatus) {
-  return status === 'pending' ? 'Pendente' : 'Em andamento';
+  return status === 'pending'
+    ? 'Pendente'
+    : status === 'in_progress'
+      ? 'Em andamento'
+      : 'Concluído';
 }
 
 function statusVariant(status: IssueStatus) {
-  return status === 'pending' ? 'secondary' : 'default';
+  return status === 'pending' || status === 'completed' ? 'secondary' : 'default';
 }
 
 function formatDate(value: string, withTime = true) {
@@ -111,6 +117,7 @@ function eventLabel(type: IssueEvent['type']) {
     started: 'Atendimento iniciado',
     returned: 'Chamado devolvido para a fila',
     released: 'Atendimento liberado',
+    completed: 'Chamado concluído',
   };
   return labels[type];
 }
@@ -186,7 +193,7 @@ export function WorkspaceHomePage() {
       try {
         const page = await getIssues(workspaceId, {
           limit: 25,
-          ...(statusFilter === 'all' ? {} : { status: statusFilter }),
+          status: statusFilter === 'all' ? 'active' : statusFilter,
           ...(cursor ? { cursor } : {}),
         });
         setIssues((previous) => (append ? [...previous, ...page.items] : page.items));
@@ -582,7 +589,7 @@ function IssueListItem({
             <span className="font-medium">
               {location
                 ? `Parque ${location.park} · Turbina ${location.turbine}`
-                : 'Localizando equipamento…'}
+                : 'Equipamento associado'}
             </span>
             <Badge variant={statusVariant(issue.status)}>{statusLabel(issue.status)}</Badge>
           </span>
@@ -615,6 +622,7 @@ function IssueEventCard({
   const locationChanged = beforeLocation !== afterLocation;
   const statusChanged = before?.status !== after?.status;
   const handlerChanged = before?.handlerMembershipId !== after?.handlerMembershipId;
+  const reportChanged = before?.completionReport !== after?.completionReport;
   const handlerName = (value: unknown) => {
     const user = record(value);
     return typeof user?.name === 'string' ? user.name : 'Sem responsável';
@@ -632,7 +640,7 @@ function IssueEventCard({
           <time className="mt-1 block text-xs text-muted-foreground" dateTime={event.occurredAt}>
             {formatDate(event.occurredAt)}
           </time>
-          {(textChanged || locationChanged || statusChanged || handlerChanged) && (
+          {(textChanged || locationChanged || statusChanged || handlerChanged || reportChanged) && (
             <div className="mt-3 space-y-3 border-t border-border/70 pt-3 text-sm">
               {textChanged && (
                 <div className="space-y-2">
@@ -675,6 +683,12 @@ function IssueEventCard({
                   Atendimento: {handlerName(before?.handler)} → {handlerName(after?.handler)}
                 </p>
               )}
+              {reportChanged && typeof after?.completionReport === 'string' && (
+                <div>
+                  <p className="text-xs font-medium text-muted-foreground">Relato de conclusão</p>
+                  <p className="mt-1 whitespace-pre-wrap">{after.completionReport}</p>
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -695,6 +709,10 @@ export function IssueDetailPage() {
   const [detailLoading, setDetailLoading] = useState(true);
   const [notice, setNotice] = useState('');
   const [busyAction, setBusyAction] = useState('');
+  const [clockNow, setClockNow] = useState(() => Date.now());
+  const [completeOpen, setCompleteOpen] = useState(false);
+  const [completionDraft, setCompletionDraft] = useState('');
+  const [completionError, setCompletionError] = useState('');
   const [editOpen, setEditOpen] = useState(false);
   const [editText, setEditText] = useState('');
   const [editError, setEditError] = useState('');
@@ -703,6 +721,12 @@ export function IssueDetailPage() {
   const [eventLocations, setEventLocations] = useState<Record<string, string>>({});
   const actionCommands = useRef<Record<string, string>>({});
   const editCommand = useRef<string | null>(null);
+  const completionReport = useRef<string | null>(null);
+
+  useEffect(() => {
+    const timer = window.setInterval(() => setClockNow(Date.now()), 30_000);
+    return () => window.clearInterval(timer);
+  }, []);
 
   const hydrateEventLocations = useCallback(
     async (items: IssueEvent[]) => {
@@ -768,8 +792,13 @@ export function IssueDetailPage() {
     void loadDetail();
   }, [loadDetail]);
 
-  async function runAction(action: 'start' | 'return' | 'release') {
-    if (!issue) return;
+  async function runAction(
+    action: 'start' | 'return' | 'release' | 'complete',
+    report?: string,
+  ): Promise<boolean> {
+    if (!issue) return false;
+    if (action === 'complete' && completionReport.current === null && report !== undefined)
+      completionReport.current = report.trim();
     let commandId = actionCommands.current[action];
     if (!commandId) {
       commandId = crypto.randomUUID();
@@ -777,7 +806,9 @@ export function IssueDetailPage() {
     }
     setBusyAction(action);
     setDetailError('');
+    setCompletionError('');
     setNotice('');
+    let actionCommitted = false;
     try {
       const command = { commandId, expectedRevision: issue.revision };
       const updated =
@@ -785,29 +816,65 @@ export function IssueDetailPage() {
           ? await startIssue(workspaceId, issue.id, command)
           : action === 'return'
             ? await returnIssue(workspaceId, issue.id, command)
-            : await releaseIssue(workspaceId, issue.id, command);
+            : action === 'release'
+              ? await releaseIssue(workspaceId, issue.id, command)
+              : await completeIssue(workspaceId, issue.id, {
+                  ...command,
+                  report: completionReport.current ?? undefined,
+                });
+      if (action === 'complete' && updated.status !== 'completed') return false;
+      actionCommitted = true;
       delete actionCommands.current[action];
+      if (action === 'complete') {
+        completionReport.current = null;
+        setCompleteOpen(false);
+        setCompletionDraft('');
+      }
       setIssue(updated);
       setNotice(
         action === 'start'
           ? 'Atendimento iniciado.'
           : action === 'return'
             ? 'Chamado devolvido para a fila.'
-            : 'Atendimento liberado.',
+            : action === 'release'
+              ? 'Atendimento liberado.'
+              : 'Chamado concluído.',
       );
       const history = await getIssueEvents(workspaceId, issue.id, { limit: 25 });
       setEvents(history.items);
       setEventCursor(history.nextCursor);
       await hydrateEventLocations(history.items);
+      return true;
     } catch (error) {
-      setDetailError(issueErrorMessage(error, 'executar esta ação'));
+      if (action === 'complete' && actionCommitted)
+        setDetailError(
+          'Chamado concluído, mas não foi possível atualizar o histórico. Atualize esta página.',
+        );
+      else if (action === 'complete')
+        setCompletionError(issueErrorMessage(error, 'concluir o chamado'));
+      else setDetailError(issueErrorMessage(error, 'executar esta ação'));
       if (error instanceof ApiRequestError && [401, 403].includes(error.status)) await refresh();
-      if (error instanceof ApiRequestError && error.status === 409) {
+      if (error instanceof ApiRequestError && error.status === 409 && !actionCommitted) {
         delete actionCommands.current[action];
+        if (action === 'complete') {
+          completionReport.current = null;
+          setCompleteOpen(false);
+        }
         await loadDetail();
       }
     } finally {
       setBusyAction('');
+    }
+    return actionCommitted;
+  }
+
+  async function submitCompletion(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const succeeded = await runAction('complete', completionDraft);
+    if (succeeded) {
+      setCompleteOpen(false);
+      setCompletionDraft('');
+      setCompletionError('');
     }
   }
 
@@ -846,7 +913,7 @@ export function IssueDetailPage() {
     if (!issue || !eventCursor) return;
     try {
       const page = await getIssueEvents(workspaceId, issue.id, { limit: 25, cursor: eventCursor });
-      setEvents((current) => [...current, ...page.items]);
+      setEvents((current) => [...page.items, ...current]);
       setEventCursor(page.nextCursor);
       await hydrateEventLocations(page.items);
     } catch (error) {
@@ -918,6 +985,12 @@ export function IssueDetailPage() {
                   <CardTitle className="text-base font-normal leading-relaxed whitespace-pre-wrap">
                     {issue.text}
                   </CardTitle>
+                  {issue.completionReport && (
+                    <div className="rounded-lg bg-muted/60 p-3 text-sm">
+                      <p className="mb-1 font-medium">Relato de conclusão</p>
+                      <p className="whitespace-pre-wrap">{issue.completionReport}</p>
+                    </div>
+                  )}
                   <CardDescription className="flex flex-wrap gap-x-5 gap-y-1">
                     <span>Registrado por {issue.creator.name}</span>
                     <time dateTime={issue.createdAt}>{formatDate(issue.createdAt)}</time>
@@ -926,8 +999,35 @@ export function IssueDetailPage() {
                 </CardHeader>
                 <CardContent className="flex flex-wrap gap-2 border-t border-border/70 pt-4">
                   {issue.status === 'pending' && (
-                    <Button disabled={Boolean(busyAction)} onClick={() => void runAction('start')}>
+                    <Button
+                      disabled={
+                        Boolean(busyAction) ||
+                        (isCreator &&
+                          clockNow < new Date(issue.createdAt).getTime() + 60 * 60 * 1000)
+                      }
+                      onClick={() => void runAction('start')}
+                    >
                       {busyAction === 'start' ? 'Iniciando…' : 'Iniciar atendimento'}
+                    </Button>
+                  )}
+                  {issue.status === 'pending' &&
+                    isCreator &&
+                    clockNow < new Date(issue.createdAt).getTime() + 60 * 60 * 1000 && (
+                      <p className="self-center text-sm text-muted-foreground">
+                        Outro membro pode iniciar agora. Você poderá atender este chamado após uma
+                        hora da criação.
+                      </p>
+                    )}
+                  {issue.status === 'in_progress' && isHandler && (
+                    <Button
+                      disabled={Boolean(busyAction)}
+                      onClick={() => {
+                        setCompletionDraft(completionReport.current ?? '');
+                        setCompletionError('');
+                        setCompleteOpen(true);
+                      }}
+                    >
+                      {busyAction === 'complete' ? 'Concluindo…' : 'Concluir chamado'}
                     </Button>
                   )}
                   {issue.status === 'in_progress' && isHandler && (
@@ -960,7 +1060,7 @@ export function IssueDetailPage() {
                 <div className="flex items-center gap-2">
                   <History aria-hidden="true" className="size-5 text-muted-foreground" />
                   <h2 className="text-lg font-semibold" id="issue-history-title">
-                    Histórico de alterações
+                    Histórico de alterações · mais recentes primeiro
                   </h2>
                 </div>
                 {events.length === 0 ? (
@@ -1044,12 +1144,79 @@ export function IssueDetailPage() {
           </form>
         </DialogContent>
       </Dialog>
+      <Dialog
+        onOpenChange={(open) => {
+          if (!busyAction) setCompleteOpen(open);
+        }}
+        open={completeOpen}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Concluir chamado</DialogTitle>
+            <DialogDescription>
+              Esta ação registra o chamado no Histórico e não pode ser desfeita nesta etapa. Informe
+              um relato de conclusão se desejar.
+            </DialogDescription>
+          </DialogHeader>
+          <form className="space-y-4" onSubmit={(event) => void submitCompletion(event)}>
+            <div className="space-y-2">
+              <Label htmlFor="completion-report">Relato de conclusão (opcional)</Label>
+              <Textarea
+                autoFocus
+                disabled={Boolean(actionCommands.current.complete)}
+                id="completion-report"
+                maxLength={10_000}
+                onChange={(event) => setCompletionDraft(event.target.value)}
+                placeholder="Descreva o serviço realizado, se necessário."
+                value={completionDraft}
+              />
+            </div>
+            {completionError && <Feedback message={completionError} tone="error" />}
+            <DialogFooter>
+              <Button
+                disabled={Boolean(busyAction)}
+                onClick={() => setCompleteOpen(false)}
+                type="button"
+                variant="outline"
+              >
+                Cancelar
+              </Button>
+              <Button disabled={Boolean(busyAction)} type="submit">
+                {busyAction === 'complete' ? 'Concluindo…' : 'Confirmar conclusão'}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </WorkspaceSidebarLayout>
   );
 }
 
 export function IssueHistoryPage() {
-  const { snapshot } = useAuth();
+  const { snapshot, refresh } = useAuth();
+  const workspaceId = snapshot.status === 'authenticated' ? snapshot.context.workspace.id : '';
+  const [completed, setCompleted] = useState<Issue[]>([]);
+  const [historyError, setHistoryError] = useState('');
+  const [historyLoading, setHistoryLoading] = useState(true);
+  useEffect(() => {
+    if (!workspaceId) return;
+    let active = true;
+    void getAllIssues(workspaceId, 'completed')
+      .then((items) => {
+        if (active) setCompleted(items);
+      })
+      .catch(async (error) => {
+        if (!active) return;
+        setHistoryError(issueErrorMessage(error, 'carregar os chamados concluídos'));
+        if (error instanceof ApiRequestError && [401, 403].includes(error.status)) await refresh();
+      })
+      .finally(() => {
+        if (active) setHistoryLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [refresh, workspaceId]);
   if (snapshot.status !== 'authenticated') return <LoadingState label="Conferindo sua sessão…" />;
   return (
     <WorkspaceSidebarLayout
@@ -1062,26 +1229,28 @@ export function IssueHistoryPage() {
           <AppPageHeader
             eyebrow={`${snapshot.context.workspace.name} / Auditoria`}
             title="Histórico"
-            subtitle="Conferência e recuperação de chamados concluídos."
+            subtitle="Conferência e recuperação de chamados concluídos. Os mais recentes aparecem primeiro."
           />
+          {historyError && <Feedback message={historyError} tone="error" />}
           <Card>
             <CardHeader>
-              <span className="grid size-11 place-items-center rounded-xl border border-border bg-muted">
-                <ArchiveRestore aria-hidden="true" className="size-5 text-muted-foreground" />
-              </span>
-              <CardTitle>Chamados concluídos ainda não estão disponíveis</CardTitle>
-              <CardDescription className="max-w-2xl leading-relaxed">
-                A API desta etapa registra e mantém o histórico de eventos nos detalhes dos
-                chamados, mas ainda não oferece conclusão, reabertura ou recuperação. Esta tela será
-                conectada a essas operações quando o lifecycle de issues for implementado.
-              </CardDescription>
+              <CardTitle>Chamados concluídos</CardTitle>
+              <CardDescription>Registro para auditoria e conferência.</CardDescription>
             </CardHeader>
             <CardContent>
-              <Button asChild variant="outline">
-                <Link to="/app">
-                  <ClipboardList aria-hidden="true" /> Voltar aos chamados ativos
-                </Link>
-              </Button>
+              {historyLoading ? (
+                <LoadingState label="Carregando chamados concluídos…" />
+              ) : completed.length === 0 ? (
+                <p className="py-8 text-center text-sm text-muted-foreground">
+                  Nenhum chamado concluído.
+                </p>
+              ) : (
+                <ul className="divide-y divide-border/70">
+                  {completed.map((issue) => (
+                    <IssueListItem key={issue.id} issue={issue} location={undefined} />
+                  ))}
+                </ul>
+              )}
             </CardContent>
           </Card>
         </div>

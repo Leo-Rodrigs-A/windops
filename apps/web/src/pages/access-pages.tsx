@@ -65,7 +65,7 @@ export function LandingPage() {
       />
       <header className="mx-auto flex w-full max-w-7xl items-center justify-between py-6">
         <Link aria-label="Wind Ops, início" className="inline-flex items-center gap-2" to="/">
-          <TowerMark className="size-6 text-primary" />
+          <TowerMark className="size-6" />
           <span className="font-semibold tracking-tight">Wind Ops</span>
         </Link>
         <div className="flex items-center gap-2">

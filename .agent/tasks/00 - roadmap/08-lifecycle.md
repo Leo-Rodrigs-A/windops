@@ -2,7 +2,7 @@
 
 ## Status
 
-Planejada
+Parcialmente antecipada em 26/10/2026 pela I09; reabertura, arquivos/restauração e relato offline continuam planejados.
 
 ## Objetivo e escopo
 

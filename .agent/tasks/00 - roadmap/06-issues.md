@@ -6,7 +6,7 @@ Em andamento — I01–I06 da slice 04 concluídas; I07 em implementação e agu
 
 ## Objetivo e escopo
 
-Texto obrigatório, parque/turbina, status Pendente, edição pelo criador, iniciar próprio atendimento e devolver para Pendente. UUID cliente e versionamento; eventos transacionais.
+Texto obrigatório, parque/turbina, status Pendente, edição pelo criador, iniciar próprio atendimento após uma hora e devolver para Pendente. Outros membros ativos podem iniciar imediatamente. UUID cliente e versionamento; eventos transacionais.
 
 ## Dependências
 
@@ -16,7 +16,7 @@ A slice executável 03 prepara cadastro/consulta/edição de equipamentos; lifec
 
 ## Critérios de aceite
 
-Sem atribuição a terceiros; somente ator ativo conclui/devolve; admin libera atendimento; criador edita aberta com antes/depois; contrato preparado para comandos idempotentes.
+Sem atribuição a terceiros; somente responsável ativo conclui/devolve; admin libera atendimento; criador edita pendente com antes/depois; contrato preparado para comandos idempotentes.
 
 ## Testes
 

@@ -35,7 +35,7 @@ export function WorkspaceSidebarLayout({
       <Sidebar collapsible="icon" variant="inset">
         <SidebarHeader className="gap-4 p-4">
           <div className="flex items-center gap-3 px-2 py-1">
-            <TowerMark className="size-5 shrink-0 text-primary" />
+            <TowerMark className="size-5 shrink-0" />
             <span className="truncate text-sm font-semibold">Wind Ops</span>
           </div>
           <div className="min-w-0 px-2">

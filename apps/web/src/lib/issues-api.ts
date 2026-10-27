@@ -1,5 +1,7 @@
 import {
+  type CompleteIssue,
   type CreateIssue,
+  completeIssueSchema,
   createIssueSchema,
   type Issue,
   type IssueEventPage,
@@ -77,6 +79,16 @@ export async function startIssue(workspaceId: string, issueId: string, input: St
   const body = startIssueSchema.parse(input);
   return issueSchema.parse(
     await requestJson(`${issuesPath(workspaceId, issueId)}/start`, {
+      method: 'POST',
+      body: JSON.stringify(body),
+    }),
+  ) as Issue;
+}
+
+export async function completeIssue(workspaceId: string, issueId: string, input: CompleteIssue) {
+  const body = completeIssueSchema.parse(input);
+  return issueSchema.parse(
+    await requestJson(`${issuesPath(workspaceId, issueId)}/complete`, {
       method: 'POST',
       body: JSON.stringify(body),
     }),

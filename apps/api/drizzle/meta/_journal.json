@@ -50,6 +50,13 @@
       "when": 1793057324052,
       "tag": "0006_issue_integrity_checks",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1793065668795,
+      "tag": "0007_tidy_magdalene",
+      "breakpoints": true
     }
   ]
 }

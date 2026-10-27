@@ -20,14 +20,14 @@ I03–I06 concluídas. Ver [índice da slice](README.md).
 
 ## Escopo e exclusões
 
-Lista, formulário, detalhe/histórico, conta/indicadores e ações administrativas do catálogo; sem concluir/reabrir issues, fila offline, push ou alegar sincronização durável. Composição das telas ausentes autorizada pelo proprietário em 26/10/2026.
+Lista, formulário, detalhe/histórico, conta/indicadores e ações administrativas do catálogo; conclusão foi originalmente excluída e adicionada pela I09 após relato do proprietário. Sem reabertura, fila offline, push ou alegar sincronização durável. Composição das telas ausentes autorizada pelo proprietário em 26/10/2026.
 
 ## Plano de implementação
 
 - [x] Reconfirmar com proprietário o documento Pencil ativo antes da consulta pelo MCP Windows; registrar referências em design-reference.md sem copiar/editar .pen. A seleção estava vazia; o proprietário autorizou compor as telas ausentes com o fluxo escrito.
-- [x] Conciliar rótulos do desenho com Pendente/Em andamento e ordenação antigas primeiro; conclusão/recuperação seguem sem função até a etapa 08.
+- [x] Conciliar rótulos do desenho com Pendente/Em andamento e ordenação antigas primeiro na Home; a I09 direcionou concluídas e eventos em ordem recente primeiro.
 - [x] Usar Shadcn, tokens, temas e navegação existente para Home/lista, filtros de status, criação sem título, edição do criador e detalhe com histórico paginado; compor Histórico e Conta e configurações conforme autorizado.
-- [x] Mostrar iniciar/devolver/liberar conforme ator e estado; API continua autoridade. Não há ação funcional de concluir.
+- [x] Mostrar iniciar/devolver/liberar conforme ator e estado; API continua autoridade. A conclusão foi acrescentada depois na I09.
 - [x] Adicionar exclusão/arquivo/restauração admin no catálogo com confirmação e consequência explícita; tratar resposta do servidor para associação concorrente e separar catálogo inativo da seleção ativa em novos chamados.
 - [x] Implementar carregamento, vazio, erro, sessão expirada, revogação e conflitos preservando texto digitado; retry mantém chave idempotente na mesma sessão. Não prometer recuperação após reload.
 - [x] Comunicar que gravações exigem conexão e não confirmar sucesso antes do commit. Garantia offline permanece na etapa 07 do roadmap.

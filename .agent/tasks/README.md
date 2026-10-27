@@ -13,9 +13,11 @@ Cada nova slice fica em uma pasta `NN-nome/`, com um `README.md` que define resu
 
 - [x] [03 — Parques e turbinas](03-parques-turbinas/README.md): P01–P06 concluídas em 26/10/2026; lifecycle com issues e catálogo offline permanecem nas etapas futuras.
 
-- [ ] [04 — Registro e atendimento](04-registro-atendimento/README.md): I01–I06 concluídas em 26/10/2026; I07 em andamento, aguardando validação manual da interface. Schema de issues/audit/sync e migrations 0005/0006 aplicadas no dev; lifecycle integrado sem nova migration.
+- [ ] [04 — Registro e atendimento](04-registro-atendimento/README.md): I01–I06 e I09 concluídas; I07 em andamento, aguardando validação manual da interface. Migrations 0005–0007 aplicadas no dev.
 
-Slice 03 concluída; slice 04 em andamento. I01 adicionou contratos compartilhados; I02 adicionou e validou o schema/migrations; I06 implementou lifecycle de equipamentos sem nova migration. I07 está implementada tecnicamente e aguarda validação manual autenticada. Catálogo offline permanece na etapa 07; conclusão e demais transições de lifecycle de issues permanecem na etapa 08.
+Correção solicitada durante I07: I09 concluiu a espera de uma hora no autoatendimento do autor, conclusão online e ordenação mais recente primeiro em Histórico/logs. Migration 0007 foi aplicada no banco dev; integração em PostgreSQL descartável passou.
+
+Slice 03 concluída; slice 04 em andamento. I01 adicionou contratos compartilhados; I02 adicionou e validou o schema/migrations; I06 implementou lifecycle de equipamentos sem nova migration. I07 está implementada tecnicamente e aguarda validação manual autenticada. I09 implementou espera de uma hora para autoatendimento do autor e conclusão online. Catálogo offline permanece na etapa 07; reabertura e arquivo de issues continuam na etapa 08.
 
 Verificação documental do planejamento inicial em 26/10/2026: links locais dos documentos alterados e consistência das seis tasks conferidos; `git diff --check` passou. As validações de implementação da P06 estão registradas na task específica.
 

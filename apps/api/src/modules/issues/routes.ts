@@ -1,4 +1,5 @@
 import {
+  completeIssueSchema,
   createIssueSchema,
   errorSchema,
   issueEventPageSchema,
@@ -54,6 +55,7 @@ function respondIssueWriteError(
     | 'unauthenticated'
     | 'forbidden'
     | 'action_forbidden'
+    | 'creator_wait'
     | 'not_found'
     | 'conflict'
     | 'idempotency_conflict'
@@ -66,6 +68,7 @@ function respondIssueWriteError(
     unauthenticated: [401, 'AUTHENTICATION_REQUIRED', 'Authentication required.'],
     forbidden: [403, 'WORKSPACE_ACCESS_DENIED', 'Workspace access denied.'],
     action_forbidden: [403, 'ISSUE_ACTION_FORBIDDEN', 'This action is not allowed for this issue.'],
+    creator_wait: [403, 'ISSUE_CREATOR_WAIT', 'The creator may start this issue after one hour.'],
     not_found: [404, 'RESOURCE_NOT_FOUND', 'Resource not found.'],
     conflict: [409, 'ISSUE_CONFLICT', 'The issue could not be created with these identifiers.'],
     idempotency_conflict: [
@@ -87,6 +90,35 @@ export function registerIssuesRoutes(
   authorization: WorkspaceAuthorizationService,
   issues: IssuesService,
 ) {
+  app.post(
+    '/api/workspaces/:workspaceId/issues/:issueId/complete',
+    {
+      schema: {
+        params: issuePathParamsSchema,
+        body: completeIssueSchema,
+        response: {
+          200: issueSchema,
+          400: errorSchema,
+          401: errorSchema,
+          403: errorSchema,
+          404: errorSchema,
+          409: errorSchema,
+        },
+      },
+    },
+    async (request, reply) => {
+      const { workspaceId, issueId } = issuePathParamsSchema.parse(request.params);
+      const result = await issues.completeIssue(
+        request.headers,
+        workspaceId,
+        issueId,
+        completeIssueSchema.parse(request.body),
+      );
+      if (result.status !== 'ok') return respondIssueWriteError(reply, request, result.status);
+      return reply.send(result.value);
+    },
+  );
+
   app.post(
     '/api/workspaces/:workspaceId/issues',
     {

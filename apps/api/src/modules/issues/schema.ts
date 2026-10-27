@@ -22,6 +22,7 @@ export const issues = pgTable(
     handlerMembershipId: uuid('handler_membership_id'),
     handlerUserId: uuid('handler_user_id'),
     text: text('text').notNull(),
+    completionReport: text('completion_report'),
     status: text('status').notNull().default('pending'),
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
@@ -47,11 +48,11 @@ export const issues = pgTable(
       table.createdAt,
       table.id,
     ),
-    check('issues_status_check', sql`${table.status} IN ('pending', 'in_progress')`),
+    check('issues_status_check', sql`${table.status} IN ('pending', 'in_progress', 'completed')`),
     check('issues_revision_check', sql`${table.revision} > 0`),
     check(
       'issues_status_handler_consistency_check',
-      sql`(${table.status} = 'pending' AND ${table.handlerMembershipId} IS NULL AND ${table.handlerUserId} IS NULL) OR (${table.status} = 'in_progress' AND ${table.handlerMembershipId} IS NOT NULL AND ${table.handlerUserId} IS NOT NULL)`,
+      sql`(${table.status} = 'pending' AND ${table.handlerMembershipId} IS NULL AND ${table.handlerUserId} IS NULL AND ${table.completionReport} IS NULL) OR (${table.status} IN ('in_progress', 'completed') AND ${table.handlerMembershipId} IS NOT NULL AND ${table.handlerUserId} IS NOT NULL)`,
     ),
     check(
       'issues_text_check',

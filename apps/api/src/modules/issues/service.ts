@@ -2,6 +2,7 @@ import { createHash, randomUUID } from 'node:crypto';
 import type { IncomingHttpHeaders } from 'node:http';
 import type {
   AuthenticatedUser,
+  CompleteIssue,
   CreateIssue,
   Issue,
   IssueEvent,
@@ -37,6 +38,7 @@ export type IssueWriteResult<T> =
   | { status: 'unauthenticated' }
   | { status: 'forbidden' }
   | { status: 'action_forbidden' }
+  | { status: 'creator_wait' }
   | { status: 'not_found' }
   | { status: 'conflict' }
   | { status: 'idempotency_conflict' }
@@ -93,6 +95,12 @@ export interface IssuesService {
     issueId: string,
     input: ReleaseIssue,
   ): Promise<IssueWriteResult<Issue>>;
+  completeIssue(
+    headers: IncomingHttpHeaders,
+    workspaceId: string,
+    issueId: string,
+    input: CompleteIssue,
+  ): Promise<IssueWriteResult<Issue>>;
 }
 
 export interface IssueWriteDependencies {
@@ -112,6 +120,8 @@ interface IssueRow extends QueryResultRow {
   handlerMembershipId: string | null;
   handlerUserId: string | null;
   text: string;
+  completionReport: string | null;
+  ownerWaitElapsed?: boolean;
   status: IssueStatus;
   createdAt: Date;
   updatedAt: Date;
@@ -133,7 +143,7 @@ interface IssueEventRow extends QueryResultRow {
 const issueColumns = `i.id, i.workspace_id AS "workspaceId", i.park_id AS "parkId",
   i.turbine_id AS "turbineId", i.creator_membership_id AS "creatorMembershipId",
   i.creator_user_id AS "creatorUserId", i.handler_membership_id AS "handlerMembershipId",
-  i.handler_user_id AS "handlerUserId", i.text, i.status,
+  i.handler_user_id AS "handlerUserId", i.text, i.completion_report AS "completionReport", i.status,
   i.created_at AS "createdAt", i.updated_at AS "updatedAt", i.revision`;
 
 function toIssue(row: IssueRow, users: Map<string, AuthenticatedUser>): Issue {
@@ -151,6 +161,7 @@ function toIssue(row: IssueRow, users: Map<string, AuthenticatedUser>): Issue {
     handlerMembershipId: row.handlerMembershipId,
     handler,
     text: row.text,
+    completionReport: row.completionReport,
     status: row.status,
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),
@@ -204,6 +215,7 @@ function issueSnapshot(issue: Issue): Record<string, unknown> {
     status: issue.status,
     handlerMembershipId: issue.handlerMembershipId,
     handler: issue.handler,
+    completionReport: issue.completionReport,
     revision: issue.revision,
   };
 }
@@ -271,11 +283,11 @@ export function createIssuesService(
   }
 
   async function transitionIssue(
-    operation: 'start' | 'return' | 'release',
+    operation: 'start' | 'return' | 'release' | 'complete',
     headers: IncomingHttpHeaders,
     workspaceId: string,
     issueId: string,
-    input: StartIssue | ReturnIssue | ReleaseIssue,
+    input: StartIssue | ReturnIssue | ReleaseIssue | CompleteIssue,
   ): Promise<IssueWriteResult<Issue>> {
     const allowedRoles: readonly WorkspaceRole[] | undefined =
       operation === 'release' ? ['admin'] : undefined;
@@ -284,12 +296,17 @@ export function createIssuesService(
         operation,
         issueId,
         expectedRevision: input.expectedRevision,
+        ...(operation === 'complete'
+          ? { report: (input as CompleteIssue).report?.trim() || null }
+          : {}),
       });
       const replay = await replayReceipt(client, workspaceId, principal, input.commandId, hash);
       if (replay) return replay;
 
       const currentResult = await client.query<IssueRow>(
-        `SELECT ${issueColumns} FROM public.issues i
+        `SELECT ${issueColumns},
+                (i.created_at + interval '1 hour' <= clock_timestamp()) AS "ownerWaitElapsed"
+         FROM public.issues i
          WHERE i.workspace_id = $1 AND i.id = $2 FOR UPDATE`,
         [workspaceId, issueId],
       );
@@ -301,6 +318,12 @@ export function createIssuesService(
       if (operation !== 'start' && currentRow.status !== 'in_progress')
         return { status: 'state_conflict' };
       if (
+        operation === 'start' &&
+        currentRow.creatorUserId === principal.user.id &&
+        currentRow.ownerWaitElapsed !== true
+      )
+        return { status: 'creator_wait' };
+      if (
         operation === 'return' &&
         (currentRow.handlerUserId !== principal.user.id ||
           currentRow.handlerMembershipId !== principal.membershipId)
@@ -308,19 +331,37 @@ export function createIssuesService(
         return { status: 'action_forbidden' };
       if (operation === 'release' && currentRow.handlerUserId === principal.user.id)
         return { status: 'action_forbidden' };
+      if (
+        operation === 'complete' &&
+        (currentRow.handlerUserId !== principal.user.id ||
+          currentRow.handlerMembershipId !== principal.membershipId)
+      )
+        return { status: 'action_forbidden' };
 
       const currentUsers = await getUsers(identity, [currentRow]);
       const before = toIssue(currentRow, currentUsers);
-      const nextStatus: IssueStatus = operation === 'start' ? 'in_progress' : 'pending';
-      const nextHandlerMembershipId = operation === 'start' ? principal.membershipId : null;
-      const nextHandlerUserId = operation === 'start' ? principal.user.id : null;
+      const nextStatus: IssueStatus =
+        operation === 'start' ? 'in_progress' : operation === 'complete' ? 'completed' : 'pending';
+      const nextHandlerMembershipId =
+        operation === 'start' || operation === 'complete' ? principal.membershipId : null;
+      const nextHandlerUserId =
+        operation === 'start' || operation === 'complete' ? principal.user.id : null;
       const updatedResult = await client.query<IssueRow>(
         `UPDATE public.issues i
          SET status = $3, handler_membership_id = $4, handler_user_id = $5,
+             completion_report = CASE WHEN $6 THEN $7 ELSE i.completion_report END,
              revision = revision + 1, updated_at = clock_timestamp()
          WHERE i.workspace_id = $1 AND i.id = $2
          RETURNING ${issueColumns}`,
-        [workspaceId, issueId, nextStatus, nextHandlerMembershipId, nextHandlerUserId],
+        [
+          workspaceId,
+          issueId,
+          nextStatus,
+          nextHandlerMembershipId,
+          nextHandlerUserId,
+          operation === 'complete',
+          operation === 'complete' ? (input as CompleteIssue).report?.trim() || null : null,
+        ],
       );
       const updatedRow = updatedResult.rows[0];
       if (!updatedRow) throw new Error('Issue transition returned no row.');
@@ -333,7 +374,14 @@ export function createIssuesService(
         actorMembershipId: principal.membershipId,
         actorUserId: principal.user.id,
         actorLabel: principal.user.name,
-        type: operation === 'start' ? 'started' : operation === 'return' ? 'returned' : 'released',
+        type:
+          operation === 'start'
+            ? 'started'
+            : operation === 'return'
+              ? 'returned'
+              : operation === 'release'
+                ? 'released'
+                : 'completed',
         before: issueSnapshot(before),
         after: issueSnapshot(issue),
       });
@@ -354,10 +402,10 @@ export function createIssuesService(
       let cursor: { createdAt: Date; id: string } | null = null;
       if (query.cursor) {
         const result = await pool.query<{ createdAt: Date; id: string }>(
-          `SELECT created_at AS "createdAt", id
+          `SELECT CASE WHEN $3::text = 'completed' THEN updated_at ELSE created_at END AS "createdAt", id
            FROM public.issues
            WHERE workspace_id = $1 AND id = $2
-             AND ($3::text IS NULL OR status = $3)
+             AND ($3::text IS NULL OR ($3 = 'active' AND status IN ('pending', 'in_progress')) OR status = $3)
              AND ($4::uuid IS NULL OR park_id = $4)
              AND ($5::uuid IS NULL OR turbine_id = $5)
            LIMIT 1`,
@@ -376,11 +424,11 @@ export function createIssuesService(
         `SELECT ${issueColumns}
          FROM public.issues i
          WHERE i.workspace_id = $1
-           AND ($2::text IS NULL OR i.status = $2)
+           AND ($2::text IS NULL OR ($2 = 'active' AND i.status IN ('pending', 'in_progress')) OR i.status = $2)
            AND ($3::uuid IS NULL OR i.park_id = $3)
            AND ($4::uuid IS NULL OR i.turbine_id = $4)
-           AND ($5::timestamptz IS NULL OR (i.created_at, i.id) > ($5, $6::uuid))
-         ORDER BY i.created_at ASC, i.id ASC
+           AND ($5::timestamptz IS NULL OR ((CASE WHEN $2 = 'completed' THEN i.updated_at ELSE i.created_at END), i.id) ${query.status === 'completed' ? '<' : '>'} ($5, $6::uuid))
+         ORDER BY (CASE WHEN $2 = 'completed' THEN i.updated_at ELSE i.created_at END) ${query.status === 'completed' ? 'DESC' : 'ASC'}, i.id ${query.status === 'completed' ? 'DESC' : 'ASC'}
          LIMIT $7`,
         [
           workspaceId,
@@ -436,8 +484,8 @@ export function createIssuesService(
                 type, occurred_at AS "occurredAt", before, after
          FROM public.issue_events
          WHERE workspace_id = $1 AND issue_id = $2
-           AND ($3::timestamptz IS NULL OR (occurred_at, id) > ($3, $4::uuid))
-         ORDER BY occurred_at ASC, id ASC
+           AND ($3::timestamptz IS NULL OR (occurred_at, id) < ($3, $4::uuid))
+         ORDER BY occurred_at DESC, id DESC
          LIMIT $5`,
         [workspaceId, issueId, cursor?.occurredAt ?? null, cursor?.id ?? null, query.limit + 1],
       );
@@ -559,6 +607,7 @@ export function createIssuesService(
         const observedRow = observedResult.rows[0];
         if (!observedRow) return { status: 'not_found' };
         if (observedRow.creatorUserId !== principal.user.id) return { status: 'action_forbidden' };
+        if (observedRow.status === 'completed') return { status: 'not_editable' };
         if (observedRow.revision !== input.expectedRevision) return { status: 'revision_conflict' };
 
         const nextParkId = input.parkId ?? observedRow.parkId;
@@ -650,6 +699,10 @@ export function createIssuesService(
 
     releaseIssue(headers, workspaceId, issueId, input) {
       return transitionIssue('release', headers, workspaceId, issueId, input);
+    },
+
+    completeIssue(headers, workspaceId, issueId, input) {
+      return transitionIssue('complete', headers, workspaceId, issueId, input);
     },
   };
 }

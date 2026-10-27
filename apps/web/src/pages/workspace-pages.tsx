@@ -169,7 +169,7 @@ export function WorkspaceHomePage() {
               className="inline-flex min-w-0 items-center gap-2"
               to="/app"
             >
-              <TowerMark className="size-5 shrink-0 text-primary" />
+              <TowerMark className="size-5 shrink-0" />
               <span className="truncate font-semibold">{context.workspace.name}</span>
             </Link>
             <WorkspaceSystemActions />

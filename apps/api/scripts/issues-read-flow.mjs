@@ -393,15 +393,16 @@ try {
     headers: headers(ids.tech),
   });
   assert.equal(eventPage.statusCode, 200, eventPage.body);
-  assert.equal(eventPage.json().items[0].actorMembershipId, membershipByUser.get(ids.revoked.id));
-  assert.equal(eventPage.json().items[0].actorLabel, 'Técnico removido');
+  assert.equal(eventPage.json().items[0].id, eventIds[1]);
+  assert.equal(eventPage.json().items[0].actorLabel, 'Usuário excluído');
   const eventPage2 = await app.inject({
-    url: `${root}/issues/${issueIds[0]}/events?limit=1&cursor=${eventIds[0]}`,
+    url: `${root}/issues/${issueIds[0]}/events?limit=1&cursor=${eventIds[1]}`,
     headers: headers(ids.tech),
   });
   assert.equal(eventPage2.statusCode, 200, eventPage2.body);
-  assert.equal(eventPage2.json().items[0].id, eventIds[1]);
-  assert.equal(eventPage2.json().items[0].actorLabel, 'Usuário excluído');
+  assert.equal(eventPage2.json().items[0].id, eventIds[0]);
+  assert.equal(eventPage2.json().items[0].actorMembershipId, membershipByUser.get(ids.revoked.id));
+  assert.equal(eventPage2.json().items[0].actorLabel, 'Técnico removido');
   await expectError(
     await app.inject({
       url: `${root}/issues/${issueIds[0]}/events?cursor=${randomUUID()}`,
@@ -847,6 +848,11 @@ try {
     },
   });
   assert.equal(transitionCreate.statusCode, 201, transitionCreate.body);
+  await pool.query(
+    `UPDATE public.issues SET created_at = clock_timestamp() - interval '1 hour'
+     WHERE id = $1 AND workspace_id = $2`,
+    [transitionIssueId, ids.workspaceA],
+  );
   const techStartBody = { commandId: randomUUID(), expectedRevision: 1 };
   const adminStartBody = { commandId: randomUUID(), expectedRevision: 1 };
   const [techStart, adminStart] = await Promise.all([
@@ -963,6 +969,11 @@ try {
     text: 'Edição concorrente com início',
   });
   assert.equal(editStartCreate.status, 'ok');
+  await pool.query(
+    `UPDATE public.issues SET created_at = clock_timestamp() - interval '1 hour'
+     WHERE id = $1 AND workspace_id = $2`,
+    [editStartIssueId, ids.workspaceA],
+  );
   const concurrentEditStart = await Promise.all([
     issues.editIssue(headers(ids.tech), ids.workspaceA, editStartIssueId, {
       commandId: randomUUID(),
@@ -988,6 +999,11 @@ try {
     text: 'Devolução contra liberação',
   });
   assert.equal(returnReleaseCreate.status, 'ok');
+  await pool.query(
+    `UPDATE public.issues SET created_at = clock_timestamp() - interval '1 hour'
+     WHERE id = $1 AND workspace_id = $2`,
+    [returnReleaseIssueId, ids.workspaceA],
+  );
   const startedByTech = await issues.startIssue(
     headers(ids.tech),
     ids.workspaceA,
@@ -1015,6 +1031,157 @@ try {
     [returnReleaseIssueId],
   );
   assert.equal(returnReleaseEventCount.rows[0].count, 3);
+
+  const ownerWaitIssueId = randomUUID();
+  const ownerWaitCreated = await app.inject({
+    method: 'POST',
+    url: `${root}/issues`,
+    headers: headers(ids.tech),
+    payload: {
+      commandId: randomUUID(),
+      issueId: ownerWaitIssueId,
+      parkId: parkIds.active,
+      turbineId: turbineIds.active,
+      text: 'Aguardar uma hora para autoatendimento',
+    },
+  });
+  assert.equal(ownerWaitCreated.statusCode, 201, ownerWaitCreated.body);
+  await expectError(
+    await app.inject({
+      method: 'POST',
+      url: `${root}/issues/${ownerWaitIssueId}/start`,
+      headers: headers(ids.tech),
+      payload: { commandId: randomUUID(), expectedRevision: 1 },
+    }),
+    403,
+    'ISSUE_CREATOR_WAIT',
+  );
+  const otherMemberStart = await app.inject({
+    method: 'POST',
+    url: `${root}/issues/${ownerWaitIssueId}/start`,
+    headers: headers(ids.admin),
+    payload: { commandId: randomUUID(), expectedRevision: 1 },
+  });
+  assert.equal(otherMemberStart.statusCode, 200, otherMemberStart.body);
+  const completionCommand = {
+    commandId: randomUUID(),
+    expectedRevision: 2,
+    report: 'Inspeção e reparo concluídos.',
+  };
+  const completed = await app.inject({
+    method: 'POST',
+    url: `${root}/issues/${ownerWaitIssueId}/complete`,
+    headers: headers(ids.admin),
+    payload: completionCommand,
+  });
+  assert.equal(completed.statusCode, 200, completed.body);
+  assert.equal(completed.json().status, 'completed');
+  assert.equal(completed.json().completionReport, completionCommand.report);
+  await expectError(
+    await app.inject({
+      method: 'PATCH',
+      url: `${root}/issues/${ownerWaitIssueId}`,
+      headers: headers(ids.tech),
+      payload: {
+        commandId: randomUUID(),
+        expectedRevision: 3,
+        text: 'Tentativa de editar após conclusão',
+      },
+    }),
+    409,
+    'ISSUE_NOT_EDITABLE',
+  );
+  const completedReplay = await app.inject({
+    method: 'POST',
+    url: `${root}/issues/${ownerWaitIssueId}/complete`,
+    headers: headers(ids.admin),
+    payload: completionCommand,
+  });
+  assert.equal(completedReplay.statusCode, 200, completedReplay.body);
+  assert.deepEqual(completedReplay.json(), completed.json());
+  const completionEvents = await pool.query(
+    `SELECT count(*)::int AS count FROM public.issue_events
+     WHERE issue_id = $1 AND type = 'completed'`,
+    [ownerWaitIssueId],
+  );
+  assert.equal(completionEvents.rows[0].count, 1);
+  const expiredOwnerIssueId = randomUUID();
+  const expiredOwnerCreated = await app.inject({
+    method: 'POST',
+    url: `${root}/issues`,
+    headers: headers(ids.tech),
+    payload: {
+      commandId: randomUUID(),
+      issueId: expiredOwnerIssueId,
+      parkId: parkIds.active,
+      turbineId: turbineIds.active,
+      text: 'Autoatendimento após uma hora',
+    },
+  });
+  assert.equal(expiredOwnerCreated.statusCode, 201, expiredOwnerCreated.body);
+  await pool.query(
+    `UPDATE public.issues SET created_at = clock_timestamp() - interval '1 hour'
+     WHERE id = $1 AND workspace_id = $2`,
+    [expiredOwnerIssueId, ids.workspaceA],
+  );
+  const ownerStartAfterWait = await app.inject({
+    method: 'POST',
+    url: `${root}/issues/${expiredOwnerIssueId}/start`,
+    headers: headers(ids.tech),
+    payload: { commandId: randomUUID(), expectedRevision: 1 },
+  });
+  assert.equal(ownerStartAfterWait.statusCode, 200, ownerStartAfterWait.body);
+  const newerCompletedId = randomUUID();
+  const newerCreated = await app.inject({
+    method: 'POST',
+    url: `${root}/issues`,
+    headers: headers(ids.admin),
+    payload: {
+      commandId: randomUUID(),
+      issueId: newerCompletedId,
+      parkId: parkIds.active,
+      turbineId: turbineIds.active,
+      text: 'Conclusão mais recente',
+    },
+  });
+  assert.equal(newerCreated.statusCode, 201, newerCreated.body);
+  await pool.query(
+    `UPDATE public.issues SET created_at = clock_timestamp() - interval '2 hours'
+     WHERE id = $1 AND workspace_id = $2`,
+    [newerCompletedId, ids.workspaceA],
+  );
+  const newerStarted = await app.inject({
+    method: 'POST',
+    url: `${root}/issues/${newerCompletedId}/start`,
+    headers: headers(ids.tech),
+    payload: { commandId: randomUUID(), expectedRevision: 1 },
+  });
+  assert.equal(newerStarted.statusCode, 200, newerStarted.body);
+  const newerCompleted = await app.inject({
+    method: 'POST',
+    url: `${root}/issues/${newerCompletedId}/complete`,
+    headers: headers(ids.tech),
+    payload: { commandId: randomUUID(), expectedRevision: 2 },
+  });
+  assert.equal(newerCompleted.statusCode, 200, newerCompleted.body);
+  const completedList = await app.inject({
+    url: `${root}/issues?status=completed&limit=1`,
+    headers: headers(ids.tech),
+  });
+  assert.equal(completedList.statusCode, 200, completedList.body);
+  assert.equal(completedList.json().items[0].id, newerCompletedId);
+  const olderCompletedList = await app.inject({
+    url: `${root}/issues?status=completed&limit=1&cursor=${completedList.json().nextCursor}`,
+    headers: headers(ids.tech),
+  });
+  assert.equal(olderCompletedList.statusCode, 200, olderCompletedList.body);
+  assert.equal(olderCompletedList.json().items[0].id, ownerWaitIssueId);
+  const activeList = await app.inject({
+    url: `${root}/issues?status=active`,
+    headers: headers(ids.tech),
+  });
+  assert.equal(activeList.statusCode, 200, activeList.body);
+  assert.ok(activeList.json().items.every((issue) => issue.status !== 'completed'));
 
   await expectError(
     await app.inject({
@@ -1445,6 +1612,11 @@ try {
     text: 'Liberação após revogação',
   });
   assert.equal(revokedHandlerCreate.status, 'ok');
+  await pool.query(
+    `UPDATE public.issues SET created_at = clock_timestamp() - interval '1 hour'
+     WHERE id = $1 AND workspace_id = $2`,
+    [revokedHandlerIssueId, ids.workspaceA],
+  );
   const revokedHandlerStart = await issues.startIssue(
     headers(ids.tech),
     ids.workspaceA,
@@ -1462,6 +1634,11 @@ try {
     text: 'Revogação concorrente com início',
   });
   assert.equal(raceIssue.status, 'ok');
+  await pool.query(
+    `UPDATE public.issues SET created_at = clock_timestamp() - interval '1 hour'
+     WHERE id = $1 AND workspace_id = $2`,
+    [raceIssueId, ids.workspaceA],
+  );
   const [raceStartResponse, raceRevokeResponse] = await Promise.all([
     app.inject({
       method: 'POST',
@@ -1572,6 +1749,7 @@ try {
   assert.ok(app.swagger().paths['/api/workspaces/{workspaceId}/issues/{issueId}/start']);
   assert.ok(app.swagger().paths['/api/workspaces/{workspaceId}/issues/{issueId}/return']);
   assert.ok(app.swagger().paths['/api/workspaces/{workspaceId}/issues/{issueId}/release']);
+  assert.ok(app.swagger().paths['/api/workspaces/{workspaceId}/issues/{issueId}/complete']);
   assert.ok(app.swagger().paths['/api/workspaces/{workspaceId}/parks/{parkId}'].delete);
   assert.ok(app.swagger().paths['/api/workspaces/{workspaceId}/parks/{parkId}/restore'].post);
   assert.ok(
