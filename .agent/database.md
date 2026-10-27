@@ -339,3 +339,13 @@ Better Auth 1.7.12 foi mapeado para `auth_*` em `identity/schema.ts`; OAuth toke
 - `pnpm db:empty-check` provisionou duas vezes uma database descartável, aplicou `0000`, inseriu uma workspace de teste, reiniciou PostgreSQL e verificou a persistência da linha e do journal; removeu a database ao terminar. `pnpm db:restore-check` restaurou dump descartável e comparou contagens (`0:1`) sem alterar o banco ativo.
 - `pnpm db:setup`, migration repetida, `pnpm db:permissions`, `pnpm test:integration`, `pnpm check`, Compose e restauração passaram. PostgreSQL/Electric/Mailpit ficaram saudáveis. O `.env` local foi atualizado e permanece ignorado.
 - Neon/VPS não foram provisionados. TLS e roles de produção estão documentados como requisito, sem validação externa. `windops` continua superuser apenas como bootstrap local/administrativo; a API nunca usa essa URL.
+
+
+## Evidência integrada — I08 — 26/10/2026
+
+- `pnpm db:empty-check` passou instalação vazia, migrations concorrentes/repetidas, constraints, restart e upgrade desde 0004 preservando workspace, identidade e catálogo.
+- `pnpm db:restore-check` restaurou em banco descartável e confirmou `workspaces:migrations=1:8`, além de `issues`, `issue_events`, `issue_location_references` e `sync_commands`. `pnpm db:permissions` confirmou privilégios runtime/migrator/replicação.
+- Integrações auth, workspaces, parks e issues passaram em PostgreSQL descartável. Incluem revogação, tenant, conflitos, replay, falha induzida antes do commit, restart/reconstrução do serviço e corridas entre issue e lifecycle.
+- Publication `electric_publication_default` contém somente `public.workspaces`; identity, issues, audit e recibos permanecem fora dela.
+- Provas confirmam persistência PostgreSQL online, não persistência local/outbox offline nem percurso autenticado de UI. Nenhum inventário operacional foi alterado por I08.
+- O proprietário confirmou as funcionalidades implementadas e aprovou a slice em 26/10/2026. Esse aceite funcional não representa certificação independente por dispositivo ou acessibilidade.

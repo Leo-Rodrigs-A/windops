@@ -2,9 +2,9 @@
 
 ## Status
 
-Em andamento — a slice executável 03 foi concluída em 26/10/2026; lifecycle com issues e catálogo offline permanecem pendentes.
+Em andamento — slices 03 e parte da 04 implementadas; I08 revalidou lifecycle integrado a issues. Catálogo local durável permanece futuro.
 
-Execução detalhada na [slice 03 — Parques e turbinas](../03-parques-turbinas/README.md). P01–P06 concluídas em 26/10/2026. A etapa permanece parcialmente atendida: exclusão definitiva sem issues e arquivamento/restauração com histórico dependem da integração transacional com issues; catálogo local durável depende da etapa 07.
+Execução detalhada nas slices [03 — Parques e turbinas](../03-parques-turbinas/README.md) e [04 — Registro e atendimento](../04-registro-atendimento/README.md). P01–P06 e o lifecycle integrado I06 foram implementados; I08 revalidou as corridas com issues em PostgreSQL descartável em 26/10/2026. A etapa permanece parcial pelo percurso manual pendente e pelo catálogo local durável da etapa 07.
 
 ## Objetivo e escopo
 
@@ -22,7 +22,7 @@ Número configurável; código de turbina único no parque; excluir definitivame
 
 Permissões, unicidade, relações entre tenants, exclusão/arquivamento conforme histórico e corrida com criação de issue, catálogo sem itens.
 
-Lifecycle integrado a issues está planejado na [slice 04](../04-registro-atendimento/README.md), especialmente I06; I01 registrou as regras em 26/10/2026. A implementação e o catálogo offline continuam pendentes; catálogo offline permanece na etapa 07.
+Lifecycle integrado a issues foi implementado na [slice 04](../04-registro-atendimento/README.md), especialmente I06, e revalidado na I08; I01 registrou as regras em 26/10/2026. Catálogo offline permanece na etapa 07.
 
 ## Referências e atualização
 

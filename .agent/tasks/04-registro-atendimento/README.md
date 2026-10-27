@@ -2,9 +2,9 @@
 
 ## Status
 
-Em andamento desde 26/10/2026; I01–I06 concluídas; I07 em implementação, com validação manual da interface pendente.
+Concluída em 26/10/2026 por aceite do proprietário; I01–I09 concluídas. O recorte entregue é online; offline e demais itens futuros permanecem fora do escopo.
 
-- [ ] Slice concluída
+- [x] Slice concluída
 
 ## Resultado esperado
 
@@ -32,8 +32,8 @@ Slices [01](../01-fundacao/README.md), [02](../02-equipe-acesso/README.md) e [03
 - [x] I05 — Início, devolução e liberação de atendimento — concluída em 26/10/2026; transições concorrentes e histórico por ação integrados.
 - [x] I06 — Exclusão, arquivamento e restauração de equipamentos — concluída em 26/10/2026; exclusão física sem referências, arquivo/restauração com histórico, recibos duráveis e corridas serializadas.
 - [x] I09 — Autoatendimento com espera e conclusão online — concluída em 26/10/2026; espera de uma hora, conclusão, relatos e histórico recente primeiro.
-- [ ] I07 — Interfaces de chamados e lifecycle do catálogo
-- [ ] I08 — Validação integrada e encerramento
+- [x] I07 — Interfaces de chamados e lifecycle do catálogo — aceite funcional do proprietário em 26/10/2026.
+- [x] I08 — Validação integrada e encerramento — automação passou e slice aprovada pelo proprietário em 26/10/2026.
 
 ## Limites e decisões de escopo
 
@@ -50,13 +50,13 @@ Slices [01](../01-fundacao/README.md), [02](../02-equipe-acesso/README.md) e [03
 
 ## Aceite da slice
 
-- [ ] Registro/edição/atendimento/conclusão conforme ator, tenant, estado e revisão, sem atribuição a terceiros.
-- [ ] Mutação, evento e recibo atômicos; restart/retry não duplicam dados ou histórico.
-- [ ] Lista/detalhe/histórico paginados e autorizados, inclusive atores removidos e equipamentos arquivados.
-- [ ] Lifecycle do catálogo preserva referências atuais/históricas e resolve corridas com gravação de issues.
-- [ ] Interface conectada à API real, conflitos explícitos e percurso validado em desktop/mobile com limitações registradas.
-- [ ] Validações/documentação concluídas; offline, reabertura/arquivo de issues e notificações permanecem explicitamente futuros.
+- [x] Registro/edição/atendimento/conclusão conforme ator, tenant, estado e revisão, sem atribuição a terceiros.
+- [x] Mutação, evento e recibo atômicos; restart/retry não duplicam dados ou histórico.
+- [x] Lista/detalhe/histórico paginados e autorizados, inclusive atores removidos e equipamentos arquivados.
+- [x] Lifecycle do catálogo preserva referências atuais/históricas e resolve corridas com gravação de issues.
+- [x] Interface conectada à API real; o proprietário confirmou e aprovou as funcionalidades implementadas. Não há certificação independente por dispositivo/acessibilidade.
+- [x] Validações/documentação concluídas; offline, reabertura/arquivo de issues e notificações permanecem explicitamente futuros.
 
-## Evidência do planejamento
+## Evidência de conclusão
 
-26/10/2026: criadas oito tasks I01–I08. I01 implementada em contratos compartilhados e modelo; veja a evidência na task. A validação integrada da slice continua pendente. A implementação futura ainda não inclui endpoints nem alteração do banco.
+26/10/2026: slice aprovada pelo proprietário, que confirmou todas as funcionalidades implementadas. I08 registra as validações automatizadas e limitações; persistência local/offline, notificações, reabertura e arquivo de issues continuam futuros. A confirmação não foi transformada em alegação de testes independentes por dispositivo ou acessibilidade.

@@ -13,11 +13,13 @@ Cada nova slice fica em uma pasta `NN-nome/`, com um `README.md` que define resu
 
 - [x] [03 — Parques e turbinas](03-parques-turbinas/README.md): P01–P06 concluídas em 26/10/2026; lifecycle com issues e catálogo offline permanecem nas etapas futuras.
 
-- [ ] [04 — Registro e atendimento](04-registro-atendimento/README.md): I01–I06 e I09 concluídas; I07 em andamento, aguardando validação manual da interface. Migrations 0005–0007 aplicadas no dev.
+- [x] [04 — Registro e atendimento](04-registro-atendimento/README.md): slice concluída e aprovada pelo proprietário em 26/10/2026; I01–I09 concluídas. Limitações e escopo futuro registrados na task.
 
 Correção solicitada durante I07: I09 concluiu a espera de uma hora no autoatendimento do autor, conclusão online e ordenação mais recente primeiro em Histórico/logs. Migration 0007 foi aplicada no banco dev; integração em PostgreSQL descartável passou.
 
-Slice 03 concluída; slice 04 em andamento. I01 adicionou contratos compartilhados; I02 adicionou e validou o schema/migrations; I06 implementou lifecycle de equipamentos sem nova migration. I07 está implementada tecnicamente e aguarda validação manual autenticada. I09 implementou espera de uma hora para autoatendimento do autor e conclusão online. Catálogo offline permanece na etapa 07; reabertura e arquivo de issues continuam na etapa 08.
+I08 — 26/10/2026: instalação vazia/upgrade/restore/grants, publicação Electric e integrações auth, workspaces, parks e issues passaram. `pnpm check` expirou sem saída após 40s; equivalentes diretos passaram. O proprietário confirmou as funcionalidades e aprovou a slice; não se alegou certificação independente de dispositivos ou acessibilidade.
+
+Slices 03 e 04 concluídas; I01 adicionou contratos compartilhados; I02 adicionou e validou o schema/migrations; I06 implementou lifecycle de equipamentos sem nova migration. I07 recebeu aceite funcional do proprietário; I08 passou validações automatizadas e a slice foi aprovada. I09 implementou espera de uma hora para autoatendimento do autor e conclusão online. Catálogo offline permanece na etapa 07; reabertura e arquivo de issues continuam na etapa 08.
 
 Verificação documental do planejamento inicial em 26/10/2026: links locais dos documentos alterados e consistência das seis tasks conferidos; `git diff --check` passou. As validações de implementação da P06 estão registradas na task específica.
 
@@ -31,7 +33,7 @@ P04 concluída em 26/10/2026: criação/edição de parks e turbines restrita a 
 
 P05 concluída em 26/10/2026: página `/parques` com leitura, cadastro sequencial por confirmação, edição administrativa, busca/paginação e navegação desktop/mobile. Proprietário confirmou admin/técnico, navegação responsiva e preview `Parque P002` sem gravação. Biome, boundaries, typechecks, 18 testes e build passaram. Ver task P05.
 
-P06 e slice 03 concluídas em 26/10/2026. Integrações, migrations, restore, permissões, PostgreSQL/Electric, builds e testes passaram; proprietário confirmou o fluxo admin/técnico em desktop e Android físico. `pnpm check` foi interrompido sem saída após 30s; equivalentes diretos passaram. Servidores, portproxy e regra de firewall temporários foram encerrados/removidos e verificados. Roadmap 05 permanece parcial pelo lifecycle futuro integrado a issues e pelo catálogo offline.
+P06 e slice 03 concluídas em 26/10/2026. Integrações, migrations, restore, permissões, PostgreSQL/Electric, builds e testes passaram; proprietário confirmou o fluxo admin/técnico em desktop e Android físico. `pnpm check` foi interrompido sem saída após 30s; equivalentes diretos passaram. Servidores, portproxy e regra de firewall temporários foram encerrados/removidos e verificados. Roadmap 05 permanece parcial pelo catálogo offline.
 
 Verificação documental da slice 04 em 26/10/2026: 23 documentos e 103 links locais conferidos, oito tasks com seções obrigatórias e checkboxes de implementação abertos; `git diff --check` passou. Nenhuma fonte/infraestrutura alterada; `pnpm check` e testes da aplicação não executados nesta preparação.
 

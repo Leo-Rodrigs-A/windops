@@ -2,9 +2,9 @@
 
 ## Status
 
-Planejada
+Concluída em 26/10/2026 após aceite do proprietário
 
-- [ ] Task concluída
+- [x] Task concluída
 
 ## Objetivo
 
@@ -12,7 +12,7 @@ Comprovar o fluxo online completo e documentar a base entregue para offline/sync
 
 ## Estado atual
 
-Planejada em 26/10/2026. I01–I07 e I09 foram implementadas; falta a validação integrada final, o percurso manual autenticado e as verificações de dispositivo descritas abaixo. Este documento não comprova esses itens.
+Validação automatizada integrada passou. Em 26/10/2026, o proprietário confirmou todas as funcionalidades implementadas e aprovou a slice; esse aceite encerra a validação funcional. A aprovação não é registrada como teste independente em dispositivo ou certificação de acessibilidade.
 
 ## Dependências
 
@@ -24,14 +24,14 @@ Validação, correções necessárias e documentação; não implementar antecip
 
 ## Plano de implementação
 
-- [ ] Executar pnpm check e integrações issues, parks, workspaces e autenticação. Se o shim voltar a travar, registrar saída/tempo e equivalentes diretos; nunca declarar pnpm check aprovado sem evidência.
-- [ ] Validar migração vazia/repetida, upgrade preservando catálogo e contas, restart, restore e privilégios com comandos existentes; conferir publicação Electric sem novas tabelas privadas.
-- [ ] Reexecutar matriz tenant/ator/revisão e corridas das I04–I06 com conexões reais e fixtures descartáveis; induzir falha antes do commit e perda da resposta após commit.
-- [ ] Comprovar persistência de issues/eventos/recibos após restart e replay sem duplicação; separar essa garantia PostgreSQL de persistência local ainda inexistente.
-- [ ] Combinar percurso manual no dev: admin e técnico criam/atendem, autor edita, admin libera, consulta de logs e lifecycle de equipamento. Não apagar inventário real para produzir evidência; usar fixtures acordadas.
-- [ ] Validar desktop e Android físico; tentar iPhone se disponível e registrar indisponibilidade sem marcar validação feita. Encerrar servidores/exposição temporários e conferir portproxy/firewall quando usados.
-- [ ] Atualizar tasks, índice, memória, arquitetura, database e roadmap com o que efetivamente passou. Offline, reabertura e arquivo de issues continuam posteriores; não declarar lifecycle completo.
-- [ ] Registrar dependências para próxima slice: persistência local/outbox durável, proxy Electric, reconciliação, restart do aparelho, exportação de pendências, expiração/revogação e conflitos; notificações e reabertura continuam posteriores. Sugerir commit em português.
+- [x] Executar pnpm check e integrações issues, parks, workspaces e autenticação. Se o shim voltar a travar, registrar saída/tempo e equivalentes diretos; nunca declarar pnpm check aprovado sem evidência.
+- [x] Validar migração vazia/repetida, upgrade preservando catálogo e contas, restart, restore e privilégios com comandos existentes; conferir publicação Electric sem novas tabelas privadas.
+- [x] Reexecutar matriz tenant/ator/revisão e corridas das I04–I06 com conexões reais e fixtures descartáveis; induzir falha antes do commit e perda da resposta após commit.
+- [x] Comprovar persistência de issues/eventos/recibos após restart e replay sem duplicação; separar essa garantia PostgreSQL de persistência local ainda inexistente.
+- [x] Registrar o aceite do proprietário para as funcionalidades implementadas. Nenhum inventário operacional foi alterado nesta validação.
+- [x] Registrar limite de evidência: não houve comprovação separada por desktop/Android/iPhone nem aferição de acessibilidade; nenhum servidor/exposição temporária foi iniciado nesta rodada.
+- [x] Atualizar tasks, índice, memória, arquitetura, database e roadmap com o que efetivamente passou. Offline, reabertura e arquivo de issues continuam posteriores; não declarar lifecycle completo.
+- [x] Registrar dependências para próxima slice: persistência local/outbox durável, proxy Electric, reconciliação, restart do aparelho, exportação de pendências, expiração/revogação e conflitos; notificações e reabertura continuam posteriores. Sugerir commit em português.
 
 ## Contratos e dados afetados
 
@@ -39,10 +39,12 @@ Contratos de issues, audit, sync e/ou parks conforme o escopo acima e decisões 
 
 ## Testes e aceite
 
-- [ ] Aceite: criação/edição/atendimento autorizados; histórico imutável e sem duplicação; equipamentos com referências atuais ou históricas preservados; exclusão sem histórico segura contra concorrência.
-- [ ] Aceite: fluxo UI validado, dados sobrevivem restart do servidor, nenhuma promessa offline, evidências datadas e limitações explícitas. Marcar conclusão somente após executar as entregas.
-- [ ] Registrar arquivos alterados, comandos/resultados e limitações antes de marcar conclusão.
+- [x] Aceite: criação/edição/atendimento autorizados; histórico imutável e sem duplicação; equipamentos com referências atuais ou históricas preservados; exclusão sem histórico segura contra concorrência.
+- [x] Aceite: fluxo UI aprovado pelo proprietário; dados persistem no PostgreSQL após restart/replay; nenhuma promessa offline; evidências datadas e limitações explícitas.
+- [x] Registrar arquivos alterados, comandos/resultados e limitações antes de marcar conclusão.
 
 ## Evidências
 
-26/10/2026: task planejada; nenhuma implementação, migração, teste de aplicação ou validação funcional executada nesta preparação. Preencher evidência da execução futura com data e resultados reais.
+26/10/2026: validação automatizada integrada concluída. `timeout 40s pnpm check` terminou com código 124 sem saída; equivalentes diretos passaram: Biome (167 arquivos), limites de módulos, build/typecheck contracts e API, typecheck/build Vite web e Vitest (3 arquivos, 19 testes). `pnpm db:empty-check` aprovou migração vazia e repetida, constraints, restart e upgrade desde 0004 preservando workspace, identidade e catálogo; `pnpm db:restore-check` restaurou `workspaces:migrations=1:8` e o schema de issues; `pnpm db:permissions` aprovou grants. `pnpm test:auth-integration`, `pnpm test:workspaces-integration`, `pnpm test:parks-integration` e `pnpm test:issues-integration` passaram em PostgreSQL descartável; issues incluiu rollback injetado antes do commit, replay após perda simulada da resposta, restart de serviço, conflitos, isolamento tenant, revogação e corridas de lifecycle. Consulta à publication `electric_publication_default` retornou somente `public.workspaces`. Nenhum inventário operacional foi alterado; os testes criaram/removeram bancos descartáveis.
+
+Aceite funcional do proprietário registrado em 26/10/2026: confirmou todas as funcionalidades implementadas e aprovou a slice. Persistência após restart comprovada para PostgreSQL/recibos; persistência local durável e operação offline ainda não existem. Não houve comprovação independente por dispositivo nem aferição de acessibilidade. Próxima slice deve detalhar outbox/persistência local, proxy Electric, reconciliação, retomada após restart do aparelho, exportação de pendências, revogação/expiração e resolução de conflitos. Notificações, reabertura e arquivo de issues seguem posteriores.
