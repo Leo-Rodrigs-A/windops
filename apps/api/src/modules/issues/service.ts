@@ -10,7 +10,11 @@ import type {
   IssueStatus,
   IssuesPage,
   IssuesQuery,
+  ReleaseIssue,
+  ReturnIssue,
+  StartIssue,
   UpdateIssue,
+  WorkspaceRole,
 } from '@windops/contracts';
 import { issueSchema } from '@windops/contracts';
 import type { Pool, PoolClient, QueryResultRow } from 'pg';
@@ -32,12 +36,14 @@ export type IssueWriteResult<T> =
   | { status: 'ok'; value: T }
   | { status: 'unauthenticated' }
   | { status: 'forbidden' }
+  | { status: 'action_forbidden' }
   | { status: 'not_found' }
   | { status: 'conflict' }
   | { status: 'idempotency_conflict' }
   | { status: 'revision_conflict' }
   | { status: 'not_editable' }
-  | { status: 'equipment_unavailable' };
+  | { status: 'equipment_unavailable' }
+  | { status: 'state_conflict' };
 
 export interface EquipmentIssueReferences {
   hasReferences: boolean;
@@ -68,6 +74,24 @@ export interface IssuesService {
     workspaceId: string,
     issueId: string,
     input: UpdateIssue,
+  ): Promise<IssueWriteResult<Issue>>;
+  startIssue(
+    headers: IncomingHttpHeaders,
+    workspaceId: string,
+    issueId: string,
+    input: StartIssue,
+  ): Promise<IssueWriteResult<Issue>>;
+  returnIssue(
+    headers: IncomingHttpHeaders,
+    workspaceId: string,
+    issueId: string,
+    input: ReturnIssue,
+  ): Promise<IssueWriteResult<Issue>>;
+  releaseIssue(
+    headers: IncomingHttpHeaders,
+    workspaceId: string,
+    issueId: string,
+    input: ReleaseIssue,
   ): Promise<IssueWriteResult<Issue>>;
 }
 
@@ -192,6 +216,7 @@ export function createIssuesService(
   async function withWriteTransaction<T>(
     headers: IncomingHttpHeaders,
     workspaceId: string,
+    allowedRoles: readonly WorkspaceRole[] | undefined,
     operation: (
       client: PoolClient,
       principal: AuthorizedWorkspacePrincipal,
@@ -204,6 +229,7 @@ export function createIssuesService(
         client,
         headers,
         workspaceId,
+        allowedRoles,
       );
       if (permission.status !== 'ok') {
         await client.query('ROLLBACK');
@@ -242,6 +268,85 @@ export function createIssuesService(
     if (!receipt) return null;
     if (!receipt.payloadHash.equals(hash)) return { status: 'idempotency_conflict' };
     return { status: 'ok', value: issueSchema.parse(receipt.result) };
+  }
+
+  async function transitionIssue(
+    operation: 'start' | 'return' | 'release',
+    headers: IncomingHttpHeaders,
+    workspaceId: string,
+    issueId: string,
+    input: StartIssue | ReturnIssue | ReleaseIssue,
+  ): Promise<IssueWriteResult<Issue>> {
+    const allowedRoles: readonly WorkspaceRole[] | undefined =
+      operation === 'release' ? ['admin'] : undefined;
+    return withWriteTransaction(headers, workspaceId, allowedRoles, async (client, principal) => {
+      const hash = commandHash({
+        operation,
+        issueId,
+        expectedRevision: input.expectedRevision,
+      });
+      const replay = await replayReceipt(client, workspaceId, principal, input.commandId, hash);
+      if (replay) return replay;
+
+      const currentResult = await client.query<IssueRow>(
+        `SELECT ${issueColumns} FROM public.issues i
+         WHERE i.workspace_id = $1 AND i.id = $2 FOR UPDATE`,
+        [workspaceId, issueId],
+      );
+      const currentRow = currentResult.rows[0];
+      if (!currentRow) return { status: 'not_found' };
+      if (currentRow.revision !== input.expectedRevision) return { status: 'revision_conflict' };
+      if (operation === 'start' && currentRow.status !== 'pending')
+        return { status: 'state_conflict' };
+      if (operation !== 'start' && currentRow.status !== 'in_progress')
+        return { status: 'state_conflict' };
+      if (
+        operation === 'return' &&
+        (currentRow.handlerUserId !== principal.user.id ||
+          currentRow.handlerMembershipId !== principal.membershipId)
+      )
+        return { status: 'action_forbidden' };
+      if (operation === 'release' && currentRow.handlerUserId === principal.user.id)
+        return { status: 'action_forbidden' };
+
+      const currentUsers = await getUsers(identity, [currentRow]);
+      const before = toIssue(currentRow, currentUsers);
+      const nextStatus: IssueStatus = operation === 'start' ? 'in_progress' : 'pending';
+      const nextHandlerMembershipId = operation === 'start' ? principal.membershipId : null;
+      const nextHandlerUserId = operation === 'start' ? principal.user.id : null;
+      const updatedResult = await client.query<IssueRow>(
+        `UPDATE public.issues i
+         SET status = $3, handler_membership_id = $4, handler_user_id = $5,
+             revision = revision + 1, updated_at = clock_timestamp()
+         WHERE i.workspace_id = $1 AND i.id = $2
+         RETURNING ${issueColumns}`,
+        [workspaceId, issueId, nextStatus, nextHandlerMembershipId, nextHandlerUserId],
+      );
+      const updatedRow = updatedResult.rows[0];
+      if (!updatedRow) throw new Error('Issue transition returned no row.');
+      const updatedUsers = await getUsers(identity, [updatedRow]);
+      const issue = toIssue(updatedRow, updatedUsers);
+      await writeDependencies.audit.appendIssueEvent(client, {
+        id: randomUUID(),
+        workspaceId,
+        issueId,
+        actorMembershipId: principal.membershipId,
+        actorUserId: principal.user.id,
+        actorLabel: principal.user.name,
+        type: operation === 'start' ? 'started' : operation === 'return' ? 'returned' : 'released',
+        before: issueSnapshot(before),
+        after: issueSnapshot(issue),
+      });
+      await writeDependencies.sync.appendCommandReceipt(client, {
+        workspaceId,
+        actorMembershipId: principal.membershipId,
+        actorUserId: principal.user.id,
+        commandId: input.commandId,
+        payloadHash: hash,
+        result: issue as unknown as Record<string, unknown>,
+      });
+      return { status: 'ok', value: issue };
+    });
   }
 
   return {
@@ -370,7 +475,7 @@ export function createIssuesService(
     },
 
     async createIssue(headers, workspaceId, input) {
-      return withWriteTransaction(headers, workspaceId, async (client, principal) => {
+      return withWriteTransaction(headers, workspaceId, undefined, async (client, principal) => {
         const hash = commandHash({
           operation: 'create',
           issueId: input.issueId,
@@ -434,7 +539,7 @@ export function createIssuesService(
     },
 
     async editIssue(headers, workspaceId, issueId, input) {
-      return withWriteTransaction(headers, workspaceId, async (client, principal) => {
+      return withWriteTransaction(headers, workspaceId, undefined, async (client, principal) => {
         const hash = commandHash({
           operation: 'edit',
           issueId,
@@ -453,7 +558,7 @@ export function createIssuesService(
         );
         const observedRow = observedResult.rows[0];
         if (!observedRow) return { status: 'not_found' };
-        if (observedRow.creatorUserId !== principal.user.id) return { status: 'forbidden' };
+        if (observedRow.creatorUserId !== principal.user.id) return { status: 'action_forbidden' };
         if (observedRow.revision !== input.expectedRevision) return { status: 'revision_conflict' };
 
         const nextParkId = input.parkId ?? observedRow.parkId;
@@ -533,6 +638,18 @@ export function createIssuesService(
         });
         return { status: 'ok', value: issue };
       });
+    },
+
+    startIssue(headers, workspaceId, issueId, input) {
+      return transitionIssue('start', headers, workspaceId, issueId, input);
+    },
+
+    returnIssue(headers, workspaceId, issueId, input) {
+      return transitionIssue('return', headers, workspaceId, issueId, input);
+    },
+
+    releaseIssue(headers, workspaceId, issueId, input) {
+      return transitionIssue('release', headers, workspaceId, issueId, input);
     },
   };
 }

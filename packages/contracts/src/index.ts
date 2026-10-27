@@ -279,6 +279,9 @@ export type IssuesPage = z.infer<typeof issuesPageSchema>;
 export type IssueEventPage = z.infer<typeof issueEventPageSchema>;
 export type CreateIssue = z.infer<typeof createIssueSchema>;
 export type UpdateIssue = z.infer<typeof updateIssueSchema>;
+export type StartIssue = z.infer<typeof startIssueSchema>;
+export type ReturnIssue = z.infer<typeof returnIssueSchema>;
+export type ReleaseIssue = z.infer<typeof releaseIssueSchema>;
 
 export type WorkspaceRole = z.infer<typeof workspaceRoleSchema>;
 export type AuthenticatedUser = z.infer<typeof authenticatedUserSchema>;

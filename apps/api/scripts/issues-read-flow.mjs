@@ -33,6 +33,11 @@ const ids = {
     name: 'I03 Revoked',
     email: `i03-revoked-${process.pid}@example.invalid`,
   },
+  raceTech: {
+    id: randomUUID(),
+    name: 'I03 Race Technician',
+    email: `i03-race-tech-${process.pid}@example.invalid`,
+  },
   orphan: {
     id: randomUUID(),
     name: 'I03 Orphan',
@@ -137,9 +142,18 @@ try {
   const memberships = await pool.query(
     `INSERT INTO public.workspace_members(workspace_id, user_id, role, revoked_at)
      VALUES ($1, $3, 'admin', NULL), ($1, $4, 'technician', NULL),
-            ($2, $5, 'admin', NULL), ($1, $6, 'technician', clock_timestamp())
+            ($2, $5, 'admin', NULL), ($1, $6, 'technician', clock_timestamp()),
+            ($1, $7, 'technician', NULL)
      RETURNING id, user_id`,
-    [ids.workspaceA, ids.workspaceB, ids.admin.id, ids.tech.id, ids.other.id, ids.revoked.id],
+    [
+      ids.workspaceA,
+      ids.workspaceB,
+      ids.admin.id,
+      ids.tech.id,
+      ids.other.id,
+      ids.revoked.id,
+      ids.raceTech.id,
+    ],
   );
   const membershipByUser = new Map(memberships.rows.map((row) => [row.user_id, row.id]));
 
@@ -521,7 +535,7 @@ try {
       payload: updateBody,
     }),
     403,
-    'WORKSPACE_ACCESS_DENIED',
+    'ISSUE_ACTION_FORBIDDEN',
   );
   const updated = await app.inject({
     method: 'PATCH',
@@ -816,6 +830,267 @@ try {
   );
   assert.deepEqual(afterRestart, committed);
 
+  const transitionIssueId = randomUUID();
+  const transitionCreate = await app.inject({
+    method: 'POST',
+    url: `${root}/issues`,
+    headers: headers(ids.tech),
+    payload: {
+      commandId: randomUUID(),
+      issueId: transitionIssueId,
+      parkId: parkIds.active,
+      turbineId: turbineIds.active,
+      text: 'Concorrência de início',
+    },
+  });
+  assert.equal(transitionCreate.statusCode, 201, transitionCreate.body);
+  const techStartBody = { commandId: randomUUID(), expectedRevision: 1 };
+  const adminStartBody = { commandId: randomUUID(), expectedRevision: 1 };
+  const [techStart, adminStart] = await Promise.all([
+    app.inject({
+      method: 'POST',
+      url: `${root}/issues/${transitionIssueId}/start`,
+      headers: headers(ids.tech),
+      payload: techStartBody,
+    }),
+    app.inject({
+      method: 'POST',
+      url: `${root}/issues/${transitionIssueId}/start`,
+      headers: headers(ids.admin),
+      payload: adminStartBody,
+    }),
+  ]);
+  const successfulStart = [techStart, adminStart].find((response) => response.statusCode === 200);
+  const rejectedStart = [techStart, adminStart].find((response) => response.statusCode !== 200);
+  assert.ok(successfulStart, `${techStart.body} ${adminStart.body}`);
+  assert.equal(successfulStart.json().status, 'in_progress');
+  assert.equal(successfulStart.json().revision, 2);
+  assert.ok(rejectedStart);
+  await expectError(rejectedStart, 409, 'REVISION_CONFLICT');
+  await expectError(
+    await app.inject({
+      method: 'POST',
+      url: `${root}/issues/${transitionIssueId}/start`,
+      headers: headers(ids.admin),
+      payload: { commandId: randomUUID(), expectedRevision: 2 },
+    }),
+    409,
+    'ISSUE_STATE_CONFLICT',
+  );
+  await expectError(
+    await app.inject({
+      method: 'POST',
+      url: `${root}/issues/${transitionIssueId}/release`,
+      headers: headers(ids.tech),
+      payload: { commandId: randomUUID(), expectedRevision: 2 },
+    }),
+    403,
+    'WORKSPACE_ACCESS_DENIED',
+  );
+  const responsible = successfulStart.json().handler.id === ids.tech.id ? ids.tech : ids.admin;
+  const otherActor = responsible.id === ids.tech.id ? ids.admin : ids.tech;
+  await expectError(
+    await app.inject({
+      method: 'POST',
+      url: `${root}/issues/${transitionIssueId}/return`,
+      headers: headers(otherActor),
+      payload: { commandId: randomUUID(), expectedRevision: 2 },
+    }),
+    403,
+    'ISSUE_ACTION_FORBIDDEN',
+  );
+  const returnBody = { commandId: randomUUID(), expectedRevision: 2 };
+  const returned = await app.inject({
+    method: 'POST',
+    url: `${root}/issues/${transitionIssueId}/return`,
+    headers: headers(responsible),
+    payload: returnBody,
+  });
+  assert.equal(returned.statusCode, 200, returned.body);
+  assert.equal(returned.json().status, 'pending');
+  assert.equal(returned.json().handler, null);
+  assert.equal(returned.json().revision, 3);
+  const oldStartReplay = await app.inject({
+    method: 'POST',
+    url: `${root}/issues/${transitionIssueId}/start`,
+    headers: headers(responsible),
+    payload: successfulStart === techStart ? techStartBody : adminStartBody,
+  });
+  assert.equal(oldStartReplay.statusCode, 200, oldStartReplay.body);
+  assert.deepEqual(oldStartReplay.json(), successfulStart.json());
+  const transitionEventCount = await pool.query(
+    `SELECT count(*)::int AS count FROM public.issue_events
+     WHERE issue_id = $1 AND type = 'started'`,
+    [transitionIssueId],
+  );
+  assert.equal(transitionEventCount.rows[0].count, 1);
+  const stillReturned = await app.inject({
+    url: `${root}/issues/${transitionIssueId}`,
+    headers: headers(ids.tech),
+  });
+  assert.equal(stillReturned.json().status, 'pending');
+  assert.equal(stillReturned.json().revision, 3);
+  await expectError(
+    await app.inject({
+      method: 'POST',
+      url: `${root}/issues/${transitionIssueId}/release`,
+      headers: headers(ids.admin),
+      payload: { commandId: randomUUID(), expectedRevision: 3 },
+    }),
+    409,
+    'ISSUE_STATE_CONFLICT',
+  );
+  await expectError(
+    await app.inject({
+      method: 'POST',
+      url: `${root}/issues/${transitionIssueId}/start`,
+      headers: headers(ids.tech),
+      payload: { commandId: randomUUID(), expectedRevision: 3, handlerUserId: ids.admin.id },
+    }),
+    400,
+    'VALIDATION_ERROR',
+  );
+
+  const editStartIssueId = randomUUID();
+  const editStartCreate = await issues.createIssue(headers(ids.tech), ids.workspaceA, {
+    commandId: randomUUID(),
+    issueId: editStartIssueId,
+    parkId: parkIds.active,
+    turbineId: turbineIds.active,
+    text: 'Edição concorrente com início',
+  });
+  assert.equal(editStartCreate.status, 'ok');
+  const concurrentEditStart = await Promise.all([
+    issues.editIssue(headers(ids.tech), ids.workspaceA, editStartIssueId, {
+      commandId: randomUUID(),
+      expectedRevision: 1,
+      text: 'Edição concorrente',
+    }),
+    issues.startIssue(headers(ids.tech), ids.workspaceA, editStartIssueId, {
+      commandId: randomUUID(),
+      expectedRevision: 1,
+    }),
+  ]);
+  assert.deepEqual(concurrentEditStart.map((result) => result.status).sort(), [
+    'ok',
+    'revision_conflict',
+  ]);
+
+  const returnReleaseIssueId = randomUUID();
+  const returnReleaseCreate = await issues.createIssue(headers(ids.tech), ids.workspaceA, {
+    commandId: randomUUID(),
+    issueId: returnReleaseIssueId,
+    parkId: parkIds.active,
+    turbineId: turbineIds.active,
+    text: 'Devolução contra liberação',
+  });
+  assert.equal(returnReleaseCreate.status, 'ok');
+  const startedByTech = await issues.startIssue(
+    headers(ids.tech),
+    ids.workspaceA,
+    returnReleaseIssueId,
+    {
+      commandId: randomUUID(),
+      expectedRevision: 1,
+    },
+  );
+  assert.equal(startedByTech.status, 'ok');
+  assert.equal(startedByTech.value.handler?.id, ids.tech.id);
+  const [returnRace, releaseRace] = await Promise.all([
+    issues.returnIssue(headers(ids.tech), ids.workspaceA, returnReleaseIssueId, {
+      commandId: randomUUID(),
+      expectedRevision: 2,
+    }),
+    issues.releaseIssue(headers(ids.admin), ids.workspaceA, returnReleaseIssueId, {
+      commandId: randomUUID(),
+      expectedRevision: 2,
+    }),
+  ]);
+  assert.deepEqual([returnRace.status, releaseRace.status].sort(), ['ok', 'revision_conflict']);
+  const returnReleaseEventCount = await pool.query(
+    'SELECT count(*)::int AS count FROM public.issue_events WHERE issue_id = $1',
+    [returnReleaseIssueId],
+  );
+  assert.equal(returnReleaseEventCount.rows[0].count, 3);
+
+  const revokedHandlerIssueId = randomUUID();
+  const revokedHandlerCreate = await issues.createIssue(headers(ids.tech), ids.workspaceA, {
+    commandId: randomUUID(),
+    issueId: revokedHandlerIssueId,
+    parkId: parkIds.active,
+    turbineId: turbineIds.active,
+    text: 'Liberação após revogação',
+  });
+  assert.equal(revokedHandlerCreate.status, 'ok');
+  const revokedHandlerStart = await issues.startIssue(
+    headers(ids.tech),
+    ids.workspaceA,
+    revokedHandlerIssueId,
+    { commandId: randomUUID(), expectedRevision: 1 },
+  );
+  assert.equal(revokedHandlerStart.status, 'ok');
+
+  const raceIssueId = randomUUID();
+  const raceIssue = await issues.createIssue(headers(ids.raceTech), ids.workspaceA, {
+    commandId: randomUUID(),
+    issueId: raceIssueId,
+    parkId: parkIds.active,
+    turbineId: turbineIds.active,
+    text: 'Revogação concorrente com início',
+  });
+  assert.equal(raceIssue.status, 'ok');
+  const [raceStartResponse, raceRevokeResponse] = await Promise.all([
+    app.inject({
+      method: 'POST',
+      url: `${root}/issues/${raceIssueId}/start`,
+      headers: headers(ids.raceTech),
+      payload: { commandId: randomUUID(), expectedRevision: 1 },
+    }),
+    app.inject({
+      method: 'POST',
+      url: `${root}/members/${membershipByUser.get(ids.raceTech.id)}/revoke`,
+      headers: headers(ids.admin),
+      payload: { expectedRevision: 1 },
+    }),
+  ]);
+  assert.equal(raceRevokeResponse.statusCode, 200, raceRevokeResponse.body);
+  assert.ok([200, 403].includes(raceStartResponse.statusCode), raceStartResponse.body);
+  if (raceStartResponse.statusCode === 403)
+    assert.equal(raceStartResponse.json().error.code, 'WORKSPACE_ACCESS_DENIED');
+  else assert.equal(raceStartResponse.json().status, 'in_progress');
+
+  await pool.query(
+    `UPDATE public.workspace_members SET revoked_at = clock_timestamp()
+     WHERE workspace_id = $1 AND user_id = $2`,
+    [ids.workspaceA, ids.tech.id],
+  );
+  const releasedAfterRevocation = await app.inject({
+    method: 'POST',
+    url: `${root}/issues/${revokedHandlerIssueId}/release`,
+    headers: headers(ids.admin),
+    payload: { commandId: randomUUID(), expectedRevision: 2 },
+  });
+  assert.equal(releasedAfterRevocation.statusCode, 200, releasedAfterRevocation.body);
+  assert.equal(releasedAfterRevocation.json().status, 'pending');
+  assert.equal(releasedAfterRevocation.json().handler, null);
+  const releasedEvents = await app.inject({
+    url: `${root}/issues/${revokedHandlerIssueId}/events`,
+    headers: headers(ids.admin),
+  });
+  const releasedEvent = releasedEvents.json().items.find((event) => event.type === 'released');
+  assert.equal(releasedEvent.before.handler.id, ids.tech.id);
+  assert.equal(releasedEvent.after.handler, null);
+  await expectError(
+    await app.inject({
+      method: 'POST',
+      url: `${root}/issues/${revokedHandlerIssueId}/start`,
+      headers: headers(ids.tech),
+      payload: { commandId: randomUUID(), expectedRevision: 3 },
+    }),
+    403,
+    'WORKSPACE_ACCESS_DENIED',
+  );
+
   await pool.query(
     `UPDATE public.workspace_members SET revoked_at = clock_timestamp()
      WHERE workspace_id = $1 AND user_id = $2`,
@@ -862,6 +1137,9 @@ try {
 
   assert.ok(app.swagger().paths['/api/workspaces/{workspaceId}/issues']);
   assert.ok(app.swagger().paths['/api/workspaces/{workspaceId}/issues/{issueId}/events']);
+  assert.ok(app.swagger().paths['/api/workspaces/{workspaceId}/issues/{issueId}/start']);
+  assert.ok(app.swagger().paths['/api/workspaces/{workspaceId}/issues/{issueId}/return']);
+  assert.ok(app.swagger().paths['/api/workspaces/{workspaceId}/issues/{issueId}/release']);
   console.log(
     'Authorized issue reads and writes, tenant isolation, deterministic pagination, atomic audit/receipts, idempotent retries, revision conflicts, archived equipment rules, revocation and transactional equipment references verified.',
   );

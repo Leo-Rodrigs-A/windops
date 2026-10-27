@@ -2,9 +2,9 @@
 
 ## Status
 
-Planejada
+Concluída em 26/10/2026
 
-- [ ] Task concluída
+- [x] Task concluída
 
 ## Objetivo
 
@@ -12,7 +12,7 @@ Entregar controle de atendimento com concorrência explícita e histórico por a
 
 ## Estado atual
 
-Planejamento em 26/10/2026. Slice 03 concluída; issues e audit têm somente entrypoints vazios e sync retorna 503. As entregas desta slice ainda não existem. As dependências abaixo precisam ser executadas e verificadas; este documento não comprova implementação.
+Rotas de início, devolução e liberação implementadas com controle de revisão, autorização por ator e recibos idempotentes. Próxima task: I06. Conclusão e relato permanecem na etapa 08.
 
 ## Dependências
 
@@ -24,11 +24,11 @@ Pendente↔Em andamento; conclusão, relato, reabertura e arquivos de issues per
 
 ## Plano de implementação
 
-- [ ] Implementar iniciar como autoatendimento para admin/técnico ativo, inclusive criador; não aceitar ID de responsável escolhido pelo cliente.
-- [ ] Somente responsável devolve para Pendente; admin libera atendimento alheio inclusive de membro revogado. Limpar responsável atual e preservar atores anteriores no evento.
-- [ ] Reusar transação, autorização, recibos e expectedRevision da I04; toda transição incrementa revisão e grava evento com antes/depois.
-- [ ] Garantir que primeiro início válido confirmado vence; segundo recebe conflito recuperável. Replay do comando vencedor não reinicia atendimento após posterior devolução.
-- [ ] Rejeitar transições incompatíveis e tentativas de concluir/atribuir a terceiros; autorização de cargo deve ser revalidada junto à escrita.
+- [x] Implementar iniciar como autoatendimento para admin/técnico ativo, inclusive criador; não aceitar ID de responsável escolhido pelo cliente.
+- [x] Somente responsável devolve para Pendente; admin libera atendimento alheio inclusive de membro revogado. Limpar responsável atual e preservar atores anteriores no evento.
+- [x] Reusar transação, autorização, recibos e expectedRevision da I04; toda transição incrementa revisão e grava evento com antes/depois.
+- [x] Garantir que primeiro início válido confirmado vence; segundo recebe conflito recuperável. Replay do comando vencedor não reinicia atendimento após posterior devolução.
+- [x] Rejeitar transições incompatíveis e tentativas de concluir/atribuir a terceiros; autorização de cargo deve ser revalidada junto à escrita.
 
 ## Contratos e dados afetados
 
@@ -36,11 +36,13 @@ Contratos de issues, audit, sync e/ou parks conforme o escopo acima e decisões 
 
 ## Testes e aceite
 
-- [ ] Testar matriz ator/criador/responsável/admin, próprio atendimento, devolução alheia negada, liberação após revogação e estado inválido.
-- [ ] Testar dois inícios concorrentes, edição concorrente com início, devolução versus liberação, rebaixamento/revogação concorrente e replay antigo após nova transição; garantir um evento por comando.
-- [ ] Executar pnpm check e integração de issues/workspaces.
-- [ ] Registrar arquivos alterados, comandos/resultados e limitações antes de marcar conclusão.
+- [x] Testar matriz ator/criador/responsável/admin, próprio atendimento, devolução alheia negada, liberação após revogação e estado inválido.
+- [x] Testar dois inícios concorrentes, edição concorrente com início, devolução versus liberação, revogação concorrente e replay antigo após nova transição; garantir um evento por comando.
+- [x] Executar pnpm check e integração de issues/workspaces.
+- [x] Registrar arquivos alterados, comandos/resultados e limitações antes de marcar conclusão.
 
 ## Evidências
 
-26/10/2026: task planejada; nenhuma implementação, migração, teste de aplicação ou validação funcional executada nesta preparação. Preencher evidência da execução futura com data e resultados reais.
+26/10/2026: adicionadas as rotas `POST /api/workspaces/:workspaceId/issues/:issueId/start`, `/return` e `/release`; o serviço de issues aplica as transições e salva snapshots, evento append-only e recibo idempotente na mesma transação. Sem alteração de schema/migration. Integração `pnpm test:issues-integration` cobre admin/técnico e criador, primeiro início concorrente, devolução somente pelo responsável, liberação somente por admin e após revogação, snapshot do responsável anterior, disputa devolver/liberar, edição/início concorrentes, conflito de estado/revisão, replay antigo depois da devolução e revogação concorrente com início. `pnpm test:workspaces-integration` passou.
+
+Biome em 156 arquivos, boundaries, typechecks contracts/API/web, 19 testes Vitest e builds API/web passaram. `pnpm check` ficou sem saída por 40s (timeout 124); equivalentes diretos executados. Nenhum dado do banco dev foi alterado. Conclusão, reabertura e relato seguem na etapa 08.

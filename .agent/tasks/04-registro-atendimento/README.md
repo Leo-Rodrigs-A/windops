@@ -2,7 +2,7 @@
 
 ## Status
 
-Em andamento desde 26/10/2026; I01–I04 concluídas, próxima task I05.
+Em andamento desde 26/10/2026; I01–I05 concluídas, próxima task I06.
 
 - [ ] Slice concluída
 
@@ -28,7 +28,7 @@ Slices [01](../01-fundacao/README.md), [02](../02-equipe-acesso/README.md) e [03
 - [x] I02 — Schema, migrações e privilégios — concluída em 26/10/2026; migrations 0005/0006 aplicadas no dev e validadas.
 - [x] I03 — Consultas autorizadas e histórico — concluída em 26/10/2026; lista/detalhe/eventos tenant-scoped e referências atuais/históricas integradas.
 - [x] I04 — Registro, edição e comandos idempotentes — concluída em 26/10/2026; POST/PATCH transacionais com evento e recibo idempotente.
-- [ ] I05 — Início, devolução e liberação de atendimento
+- [x] I05 — Início, devolução e liberação de atendimento — concluída em 26/10/2026; transições concorrentes e histórico por ação integrados.
 - [ ] I06 — Exclusão, arquivamento e restauração de equipamentos
 - [ ] I07 — Interfaces de chamados e lifecycle do catálogo
 - [ ] I08 — Validação integrada e encerramento

@@ -6,6 +6,9 @@ import {
   issueSchema,
   issuesPageSchema,
   issuesQuerySchema,
+  releaseIssueSchema,
+  returnIssueSchema,
+  startIssueSchema,
   updateIssueSchema,
 } from '@windops/contracts';
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
@@ -50,16 +53,19 @@ function respondIssueWriteError(
   status:
     | 'unauthenticated'
     | 'forbidden'
+    | 'action_forbidden'
     | 'not_found'
     | 'conflict'
     | 'idempotency_conflict'
     | 'revision_conflict'
     | 'not_editable'
-    | 'equipment_unavailable',
+    | 'equipment_unavailable'
+    | 'state_conflict',
 ): FastifyReply {
   const responses = {
     unauthenticated: [401, 'AUTHENTICATION_REQUIRED', 'Authentication required.'],
     forbidden: [403, 'WORKSPACE_ACCESS_DENIED', 'Workspace access denied.'],
+    action_forbidden: [403, 'ISSUE_ACTION_FORBIDDEN', 'This action is not allowed for this issue.'],
     not_found: [404, 'RESOURCE_NOT_FOUND', 'Resource not found.'],
     conflict: [409, 'ISSUE_CONFLICT', 'The issue could not be created with these identifiers.'],
     idempotency_conflict: [
@@ -70,6 +76,7 @@ function respondIssueWriteError(
     revision_conflict: [409, 'REVISION_CONFLICT', 'The issue changed. Reload and retry.'],
     not_editable: [409, 'ISSUE_NOT_EDITABLE', 'The issue can no longer be edited.'],
     equipment_unavailable: [409, 'EQUIPMENT_UNAVAILABLE', 'The selected equipment is unavailable.'],
+    state_conflict: [409, 'ISSUE_STATE_CONFLICT', 'The issue is not in a state for this action.'],
   } as const;
   const [statusCode, code, message] = responses[status];
   return reply.code(statusCode).send({ error: { code, message, requestId: request.id } });
@@ -130,6 +137,93 @@ export function registerIssuesRoutes(
         workspaceId,
         issueId,
         updateIssueSchema.parse(request.body),
+      );
+      if (result.status !== 'ok') return respondIssueWriteError(reply, request, result.status);
+      return reply.send(result.value);
+    },
+  );
+
+  app.post(
+    '/api/workspaces/:workspaceId/issues/:issueId/start',
+    {
+      schema: {
+        params: issuePathParamsSchema,
+        body: startIssueSchema,
+        response: {
+          200: issueSchema,
+          400: errorSchema,
+          401: errorSchema,
+          403: errorSchema,
+          404: errorSchema,
+          409: errorSchema,
+        },
+      },
+    },
+    async (request, reply) => {
+      const { workspaceId, issueId } = issuePathParamsSchema.parse(request.params);
+      const result = await issues.startIssue(
+        request.headers,
+        workspaceId,
+        issueId,
+        startIssueSchema.parse(request.body),
+      );
+      if (result.status !== 'ok') return respondIssueWriteError(reply, request, result.status);
+      return reply.send(result.value);
+    },
+  );
+
+  app.post(
+    '/api/workspaces/:workspaceId/issues/:issueId/return',
+    {
+      schema: {
+        params: issuePathParamsSchema,
+        body: returnIssueSchema,
+        response: {
+          200: issueSchema,
+          400: errorSchema,
+          401: errorSchema,
+          403: errorSchema,
+          404: errorSchema,
+          409: errorSchema,
+        },
+      },
+    },
+    async (request, reply) => {
+      const { workspaceId, issueId } = issuePathParamsSchema.parse(request.params);
+      const result = await issues.returnIssue(
+        request.headers,
+        workspaceId,
+        issueId,
+        returnIssueSchema.parse(request.body),
+      );
+      if (result.status !== 'ok') return respondIssueWriteError(reply, request, result.status);
+      return reply.send(result.value);
+    },
+  );
+
+  app.post(
+    '/api/workspaces/:workspaceId/issues/:issueId/release',
+    {
+      schema: {
+        params: issuePathParamsSchema,
+        body: releaseIssueSchema,
+        response: {
+          200: issueSchema,
+          400: errorSchema,
+          401: errorSchema,
+          403: errorSchema,
+          404: errorSchema,
+          409: errorSchema,
+        },
+      },
+    },
+    async (request, reply) => {
+      const { workspaceId, issueId } = issuePathParamsSchema.parse(request.params);
+      const result = await issues.releaseIssue(
+        request.headers,
+        workspaceId,
+        issueId,
+        releaseIssueSchema.parse(request.body),
       );
       if (result.status !== 'ok') return respondIssueWriteError(reply, request, result.status);
       return reply.send(result.value);
