@@ -44,6 +44,7 @@ export type LocalCommandStatus =
   | 'sending'
   | 'waiting_auth'
   | 'waiting_eligibility'
+  | 'blocked'
   | 'conflict'
   | 'rejected'
   | 'confirmed_waiting_replica'
@@ -97,7 +98,7 @@ export type LocalIssueProjection = {
     status: Issue['status'] | 'local';
   };
   serverRevision: number | null;
-  serverActive: boolean;
+  serverActive: boolean | null;
   localRevision: number;
   updatedAt: string;
 };
@@ -105,6 +106,7 @@ export type LocalIssueProjection = {
 export type LocalIssueCommand = {
   id: string;
   issueId: string;
+  chainId: string;
   workspaceId: string;
   kind: LocalCommandKind;
   payload: unknown;
@@ -208,7 +210,7 @@ export class LocalIssueStore {
         status: 'local',
       },
       serverRevision: null,
-      serverActive: false,
+      serverActive: null,
       localRevision: 1,
       updatedAt: new Date().toISOString(),
     };
@@ -333,6 +335,27 @@ export class LocalIssueStore {
     return updated;
   }
 
+  async prepareCommandForSend(id: string, payload: unknown) {
+    const command = this.getCommand(id);
+    if (!command) throw new Error('Comando local não encontrado.');
+    if (!['pending', 'sending', 'waiting_auth', 'waiting_eligibility'].includes(command.status))
+      return null;
+    if (command.frozenPayload !== null) {
+      if (command.status === 'sending') return command;
+      const retry: LocalIssueCommand = { ...command, status: 'sending', blockReason: null };
+      await this.commitRows([{ id: `command:${id}`, kind: 'command', value: retry }]);
+      return retry;
+    }
+    const prepared: LocalIssueCommand = {
+      ...command,
+      status: 'sending',
+      attemptedAt: command.attemptedAt ?? new Date().toISOString(),
+      frozenPayload: payload,
+    };
+    await this.commitRows([{ id: `command:${id}`, kind: 'command', value: prepared }]);
+    return prepared;
+  }
+
   getIssue(id: string) {
     const row = this.journal.get(`issue:${id}`);
     return row?.kind === 'issue' ? row.value : undefined;
@@ -340,7 +363,9 @@ export class LocalIssueStore {
 
   getCommand(id: string) {
     const row = this.journal.get(`command:${id}`);
-    return row?.kind === 'command' ? row.value : undefined;
+    return row?.kind === 'command'
+      ? { ...row.value, chainId: row.value.chainId ?? row.value.issueId }
+      : undefined;
   }
 
   getCheckpoint(collection: ReplicaCollection) {
@@ -588,7 +613,9 @@ export class LocalIssueStore {
       } else unresolved.push(command);
     }
 
-    const awaitingResponse = unresolved.some((command) => command.status === 'sending');
+    const awaitingResponse = unresolved.some(
+      (command) => command.attemptedAt !== null && command.frozenPayload !== null,
+    );
     if (unresolved.length > 0 && !awaitingResponse) {
       for (const command of unresolved) {
         rows.push({
@@ -642,7 +669,11 @@ export class LocalIssueStore {
 
   async recordCommandAck(commandId: string, issue: SyncedIssueRow) {
     const command = this.getCommand(commandId);
-    if (!command || command.issueId !== issue.id)
+    if (
+      !command ||
+      command.issueId !== issue.id ||
+      issue.workspaceId !== this.partition.workspaceId
+    )
       throw new Error('A confirmação não corresponde ao comando local.');
     const current = this.getIssue(issue.id);
     const observedRevision = current?.serverRevision ?? 0;
@@ -682,6 +713,7 @@ export class LocalIssueStore {
     return [...this.journal.values()]
       .flatMap((row) => (row.kind === 'command' ? [row.value] : []))
       .filter((command) => command.status !== 'confirmed')
+      .map((command) => ({ ...command, chainId: command.chainId ?? command.issueId }))
       .sort((a, b) => a.createdAt.localeCompare(b.createdAt));
   }
 
@@ -733,6 +765,7 @@ export class LocalIssueStore {
         ({
           id,
           issueId,
+          chainId,
           workspaceId,
           kind,
           payload,
@@ -746,6 +779,7 @@ export class LocalIssueStore {
         }) => ({
           id,
           issueId,
+          chainId,
           workspaceId,
           kind,
           payload,
@@ -792,6 +826,7 @@ export class LocalIssueStore {
     return {
       id,
       issueId,
+      chainId: issueId,
       workspaceId: this.partition.workspaceId,
       kind,
       payload,

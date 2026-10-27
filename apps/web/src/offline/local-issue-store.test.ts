@@ -155,7 +155,7 @@ describe('armazenamento local de issues e outbox', () => {
       serverIssue: null,
       local: { parkId, turbineId, text: 'Pendente antes do upgrade', status: 'local' },
       serverRevision: null,
-      serverActive: false,
+      serverActive: null,
       localRevision: 1,
       updatedAt: new Date().toISOString(),
     };
