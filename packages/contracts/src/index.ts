@@ -259,7 +259,8 @@ export const updateIssueSchema = z
   .strict()
   .refine(
     ({ text, parkId, turbineId }) =>
-      text !== undefined || (parkId !== undefined && turbineId !== undefined),
+      (text !== undefined || (parkId !== undefined && turbineId !== undefined)) &&
+      (parkId === undefined) === (turbineId === undefined),
     'Informe o texto ou a localização completa.',
   );
 const issueActionSchema = z

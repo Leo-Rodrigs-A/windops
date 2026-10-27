@@ -1,10 +1,12 @@
 import {
+  createIssueSchema,
   errorSchema,
   issueEventPageSchema,
   issueEventQuerySchema,
   issueSchema,
   issuesPageSchema,
   issuesQuerySchema,
+  updateIssueSchema,
 } from '@windops/contracts';
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import { z } from 'zod';
@@ -42,11 +44,98 @@ function respondIssueReadError(
   });
 }
 
+function respondIssueWriteError(
+  reply: FastifyReply,
+  request: FastifyRequest,
+  status:
+    | 'unauthenticated'
+    | 'forbidden'
+    | 'not_found'
+    | 'conflict'
+    | 'idempotency_conflict'
+    | 'revision_conflict'
+    | 'not_editable'
+    | 'equipment_unavailable',
+): FastifyReply {
+  const responses = {
+    unauthenticated: [401, 'AUTHENTICATION_REQUIRED', 'Authentication required.'],
+    forbidden: [403, 'WORKSPACE_ACCESS_DENIED', 'Workspace access denied.'],
+    not_found: [404, 'RESOURCE_NOT_FOUND', 'Resource not found.'],
+    conflict: [409, 'ISSUE_CONFLICT', 'The issue could not be created with these identifiers.'],
+    idempotency_conflict: [
+      409,
+      'IDEMPOTENCY_CONFLICT',
+      'The command key was used with different content.',
+    ],
+    revision_conflict: [409, 'REVISION_CONFLICT', 'The issue changed. Reload and retry.'],
+    not_editable: [409, 'ISSUE_NOT_EDITABLE', 'The issue can no longer be edited.'],
+    equipment_unavailable: [409, 'EQUIPMENT_UNAVAILABLE', 'The selected equipment is unavailable.'],
+  } as const;
+  const [statusCode, code, message] = responses[status];
+  return reply.code(statusCode).send({ error: { code, message, requestId: request.id } });
+}
+
 export function registerIssuesRoutes(
   app: FastifyInstance,
   authorization: WorkspaceAuthorizationService,
   issues: IssuesService,
 ) {
+  app.post(
+    '/api/workspaces/:workspaceId/issues',
+    {
+      schema: {
+        params: workspaceParamsSchema,
+        body: createIssueSchema,
+        response: {
+          201: issueSchema,
+          400: errorSchema,
+          401: errorSchema,
+          403: errorSchema,
+          409: errorSchema,
+        },
+      },
+    },
+    async (request, reply) => {
+      const { workspaceId } = workspaceParamsSchema.parse(request.params);
+      const result = await issues.createIssue(
+        request.headers,
+        workspaceId,
+        createIssueSchema.parse(request.body),
+      );
+      if (result.status !== 'ok') return respondIssueWriteError(reply, request, result.status);
+      return reply.code(201).send(result.value);
+    },
+  );
+
+  app.patch(
+    '/api/workspaces/:workspaceId/issues/:issueId',
+    {
+      schema: {
+        params: issuePathParamsSchema,
+        body: updateIssueSchema,
+        response: {
+          200: issueSchema,
+          400: errorSchema,
+          401: errorSchema,
+          403: errorSchema,
+          404: errorSchema,
+          409: errorSchema,
+        },
+      },
+    },
+    async (request, reply) => {
+      const { workspaceId, issueId } = issuePathParamsSchema.parse(request.params);
+      const result = await issues.editIssue(
+        request.headers,
+        workspaceId,
+        issueId,
+        updateIssueSchema.parse(request.body),
+      );
+      if (result.status !== 'ok') return respondIssueWriteError(reply, request, result.status);
+      return reply.send(result.value);
+    },
+  );
+
   app.get(
     '/api/workspaces/:workspaceId/issues',
     {

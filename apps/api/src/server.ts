@@ -1,7 +1,9 @@
 import { buildApp } from './app.js';
+import { createAuditService } from './modules/audit/index.js';
 import { createIdentityProvider, createIdentityService } from './modules/identity/index.js';
 import { createIssuesService } from './modules/issues/index.js';
 import { createParksCatalogService } from './modules/parks/index.js';
+import { createSyncService } from './modules/sync/index.js';
 import { createWorkspaceAuthorizationService } from './modules/workspaces/index.js';
 import { loadEnvironment } from './platform/config.js';
 import { createDatabase } from './platform/database/client.js';
@@ -38,14 +40,20 @@ const workspaceAuthorization = createWorkspaceAuthorizationService(
   emailSender,
   env.APP_ORIGIN,
 );
+const parksCatalog = createParksCatalogService(pool, workspaceAuthorization);
 const app = buildApp({
   logger: true,
   docs: env.NODE_ENV !== 'production',
   trustProxy: env.NODE_ENV === 'production',
   ...(identity ? { identity } : {}),
   workspaceAuthorization,
-  parksCatalog: createParksCatalogService(pool, workspaceAuthorization),
-  issues: createIssuesService(pool, identityService),
+  parksCatalog,
+  issues: createIssuesService(pool, identityService, {
+    authorization: workspaceAuthorization,
+    parks: parksCatalog,
+    audit: createAuditService(),
+    sync: createSyncService(),
+  }),
   authOrigin: env.APP_ORIGIN,
   ready: async () => {
     await pool.query('SELECT 1');

@@ -90,6 +90,11 @@ export interface ParksCatalogService {
     parkDeactivatedAt: string | null;
     turbineDeactivatedAt: string | null;
   } | null>;
+  lockIssueLocations(
+    executor: ParksQueryExecutor,
+    workspaceId: string,
+    locations: Array<{ parkId: string; turbineId: string }>,
+  ): Promise<Array<{ parkId: string; turbineId: string; active: boolean }>>;
 }
 
 function toPark(row: ParkRow): Park {
@@ -358,6 +363,51 @@ export function createParksCatalogService(
         parkDeactivatedAt: park.deactivatedAt?.toISOString() ?? null,
         turbineDeactivatedAt: turbine.deactivatedAt?.toISOString() ?? null,
       };
+    },
+
+    async lockIssueLocations(executor, workspaceId, locations) {
+      const unique = [
+        ...new Map(
+          locations.map((location) => [`${location.parkId}:${location.turbineId}`, location]),
+        ).values(),
+      ];
+      if (unique.length === 0) return [];
+      const parkIds = [...new Set(unique.map((location) => location.parkId))].sort();
+      const parks = await executor.query<{ id: string }>(
+        `SELECT id FROM public.parks
+         WHERE workspace_id = $1 AND id = ANY($2::uuid[])
+         ORDER BY id FOR SHARE`,
+        [workspaceId, parkIds],
+      );
+      if (parks.rowCount !== parkIds.length) return [];
+      const turbines = await executor.query<{
+        parkId: string;
+        turbineId: string;
+        parkActive: boolean;
+        turbineActive: boolean;
+      }>(
+        `WITH requested AS (
+           SELECT * FROM unnest($2::uuid[], $3::uuid[]) AS pair(park_id, turbine_id)
+         )
+         SELECT t.park_id AS "parkId", t.id AS "turbineId",
+                (p.deactivated_at IS NULL) AS "parkActive",
+                (t.deactivated_at IS NULL) AS "turbineActive"
+         FROM requested r
+         JOIN public.turbines t
+           ON t.workspace_id = $1 AND t.park_id = r.park_id AND t.id = r.turbine_id
+         JOIN public.parks p ON p.workspace_id = t.workspace_id AND p.id = t.park_id
+         ORDER BY t.park_id, t.id FOR SHARE OF t`,
+        [
+          workspaceId,
+          unique.map((location) => location.parkId),
+          unique.map((location) => location.turbineId),
+        ],
+      );
+      return turbines.rows.map((row) => ({
+        parkId: row.parkId,
+        turbineId: row.turbineId,
+        active: row.parkActive && row.turbineActive,
+      }));
     },
   };
 }

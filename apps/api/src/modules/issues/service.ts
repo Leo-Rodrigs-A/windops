@@ -1,5 +1,8 @@
+import { createHash, randomUUID } from 'node:crypto';
+import type { IncomingHttpHeaders } from 'node:http';
 import type {
   AuthenticatedUser,
+  CreateIssue,
   Issue,
   IssueEvent,
   IssueEventPage,
@@ -7,15 +10,34 @@ import type {
   IssueStatus,
   IssuesPage,
   IssuesQuery,
+  UpdateIssue,
 } from '@windops/contracts';
+import { issueSchema } from '@windops/contracts';
 import type { Pool, PoolClient, QueryResultRow } from 'pg';
+import type { AuditService } from '../audit/index.js';
 import type { IdentityService } from '../identity/index.js';
+import type { ParksCatalogService } from '../parks/index.js';
+import type { SyncService } from '../sync/index.js';
+import type {
+  AuthorizedWorkspacePrincipal,
+  WorkspaceAuthorizationService,
+} from '../workspaces/index.js';
 
 export type IssuesQueryExecutor = Pick<PoolClient, 'query'>;
 export type IssueReadResult<T> =
   | { status: 'ok'; value: T }
   | { status: 'not_found' }
   | { status: 'invalid_cursor' };
+export type IssueWriteResult<T> =
+  | { status: 'ok'; value: T }
+  | { status: 'unauthenticated' }
+  | { status: 'forbidden' }
+  | { status: 'not_found' }
+  | { status: 'conflict' }
+  | { status: 'idempotency_conflict' }
+  | { status: 'revision_conflict' }
+  | { status: 'not_editable' }
+  | { status: 'equipment_unavailable' };
 
 export interface EquipmentIssueReferences {
   hasReferences: boolean;
@@ -36,6 +58,24 @@ export interface IssuesService {
     parkId: string,
     turbineId?: string,
   ): Promise<EquipmentIssueReferences>;
+  createIssue(
+    headers: IncomingHttpHeaders,
+    workspaceId: string,
+    input: CreateIssue,
+  ): Promise<IssueWriteResult<Issue>>;
+  editIssue(
+    headers: IncomingHttpHeaders,
+    workspaceId: string,
+    issueId: string,
+    input: UpdateIssue,
+  ): Promise<IssueWriteResult<Issue>>;
+}
+
+export interface IssueWriteDependencies {
+  authorization: WorkspaceAuthorizationService;
+  parks: ParksCatalogService;
+  audit: AuditService;
+  sync: SyncService;
 }
 
 interface IssueRow extends QueryResultRow {
@@ -116,7 +156,94 @@ function toIssueEvent(row: IssueEventRow): IssueEvent {
   };
 }
 
-export function createIssuesService(pool: Pool, identity: IdentityService): IssuesService {
+function canonicalize(value: unknown): unknown {
+  if (Array.isArray(value)) return value.map(canonicalize);
+  if (!value || typeof value !== 'object') return value;
+  return Object.fromEntries(
+    Object.entries(value)
+      .sort(([left], [right]) => left.localeCompare(right))
+      .map(([key, entry]) => [key, canonicalize(entry)]),
+  );
+}
+
+function commandHash(value: unknown): Buffer {
+  return createHash('sha256')
+    .update(JSON.stringify(canonicalize(value)))
+    .digest();
+}
+
+function issueSnapshot(issue: Issue): Record<string, unknown> {
+  return {
+    text: issue.text,
+    parkId: issue.parkId,
+    turbineId: issue.turbineId,
+    status: issue.status,
+    handlerMembershipId: issue.handlerMembershipId,
+    handler: issue.handler,
+    revision: issue.revision,
+  };
+}
+
+export function createIssuesService(
+  pool: Pool,
+  identity: IdentityService,
+  writeDependencies: IssueWriteDependencies,
+): IssuesService {
+  async function withWriteTransaction<T>(
+    headers: IncomingHttpHeaders,
+    workspaceId: string,
+    operation: (
+      client: PoolClient,
+      principal: AuthorizedWorkspacePrincipal,
+    ) => Promise<IssueWriteResult<T>>,
+  ): Promise<IssueWriteResult<T>> {
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+      const permission = await writeDependencies.authorization.authorizeWorkspaceInTransaction(
+        client,
+        headers,
+        workspaceId,
+      );
+      if (permission.status !== 'ok') {
+        await client.query('ROLLBACK');
+        return permission;
+      }
+      const result = await operation(client, permission.value);
+      if (result.status !== 'ok') {
+        await client.query('ROLLBACK');
+        return result;
+      }
+      await client.query('COMMIT');
+      return result;
+    } catch (error) {
+      await client.query('ROLLBACK').catch(() => undefined);
+      if (error && typeof error === 'object' && 'code' in error && error.code === '23505')
+        return { status: 'conflict' };
+      throw error;
+    } finally {
+      client.release();
+    }
+  }
+
+  async function replayReceipt(
+    client: PoolClient,
+    workspaceId: string,
+    principal: AuthorizedWorkspacePrincipal,
+    commandId: string,
+    hash: Buffer,
+  ): Promise<IssueWriteResult<Issue> | null> {
+    const receipt = await writeDependencies.sync.getCommandReceipt(
+      client,
+      workspaceId,
+      principal.user.id,
+      commandId,
+    );
+    if (!receipt) return null;
+    if (!receipt.payloadHash.equals(hash)) return { status: 'idempotency_conflict' };
+    return { status: 'ok', value: issueSchema.parse(receipt.result) };
+  }
+
   return {
     async listIssues(workspaceId, query) {
       let cursor: { createdAt: Date; id: string } | null = null;
@@ -240,6 +367,172 @@ export function createIssuesService(pool: Pool, identity: IdentityService): Issu
         hasReferences: current.rows[0]?.present === true || historical.rows[0]?.present === true,
         hasOpenIssues: open.rows[0]?.present === true,
       };
+    },
+
+    async createIssue(headers, workspaceId, input) {
+      return withWriteTransaction(headers, workspaceId, async (client, principal) => {
+        const hash = commandHash({
+          operation: 'create',
+          issueId: input.issueId,
+          parkId: input.parkId,
+          turbineId: input.turbineId,
+          text: input.text,
+        });
+        const replay = await replayReceipt(client, workspaceId, principal, input.commandId, hash);
+        if (replay) return replay;
+
+        const [location] = await writeDependencies.parks.lockIssueLocations(client, workspaceId, [
+          { parkId: input.parkId, turbineId: input.turbineId },
+        ]);
+        if (!location?.active) return { status: 'equipment_unavailable' };
+        const collision = await client.query('SELECT 1 FROM public.issues WHERE id = $1 LIMIT 1', [
+          input.issueId,
+        ]);
+        if (collision.rowCount) return { status: 'conflict' };
+
+        const created = await client.query<IssueRow>(
+          `INSERT INTO public.issues AS i
+            (id, workspace_id, park_id, turbine_id, creator_membership_id, creator_user_id, text)
+           VALUES ($1, $2, $3, $4, $5, $6, $7)
+           RETURNING ${issueColumns}`,
+          [
+            input.issueId,
+            workspaceId,
+            input.parkId,
+            input.turbineId,
+            principal.membershipId,
+            principal.user.id,
+            input.text,
+          ],
+        );
+        const row = created.rows[0];
+        if (!row) throw new Error('Issue creation returned no row.');
+        const issue = toIssue(row, new Map([[principal.user.id, principal.user]]));
+        const eventId = randomUUID();
+        await writeDependencies.audit.appendIssueEvent(client, {
+          id: eventId,
+          workspaceId,
+          issueId: issue.id,
+          actorMembershipId: principal.membershipId,
+          actorUserId: principal.user.id,
+          actorLabel: principal.user.name,
+          type: 'created',
+          before: null,
+          after: issueSnapshot(issue),
+          location: { parkId: issue.parkId, turbineId: issue.turbineId },
+        });
+        await writeDependencies.sync.appendCommandReceipt(client, {
+          workspaceId,
+          actorMembershipId: principal.membershipId,
+          actorUserId: principal.user.id,
+          commandId: input.commandId,
+          payloadHash: hash,
+          result: issue as unknown as Record<string, unknown>,
+        });
+        return { status: 'ok', value: issue };
+      });
+    },
+
+    async editIssue(headers, workspaceId, issueId, input) {
+      return withWriteTransaction(headers, workspaceId, async (client, principal) => {
+        const hash = commandHash({
+          operation: 'edit',
+          issueId,
+          expectedRevision: input.expectedRevision,
+          ...(input.text !== undefined ? { text: input.text } : {}),
+          ...(input.parkId !== undefined ? { parkId: input.parkId } : {}),
+          ...(input.turbineId !== undefined ? { turbineId: input.turbineId } : {}),
+        });
+        const replay = await replayReceipt(client, workspaceId, principal, input.commandId, hash);
+        if (replay) return replay;
+
+        const observedResult = await client.query<IssueRow>(
+          `SELECT ${issueColumns} FROM public.issues i
+           WHERE i.workspace_id = $1 AND i.id = $2`,
+          [workspaceId, issueId],
+        );
+        const observedRow = observedResult.rows[0];
+        if (!observedRow) return { status: 'not_found' };
+        if (observedRow.creatorUserId !== principal.user.id) return { status: 'forbidden' };
+        if (observedRow.revision !== input.expectedRevision) return { status: 'revision_conflict' };
+
+        const nextParkId = input.parkId ?? observedRow.parkId;
+        const nextTurbineId = input.turbineId ?? observedRow.turbineId;
+        const locationChanged =
+          nextParkId !== observedRow.parkId || nextTurbineId !== observedRow.turbineId;
+        const lockedLocations = await writeDependencies.parks.lockIssueLocations(
+          client,
+          workspaceId,
+          locationChanged
+            ? [
+                { parkId: observedRow.parkId, turbineId: observedRow.turbineId },
+                { parkId: nextParkId, turbineId: nextTurbineId },
+              ]
+            : [{ parkId: observedRow.parkId, turbineId: observedRow.turbineId }],
+        );
+        if (lockedLocations.length !== (locationChanged ? 2 : 1))
+          return { status: 'equipment_unavailable' };
+        if (
+          locationChanged &&
+          !lockedLocations.find(
+            (entry) => entry.parkId === nextParkId && entry.turbineId === nextTurbineId,
+          )?.active
+        )
+          return { status: 'equipment_unavailable' };
+
+        const currentResult = await client.query<IssueRow>(
+          `SELECT ${issueColumns} FROM public.issues i
+           WHERE i.workspace_id = $1 AND i.id = $2 FOR UPDATE`,
+          [workspaceId, issueId],
+        );
+        const currentRow = currentResult.rows[0];
+        if (!currentRow) return { status: 'not_found' };
+        if (
+          currentRow.revision !== input.expectedRevision ||
+          currentRow.parkId !== observedRow.parkId ||
+          currentRow.turbineId !== observedRow.turbineId
+        )
+          return { status: 'revision_conflict' };
+
+        const currentUsers = await getUsers(identity, [currentRow]);
+        const before = toIssue(currentRow, currentUsers);
+        const updatedResult = await client.query<IssueRow>(
+          `UPDATE public.issues i
+           SET text = $3, park_id = $4, turbine_id = $5,
+               revision = revision + 1, updated_at = clock_timestamp()
+           WHERE i.workspace_id = $1 AND i.id = $2
+           RETURNING ${issueColumns}`,
+          [workspaceId, issueId, input.text ?? currentRow.text, nextParkId, nextTurbineId],
+        );
+        const updatedRow = updatedResult.rows[0];
+        if (!updatedRow) throw new Error('Issue update returned no row.');
+        const afterUsers = await getUsers(identity, [updatedRow]);
+        const issue = toIssue(updatedRow, afterUsers);
+        const eventId = randomUUID();
+        await writeDependencies.audit.appendIssueEvent(client, {
+          id: eventId,
+          workspaceId,
+          issueId,
+          actorMembershipId: principal.membershipId,
+          actorUserId: principal.user.id,
+          actorLabel: principal.user.name,
+          type: 'edited',
+          before: issueSnapshot(before),
+          after: issueSnapshot(issue),
+          ...(locationChanged
+            ? { location: { parkId: nextParkId, turbineId: nextTurbineId } }
+            : {}),
+        });
+        await writeDependencies.sync.appendCommandReceipt(client, {
+          workspaceId,
+          actorMembershipId: principal.membershipId,
+          actorUserId: principal.user.id,
+          commandId: input.commandId,
+          payloadHash: hash,
+          result: issue as unknown as Record<string, unknown>,
+        });
+        return { status: 'ok', value: issue };
+      });
     },
   };
 }

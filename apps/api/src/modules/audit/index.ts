@@ -1,2 +1,1 @@
-// Public module entrypoint. Business behavior belongs to its documented slice.
-export {};
+export { type AppendIssueEventInput, type AuditService, createAuditService } from './service.js';

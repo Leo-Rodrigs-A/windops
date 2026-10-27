@@ -13,7 +13,8 @@
     "db:parks-check": "node scripts/parks-schema-check.mjs",
     "test:integration": "node scripts/integration.mjs",
     "test:parks-integration": "node --import tsx scripts/parks-catalog-flow.mjs",
-    "test:issues-read-integration": "node --import tsx scripts/issues-read-flow.mjs"
+    "test:issues-read-integration": "node --import tsx scripts/issues-read-flow.mjs",
+    "test:issues-integration": "node --import tsx scripts/issues-read-flow.mjs"
   },
   "dependencies": {
     "@windops/contracts": "workspace:*",

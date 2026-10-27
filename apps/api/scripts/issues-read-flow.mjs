@@ -5,7 +5,10 @@ import { fileURLToPath } from 'node:url';
 import { config } from 'dotenv';
 import { Pool } from 'pg';
 import { buildApp } from '../src/app.ts';
+import { createAuditService } from '../src/modules/audit/index.ts';
 import { createIssuesService } from '../src/modules/issues/index.ts';
+import { createParksCatalogService } from '../src/modules/parks/index.ts';
+import { createSyncService } from '../src/modules/sync/index.ts';
 import { createWorkspaceAuthorizationService } from '../src/modules/workspaces/index.ts';
 
 config({ path: fileURLToPath(new URL('../../../.env', import.meta.url)), quiet: true });
@@ -43,8 +46,18 @@ const issueIds = [
 ];
 const eventIds = ['00000000-0000-4000-8000-000000000201', '00000000-0000-4000-8000-000000000202'];
 const issueBId = randomUUID();
-const parkIds = { active: randomUUID(), archived: randomUUID(), other: randomUUID() };
-const turbineIds = { active: randomUUID(), archived: randomUUID(), other: randomUUID() };
+const parkIds = {
+  active: randomUUID(),
+  archived: randomUUID(),
+  other: randomUUID(),
+  destination: randomUUID(),
+};
+const turbineIds = {
+  active: randomUUID(),
+  archived: randomUUID(),
+  other: randomUUID(),
+  destination: randomUUID(),
+};
 let databaseCreated = false;
 let pool;
 let app;
@@ -88,6 +101,12 @@ async function expectError(response, status, code) {
   assert.equal(response.json().error.code, code);
 }
 
+function deferred() {
+  let resolve;
+  const promise = new Promise((done) => (resolve = done));
+  return { promise, resolve };
+}
+
 try {
   docker([...compose, 'exec', '-T', 'postgres', 'createdb', '-U', 'windops', database]);
   databaseCreated = true;
@@ -127,13 +146,20 @@ try {
   await pool.query(
     `INSERT INTO public.parks(id, workspace_id, code, deactivated_at) VALUES
        ($1, $2, 'P01', NULL), ($3, $2, 'P02', clock_timestamp()),
-       ($4, $5, 'P01', NULL)`,
-    [parkIds.active, ids.workspaceA, parkIds.archived, parkIds.other, ids.workspaceB],
+       ($4, $5, 'P01', NULL), ($6, $2, 'P03', NULL)`,
+    [
+      parkIds.active,
+      ids.workspaceA,
+      parkIds.archived,
+      parkIds.other,
+      ids.workspaceB,
+      parkIds.destination,
+    ],
   );
   await pool.query(
     `INSERT INTO public.turbines(id, workspace_id, park_id, code, deactivated_at) VALUES
        ($1, $2, $3, 'T01', NULL), ($4, $2, $5, 'T01', clock_timestamp()),
-       ($6, $7, $8, 'T01', NULL)`,
+       ($6, $7, $8, 'T01', NULL), ($9, $2, $10, 'T01', NULL)`,
     [
       turbineIds.active,
       ids.workspaceA,
@@ -143,6 +169,8 @@ try {
       turbineIds.other,
       ids.workspaceB,
       parkIds.other,
+      turbineIds.destination,
+      parkIds.destination,
     ],
   );
 
@@ -225,7 +253,13 @@ try {
     { send: async () => {} },
     'http://localhost:5173',
   );
-  const issues = createIssuesService(pool, identity);
+  const parks = createParksCatalogService(pool, authorization);
+  const issues = createIssuesService(pool, identity, {
+    authorization,
+    parks,
+    audit: createAuditService(),
+    sync: createSyncService(),
+  });
   app = buildApp({
     ready: async () => {},
     workspaceAuthorization: authorization,
@@ -369,6 +403,435 @@ try {
     'RESOURCE_NOT_FOUND',
   );
 
+  const createdIssueId = randomUUID();
+  const createCommandId = randomUUID();
+  const createBody = {
+    commandId: createCommandId,
+    issueId: createdIssueId,
+    parkId: parkIds.active,
+    turbineId: turbineIds.active,
+    text: 'Falha registrada pela integração',
+  };
+  await expectError(
+    await app.inject({ method: 'POST', url: `${root}/issues`, payload: createBody }),
+    401,
+    'AUTHENTICATION_REQUIRED',
+  );
+  await expectError(
+    await app.inject({
+      method: 'POST',
+      url: `${root}/issues`,
+      headers: headers(ids.revoked),
+      payload: { ...createBody, issueId: randomUUID(), commandId: randomUUID() },
+    }),
+    403,
+    'WORKSPACE_ACCESS_DENIED',
+  );
+  const created = await app.inject({
+    method: 'POST',
+    url: `${root}/issues`,
+    headers: headers(ids.tech),
+    payload: createBody,
+  });
+  assert.equal(created.statusCode, 201, created.body);
+  assert.equal(created.json().creator.id, ids.tech.id);
+  assert.equal(created.json().revision, 1);
+  const createdReplay = await app.inject({
+    method: 'POST',
+    url: `${root}/issues`,
+    headers: headers(ids.tech),
+    payload: createBody,
+  });
+  assert.equal(createdReplay.statusCode, 201, createdReplay.body);
+  assert.deepEqual(createdReplay.json(), created.json());
+  await expectError(
+    await app.inject({
+      method: 'POST',
+      url: `${root}/issues`,
+      headers: headers(ids.tech),
+      payload: { ...createBody, text: 'Outro conteúdo' },
+    }),
+    409,
+    'IDEMPOTENCY_CONFLICT',
+  );
+  await expectError(
+    await app.inject({
+      method: 'POST',
+      url: `${root}/issues`,
+      headers: headers(ids.tech),
+      payload: { ...createBody, commandId: randomUUID() },
+    }),
+    409,
+    'ISSUE_CONFLICT',
+  );
+  await expectError(
+    await app.inject({
+      method: 'POST',
+      url: `${root}/issues`,
+      headers: headers(ids.tech),
+      payload: { ...createBody, issueId: issueBId, commandId: randomUUID() },
+    }),
+    409,
+    'ISSUE_CONFLICT',
+  );
+  await expectError(
+    await app.inject({
+      method: 'POST',
+      url: `${root}/issues`,
+      headers: headers(ids.tech),
+      payload: {
+        ...createBody,
+        issueId: randomUUID(),
+        commandId: randomUUID(),
+        parkId: parkIds.archived,
+        turbineId: turbineIds.archived,
+      },
+    }),
+    409,
+    'EQUIPMENT_UNAVAILABLE',
+  );
+  await expectError(
+    await app.inject({
+      method: 'POST',
+      url: `${root}/issues`,
+      headers: headers(ids.tech),
+      payload: {
+        ...createBody,
+        issueId: randomUUID(),
+        commandId: randomUUID(),
+        parkId: parkIds.active,
+        turbineId: turbineIds.other,
+      },
+    }),
+    409,
+    'EQUIPMENT_UNAVAILABLE',
+  );
+
+  const updateCommandId = randomUUID();
+  const updateBody = {
+    commandId: updateCommandId,
+    expectedRevision: 1,
+    text: 'Texto revisado',
+  };
+  await expectError(
+    await app.inject({
+      method: 'PATCH',
+      url: `${root}/issues/${createdIssueId}`,
+      headers: headers(ids.admin),
+      payload: updateBody,
+    }),
+    403,
+    'WORKSPACE_ACCESS_DENIED',
+  );
+  const updated = await app.inject({
+    method: 'PATCH',
+    url: `${root}/issues/${createdIssueId}`,
+    headers: headers(ids.tech),
+    payload: updateBody,
+  });
+  assert.equal(updated.statusCode, 200, updated.body);
+  assert.equal(updated.json().revision, 2);
+  assert.equal(updated.json().text, 'Texto revisado');
+  const updatedReplay = await app.inject({
+    method: 'PATCH',
+    url: `${root}/issues/${createdIssueId}`,
+    headers: headers(ids.tech),
+    payload: updateBody,
+  });
+  assert.equal(updatedReplay.statusCode, 200, updatedReplay.body);
+  assert.deepEqual(updatedReplay.json(), updated.json());
+  const countsAfterReplay = await pool.query(
+    `SELECT
+       (SELECT count(*)::int FROM public.issues WHERE id = $1) AS issues,
+       (SELECT count(*)::int FROM public.issue_events WHERE issue_id = $1) AS events,
+       (SELECT count(*)::int FROM public.sync_commands WHERE actor_user_id = $2
+         AND command_id = ANY($3::uuid[])) AS receipts`,
+    [createdIssueId, ids.tech.id, [createCommandId, updateCommandId]],
+  );
+  assert.deepEqual(countsAfterReplay.rows[0], { issues: 1, events: 2, receipts: 2 });
+  await expectError(
+    await app.inject({
+      method: 'PATCH',
+      url: `${root}/issues/${createdIssueId}`,
+      headers: headers(ids.tech),
+      payload: { ...updateBody, text: 'Divergente' },
+    }),
+    409,
+    'IDEMPOTENCY_CONFLICT',
+  );
+  await expectError(
+    await app.inject({
+      method: 'PATCH',
+      url: `${root}/issues/${createdIssueId}`,
+      headers: headers(ids.tech),
+      payload: { commandId: randomUUID(), expectedRevision: 1, text: 'Stale' },
+    }),
+    409,
+    'REVISION_CONFLICT',
+  );
+  await expectError(
+    await app.inject({
+      method: 'PATCH',
+      url: `${root}/issues/${createdIssueId}`,
+      headers: headers(ids.tech),
+      payload: {
+        commandId: randomUUID(),
+        expectedRevision: 2,
+        parkId: parkIds.archived,
+        turbineId: turbineIds.archived,
+      },
+    }),
+    409,
+    'EQUIPMENT_UNAVAILABLE',
+  );
+  await expectError(
+    await app.inject({
+      method: 'PATCH',
+      url: `${root}/issues/${createdIssueId}`,
+      headers: headers(ids.tech),
+      payload: { commandId: randomUUID(), expectedRevision: 2, parkId: parkIds.active },
+    }),
+    400,
+    'VALIDATION_ERROR',
+  );
+
+  const concurrentEditIssueId = randomUUID();
+  const concurrentCreate = await app.inject({
+    method: 'POST',
+    url: `${root}/issues`,
+    headers: headers(ids.tech),
+    payload: {
+      commandId: randomUUID(),
+      issueId: concurrentEditIssueId,
+      parkId: parkIds.active,
+      turbineId: turbineIds.active,
+      text: 'Concorrência de revisão',
+    },
+  });
+  assert.equal(concurrentCreate.statusCode, 201, concurrentCreate.body);
+  const concurrentEdits = await Promise.all([
+    issues.editIssue(headers(ids.tech), ids.workspaceA, concurrentEditIssueId, {
+      commandId: randomUUID(),
+      expectedRevision: 1,
+      text: 'Concorrente A',
+    }),
+    issues.editIssue(headers(ids.tech), ids.workspaceA, concurrentEditIssueId, {
+      commandId: randomUUID(),
+      expectedRevision: 1,
+      text: 'Concorrente B',
+    }),
+  ]);
+  assert.deepEqual(concurrentEdits.map((result) => result.status).sort(), [
+    'ok',
+    'revision_conflict',
+  ]);
+
+  const archivedTextEdit = await app.inject({
+    method: 'PATCH',
+    url: `${root}/issues/${issueIds[1]}`,
+    headers: headers(ids.tech),
+    payload: { commandId: randomUUID(), expectedRevision: 1, text: 'Histórico corrigido' },
+  });
+  assert.equal(archivedTextEdit.statusCode, 200, archivedTextEdit.body);
+  assert.equal(archivedTextEdit.json().parkId, parkIds.archived);
+
+  const simultaneousId = randomUUID();
+  const simultaneousBody = {
+    commandId: randomUUID(),
+    issueId: simultaneousId,
+    parkId: parkIds.active,
+    turbineId: turbineIds.active,
+    text: 'Retry simultâneo',
+  };
+  const simultaneous = await Promise.all([
+    issues.createIssue(headers(ids.tech), ids.workspaceA, simultaneousBody),
+    issues.createIssue(headers(ids.tech), ids.workspaceA, simultaneousBody),
+  ]);
+  assert.deepEqual(
+    simultaneous.map((result) => result.status),
+    ['ok', 'ok'],
+  );
+  assert.deepEqual(
+    simultaneous.map((result) => result.status === 'ok' && result.value.id),
+    [simultaneousId, simultaneousId],
+  );
+
+  async function verifyLifecycleSerializesWithIssueMutation(
+    mutate,
+    referencedParkId,
+    referencedTurbineId,
+  ) {
+    const reachedLocationLock = deferred();
+    const releaseMutation = deferred();
+    const blockingParks = {
+      ...parks,
+      lockIssueLocations: async (...args) => {
+        const locked = await parks.lockIssueLocations(...args);
+        reachedLocationLock.resolve();
+        await releaseMutation.promise;
+        return locked;
+      },
+    };
+    const blockedIssues = createIssuesService(pool, identity, {
+      authorization,
+      parks: blockingParks,
+      audit: createAuditService(),
+      sync: createSyncService(),
+    });
+    const mutationPromise = mutate(blockedIssues);
+    await Promise.race([
+      reachedLocationLock.promise,
+      new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('Location lock was not reached.')), 10_000),
+      ),
+    ]);
+    const lifecycleStarted = deferred();
+    const lifecycleCheck = (async () => {
+      const transaction = await pool.connect();
+      try {
+        await transaction.query('BEGIN');
+        lifecycleStarted.resolve();
+        const permission = await authorization.authorizeWorkspaceInTransaction(
+          transaction,
+          headers(ids.admin),
+          ids.workspaceA,
+          ['admin'],
+        );
+        assert.equal(permission.status, 'ok');
+        const references = await issues.getEquipmentIssueReferences(
+          transaction,
+          ids.workspaceA,
+          referencedParkId,
+          referencedTurbineId,
+        );
+        await transaction.query('ROLLBACK');
+        return references;
+      } catch (error) {
+        await transaction.query('ROLLBACK').catch(() => undefined);
+        throw error;
+      } finally {
+        transaction.release();
+      }
+    })();
+    await lifecycleStarted.promise;
+    releaseMutation.resolve();
+    const mutation = await mutationPromise;
+    assert.equal(mutation.status, 'ok');
+    const references = await lifecycleCheck;
+    assert.equal(references.hasReferences, true);
+    assert.equal(references.hasOpenIssues, true);
+  }
+
+  const archiveRaceIssue = randomUUID();
+  await verifyLifecycleSerializesWithIssueMutation(
+    (blockedIssues) =>
+      blockedIssues.createIssue(headers(ids.tech), ids.workspaceA, {
+        commandId: randomUUID(),
+        issueId: archiveRaceIssue,
+        parkId: parkIds.active,
+        turbineId: turbineIds.active,
+        text: 'Corrida de criação com lifecycle',
+      }),
+    parkIds.active,
+    turbineIds.active,
+  );
+  const moveRaceIssue = randomUUID();
+  const moveRaceCreate = await issues.createIssue(headers(ids.tech), ids.workspaceA, {
+    commandId: randomUUID(),
+    issueId: moveRaceIssue,
+    parkId: parkIds.active,
+    turbineId: turbineIds.active,
+    text: 'Corrida de mudança de localização',
+  });
+  assert.equal(moveRaceCreate.status, 'ok');
+  await verifyLifecycleSerializesWithIssueMutation(
+    (blockedIssues) =>
+      blockedIssues.editIssue(headers(ids.tech), ids.workspaceA, moveRaceIssue, {
+        commandId: randomUUID(),
+        expectedRevision: 1,
+        parkId: parkIds.destination,
+        turbineId: turbineIds.destination,
+      }),
+    parkIds.active,
+    turbineIds.active,
+  );
+
+  const failedIssueId = randomUUID();
+  const realAudit = createAuditService();
+  const failingIssues = createIssuesService(pool, identity, {
+    authorization,
+    parks,
+    audit: {
+      appendIssueEvent: async (transaction, event) => {
+        await realAudit.appendIssueEvent(transaction, event);
+        throw new Error('Injected audit failure');
+      },
+    },
+    sync: createSyncService(),
+  });
+  await assert.rejects(
+    failingIssues.createIssue(headers(ids.admin), ids.workspaceA, {
+      commandId: randomUUID(),
+      issueId: failedIssueId,
+      parkId: parkIds.active,
+      turbineId: turbineIds.active,
+      text: 'Rollback integral',
+    }),
+    /Injected audit failure/,
+  );
+  const failedCount = await pool.query(
+    'SELECT count(*)::int AS count FROM public.issues WHERE id = $1',
+    [failedIssueId],
+  );
+  assert.equal(failedCount.rows[0].count, 0);
+
+  const committedId = randomUUID();
+  const committedCommand = {
+    commandId: randomUUID(),
+    issueId: committedId,
+    parkId: parkIds.active,
+    turbineId: turbineIds.active,
+    text: 'Resposta perdida após commit',
+  };
+  const committed = await issues.createIssue(headers(ids.admin), ids.workspaceA, committedCommand);
+  assert.equal(committed.status, 'ok');
+  await app.close();
+  const restartedIssues = createIssuesService(pool, identity, {
+    authorization,
+    parks,
+    audit: createAuditService(),
+    sync: createSyncService(),
+  });
+  app = buildApp({
+    ready: async () => {},
+    workspaceAuthorization: authorization,
+    issues: restartedIssues,
+    docs: true,
+  });
+  await app.ready();
+  const afterRestart = await restartedIssues.createIssue(
+    headers(ids.admin),
+    ids.workspaceA,
+    committedCommand,
+  );
+  assert.deepEqual(afterRestart, committed);
+
+  await pool.query(
+    `UPDATE public.workspace_members SET revoked_at = clock_timestamp()
+     WHERE workspace_id = $1 AND user_id = $2`,
+    [ids.workspaceA, ids.admin.id],
+  );
+  await expectError(
+    await app.inject({
+      method: 'POST',
+      url: `${root}/issues`,
+      headers: headers(ids.admin),
+      payload: committedCommand,
+    }),
+    403,
+    'WORKSPACE_ACCESS_DENIED',
+  );
+
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
@@ -400,7 +863,7 @@ try {
   assert.ok(app.swagger().paths['/api/workspaces/{workspaceId}/issues']);
   assert.ok(app.swagger().paths['/api/workspaces/{workspaceId}/issues/{issueId}/events']);
   console.log(
-    'Authorized issue list/detail/event reads, tenant filters, deterministic pagination, archived equipment visibility, revoked actor history and transactional equipment-reference queries verified.',
+    'Authorized issue reads and writes, tenant isolation, deterministic pagination, atomic audit/receipts, idempotent retries, revision conflicts, archived equipment rules, revocation and transactional equipment references verified.',
   );
 } finally {
   if (app) await app.close();

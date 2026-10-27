@@ -39,6 +39,7 @@ export type WorkspaceOperationResult<T> =
     };
 export interface AuthorizedWorkspacePrincipal {
   user: AuthenticatedUser;
+  membershipId: string;
   workspace: { id: string; name: string; role: WorkspaceRole };
 }
 
@@ -222,10 +223,11 @@ export function createWorkspaceAuthorizationService(
       if (!user) return { status: 'unauthenticated' };
       const result = await pool.query<{
         id: string;
+        membershipId: string;
         name: string;
         role: WorkspaceRole;
       }>(
-        `SELECT w.id, w.name, m.role
+        `SELECT w.id, m.id AS "membershipId", w.name, m.role
          FROM public.workspace_members m
          JOIN public.workspaces w ON w.id = m.workspace_id
          WHERE m.user_id = $1 AND m.revoked_at IS NULL
@@ -814,10 +816,11 @@ export function createWorkspaceAuthorizationService(
       if (!user) return { status: 'unauthenticated' };
       const result = await pool.query<{
         id: string;
+        membershipId: string;
         name: string;
         role: WorkspaceRole;
       }>(
-        `SELECT w.id, w.name, m.role
+        `SELECT w.id, m.id AS "membershipId", w.name, m.role
          FROM public.workspace_members m
          JOIN public.workspaces w ON w.id = m.workspace_id
          WHERE m.workspace_id = $1
@@ -833,6 +836,7 @@ export function createWorkspaceAuthorizationService(
         status: 'ok',
         value: {
           user,
+          membershipId: membership.membershipId,
           workspace: { id: membership.id, name: membership.name, role: membership.role },
         },
       };
@@ -847,8 +851,8 @@ export function createWorkspaceAuthorizationService(
       );
       const workspace = workspaceResult.rows[0];
       if (!workspace) return { status: 'forbidden' };
-      const membershipResult = await client.query<{ role: WorkspaceRole }>(
-        `SELECT role FROM public.workspace_members
+      const membershipResult = await client.query<{ id: string; role: WorkspaceRole }>(
+        `SELECT id, role FROM public.workspace_members
          WHERE workspace_id = $1 AND user_id = $2 AND revoked_at IS NULL
          FOR UPDATE`,
         [workspaceId, user.id],
@@ -860,6 +864,7 @@ export function createWorkspaceAuthorizationService(
         status: 'ok',
         value: {
           user,
+          membershipId: membership.id,
           workspace: { ...workspace, role: membership.role },
         },
       };

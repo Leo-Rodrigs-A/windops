@@ -13,7 +13,7 @@ Cada nova slice fica em uma pasta `NN-nome/`, com um `README.md` que define resu
 
 - [x] [03 — Parques e turbinas](03-parques-turbinas/README.md): P01–P06 concluídas em 26/10/2026; lifecycle com issues e catálogo offline permanecem nas etapas futuras.
 
-- [ ] [04 — Registro e atendimento](04-registro-atendimento/README.md): I01–I03 concluídas em 26/10/2026; próxima task I04. Schema de issues/audit/sync e migrations 0005/0006 aplicadas no dev.
+- [ ] [04 — Registro e atendimento](04-registro-atendimento/README.md): I01–I04 concluídas em 26/10/2026; próxima task I05. Schema de issues/audit/sync e migrations 0005/0006 aplicadas no dev.
 
 Slice 03 concluída; slice 04 em andamento. I01 adicionou contratos compartilhados; I02 adicionou e validou o schema/migrations, sem endpoints. Catálogo offline permanece na etapa 07; conclusão e demais transições de lifecycle de issues permanecem na etapa 08.
 
