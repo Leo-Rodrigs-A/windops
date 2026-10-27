@@ -33,11 +33,12 @@
     "test:integration": "pnpm --filter @windops/api test:integration"
   },
   "devDependencies": {
-    "typescript": "7.0.2",
-    "vitest": "5.0.5",
-    "tsx": "4.23.15",
-    "@types/node": "22.19.15",
     "@biomejs/biome": "2.6.3",
-    "concurrently": "10.0.6"
+    "@types/node": "22.19.15",
+    "concurrently": "10.0.6",
+    "fake-indexeddb": "6.0.0",
+    "tsx": "4.23.15",
+    "typescript": "7.0.2",
+    "vitest": "5.0.5"
   }
 }

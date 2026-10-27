@@ -2,7 +2,7 @@
 
 ## Status
 
-Planejada em 26/10/2026, após aprovação da slice 04 pelo proprietário.
+Em andamento desde 27/10/2026, após aprovação da slice 04 pelo proprietário. S01 concluída em 27/10 por orientação explícita do proprietário; S02 é a próxima task.
 
 - [ ] Slice concluída
 
@@ -14,27 +14,26 @@ Um dispositivo previamente autenticado e preparado permite consultar catálogo/i
 
 - Slices [01](../01-fundacao/README.md), [02](../02-equipe-acesso/README.md), [03](../03-parques-turbinas/README.md) e [04](../04-registro-atendimento/README.md) concluídas. A aprovação da slice 04 é funcional online; não comprova durabilidade local nem suporte offline de aparelhos.
 - API de issues tem UUIDs, revisão, mutação/evento/recibo atômicos e retry autorizado. `sync_commands` é recibo remoto; a fila local ainda não existe.
-- `apps/api/src/modules/sync/routes.ts` responde 503; publicação Electric atual contém somente workspaces. Pacotes TanStack DB/Electric estão declarados em `apps/web/package.json`, sem integração local durável.
+- `apps/api/src/modules/sync/routes.ts` responde 503; publicação Electric atual contém somente workspaces. TanStack DB 0.15.2/Electric Collection 0.6.3 estão declarados em `apps/web/package.json`, sem sincronização local do produto. A S01 provou IndexedDB em harness e selecionou journal de uma Collection como candidato para S02; navegadores reais ainda não foram certificados.
 - `AuthProvider` consulta sessão online nas transições; `issues-api.ts` usa HTTP diretamente; Cloud reflete apenas `navigator.onLine`. Manifest/ícones existem, mas não há service worker/offline pronto.
 - Regra atual do servidor: autor inicia após uma hora da criação; outros membros iniciam imediatamente; somente responsável devolve/conclui. Sessão com segunda etapa e membership ativa são obrigatórias para upload e shapes.
 
 ## Ordem e dependências
 
-Executar na ordem S01–S09. A escolha do mecanismo de persistência e a política temporal são decisões obrigatórias da S01; não congelar implementação de adaptador ou alterar regras silenciosamente durante o planejamento.
+Executar na ordem S01–S09. A política temporal foi preservada na S01; IndexedDB é o adaptador candidato provado para S02. S01 foi concluída com a aceitação de escopo registrada; a única combinação real reportada é Galaxy A12/Android 12/Brave. Não anunciar suporte em outros navegadores/plataformas antes dos testes correspondentes.
 
-| Task | Dependências |
-| --- | --- |
-| [S01 — Prova de persistência e contratos offline](01-prova-persistencia-contratos.md) | Slices 01–04 |
-| [S02 — Armazenamento local e fila durável](02-armazenamento-outbox.md) | S01: prova e modelo |
-| [S03 — Proxy Electric e publicação autorizada](03-proxy-electric-autorizado.md) | S01: shapes e autorização |
-| [S04 — Réplica local e reconciliação](04-replica-reconciliacao.md) | S02, S03 |
-| [S05 — Envio, dependências e retries de comandos](05-envio-comandos.md) | S01, S02, S04; política temporal resolvida |
-| [S06 — Acesso offline, conflitos e recuperação](06-acesso-conflitos-exportacao.md) | S02, S03, S05 |
-| [S07 — Interface de campo e status de sincronização](07-interface-offline.md) | S04–S06 |
-| [S08 — PWA, reabertura e atualizações seguras](08-pwa-atualizacoes.md) | S02, S06, S07 |
-| [S09 — Validação integrada de campo e encerramento](09-validacao-integrada.md) | S01–S08 |
-
-- [ ] S01 — Prova de persistência e contratos offline
+| Task                                                                                  | Dependências                               |
+| ------------------------------------------------------------------------------------- | ------------------------------------------ |
+| [S01 — Prova de persistência e contratos offline](01-prova-persistencia-contratos.md) | Slices 01–04                               |
+| [S02 — Armazenamento local e fila durável](02-armazenamento-outbox.md)                | S01: prova e modelo                        |
+| [S03 — Proxy Electric e publicação autorizada](03-proxy-electric-autorizado.md)       | S01: shapes e autorização                  |
+| [S04 — Réplica local e reconciliação](04-replica-reconciliacao.md)                    | S02, S03                                   |
+| [S05 — Envio, dependências e retries de comandos](05-envio-comandos.md)               | S01, S02, S04; política temporal resolvida |
+| [S06 — Acesso offline, conflitos e recuperação](06-acesso-conflitos-exportacao.md)    | S02, S03, S05                              |
+| [S07 — Interface de campo e status de sincronização](07-interface-offline.md)         | S04–S06                                    |
+| [S08 — PWA, reabertura e atualizações seguras](08-pwa-atualizacoes.md)                | S02, S06, S07                              |
+| [S09 — Validação integrada de campo e encerramento](09-validacao-integrada.md)        | S01–S08                                    |
+- [x] S01 — Prova de persistência e contratos offline — prova com fake IndexedDB passou e retomada manual reportada em Galaxy A12/Android 12 com Brave. O proprietário dispensou validações separadas de Chrome/Android e Safari/iPhone como critério de bloqueio da S01; registrar essa cobertura real sem afirmar testes nesses navegadores.
 - [ ] S02 — Armazenamento local e fila durável
 - [ ] S03 — Proxy Electric e publicação autorizada
 - [ ] S04 — Réplica local e reconciliação
@@ -50,7 +49,7 @@ Executar na ordem S01–S09. A escolha do mecanismo de persistência e a políti
 - Offline: leitura de catálogo, issues ativas e seus logs; criação, edição própria pendente, início/devolução e conclusão com relato opcional. Concluídas remotas são online salvo cache existente; conclusão local pendente permanece acessível. Não sincronizar o histórico inteiro indefinidamente por conveniência.
 - Cadastro/edição/lifecycle de equipamentos, gestão de equipe e liberação administrativa permanecem online nesta slice. Não acrescentar fila de comandos administrativos sem ampliar contratos/idempotência e escopo explicitamente.
 - Primeiro login exige conexão. Sessão expirada permite trabalho local previamente habilitado; upload exige autenticação renovada com segunda etapa. Revogação conhecida bloqueia envio e novas operações, preservando exportação das pendências do próprio usuário.
-- Base temporal preservada: uma hora desde created_at do servidor para autor iniciar. Tempo do aparelho não autoriza comandos sozinho. A experiência de criação e atendimento inteiramente offline precisa da decisão explícita da S01; se usar a base atual, a cadeia aguardará elegibilidade após criação remota. Não apresentar essa limitação como solução completa de tempo offline.
+- Base temporal registrada na S01: uma hora desde `created_at` do servidor para o autor iniciar. Issue criada offline recebe essa data ao ser aceita pelo servidor; a cadeia do autor aguarda até completar uma hora. Tempo do aparelho não antecipa autorização.
 - Fila usa dependências, payload congelado após tentativa e reautorização em todo replay. Atualização da réplica nunca elimina pendências nem substitui silenciosamente intenção conflitante.
 - Proxy fixa coleção, colunas e filtro tenant; clientes não escolhem table/where. Auth, membership privada, convites e recibos ficam fora da publicação. Monólito modular e serviços públicos permanecem obrigatórios.
 - Cloud passa a comunicar salvamento/sincronização; Bell permanece reservado. Sem push, e-mail de eventos, worker de notificações, reabertura, arquivo/reativação de issues ou restauração de relatos. Preservar correlação de cadeias offline para futura regra de criação+conclusão sem push retroativo.
@@ -58,12 +57,12 @@ Executar na ordem S01–S09. A escolha do mecanismo de persistência e a políti
 - Referências Pencil continuam externas e somente leitura, reconfirmadas quando necessárias à S07. Navegação, modais Shadcn e marca já aprovados são a base. Não criar telas finais durante o planejamento.
 - Registrar cada evidência por plataforma: navegador desktop não comprova restart físico de Android/iPhone. Indisponibilidade de aparelho não autoriza marcar validação feita; provas independentes podem avançar com a lacuna registrada.
 
-## Decisões a fechar na S01
+## Decisões da S01 já registradas
 
-1. Adaptador durável e transação/journal entre intenção, fila e projeção; migrações e suporte real dos navegadores.
-2. Relógio e elegibilidade do autor em criação originalmente offline, com decisão do proprietário se houver mudança da regra online.
-3. Conjunto/projeções Electric, metadados de atores, retenção de logs/concluídas e ACK versus réplica.
-4. Logout offline e proteção de partições/pendências, exportação, recuperação de falhas e limites operacionais.
+1. Candidato `indexedDBCollectionOptions` em `@tanstack/db` 0.15.2; journal usa mesma Collection/store para comando e projeção, com `acceptMutations` numa transação. Quota/upgrade abortado e suporte de navegador ainda precisam de validação.
+2. `created_at` do servidor continua sendo autoridade; issue criada offline começa a espera do autor quando o servidor a aceita. Nada de antecipar por relógio local.
+3. Escopo inicial são catálogo necessário, issues ativas, logs/dependências e metadados públicos mínimos. S03 deve provar projeções Electric e ACK versus réplica antes de ampliar publicação.
+4. Nome de banco particionado por usuário/workspace; logout e troca não misturam partições; revogação conhecida bloqueia envio e preserva exportação. S02 prova retenção, recovery e limites.
 
 ## Aceite da slice
 
@@ -77,6 +76,8 @@ Executar na ordem S01–S09. A escolha do mecanismo de persistência e a políti
 
 ## Evidência do planejamento
 
-26/10/2026: nove tasks S01–S09 preparadas a partir de arquitetura, memória, roadmap, schema/recibos, proxy desabilitado, AuthProvider e frontend online. Todas permanecem planejadas. Sem escolha final de adaptador, nova dependência, migration, escrita em banco, consulta/edição de design, teste de aplicação ou ativação offline.
+26/10/2026: nove tasks S01–S09 preparadas a partir de arquitetura, memória, roadmap, schema/recibos, proxy desabilitado, AuthProvider e frontend online.
 
-Verificação documental em 26/10/2026: 19 documentos e 85 links locais conferidos; nove tasks com seções obrigatórias, dependências ordenadas e checkboxes abertos. `git diff --check` passou. `pnpm check` e testes de aplicação não foram executados porque a alteração é somente documental.
+27/10/2026: S01 iniciada e concluída. `fake-indexeddb` 6.0.0 foi adicionada somente como devDependency; duas provas do IndexedDB/TanStack passaram. IndexedDB/journal de Collection escolhido provisoriamente. Proprietário reportou teste manual bem-sucedido do webapp instalado em Samsung Galaxy A12/Android 12, com Brave 1.98.60 (64 bits), Chromium 156.0.8078.48; issue e navegação retomaram após fechar/reabrir com e sem internet. Por orientação explícita do proprietário, Chrome e Safari/iPhone não bloqueiam a S01; não foram testados. Sem migration, escrita no banco do produto, consulta/edição do Pencil ou ativação offline.
+
+Verificação documental em 26/10/2026: 19 documentos e 85 links locais conferidos; nove tasks com seções obrigatórias, dependências ordenadas e checkboxes abertos. `git diff --check` passou. `pnpm check` e testes de aplicação não foram executados naquela preparação documental.
