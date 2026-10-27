@@ -8,7 +8,7 @@ Cada nova slice fica em uma pasta `NN-nome/`, com um `README.md` que define resu
 
 ## Slice atual
 
-Próxima task: [S04 — Réplica local e reconciliação](05-offline-sincronizacao/04-replica-reconciliacao.md). S01–S03 concluídas; S02 implementa o journal local particionado e S03 entrega o proxy Electric autenticado com projeções sanitizadas. S01 teve retomada manual reportada em Galaxy A12/Android 12 com Brave; Chrome/Android e Safari/iPhone não foram testados e não bloquearam a conclusão.
+Próxima task: [S05 — Envio, dependências e retries de comandos](05-offline-sincronizacao/05-envio-comandos.md). S01–S04 concluídas; S04 persiste réplica/checkpoints no journal da S02 e reconcilia mudanças pelo proxy Electric autenticado. S01 teve retomada manual reportada em Galaxy A12/Android 12 com Brave; Chrome/Android e Safari/iPhone não foram testados e não bloquearam a conclusão.
 
 - [x] [01 — Fundação](01-fundacao/README.md): F01–F08 concluídas em 25/10/2026, com validação local e Android físico.
 - [x] [02 — Equipe e acesso ao workspace](02-equipe-acesso/README.md): E01–E07 concluídas; integrações, desktop, Android e ações entre cargos validados. Ajustes visuais mobile ficam para melhoria posterior.
@@ -17,7 +17,7 @@ Próxima task: [S04 — Réplica local e reconciliação](05-offline-sincronizac
 
 - [x] [04 — Registro e atendimento](04-registro-atendimento/README.md): slice concluída e aprovada pelo proprietário em 26/10/2026; I01–I09 concluídas. Limitações e escopo futuro registrados na task.
 
-- [ ] [05 — Operação offline e sincronização](05-offline-sincronizacao/README.md): nove tasks S01–S09; S01–S03 concluídas, próxima S04.
+- [ ] [05 — Operação offline e sincronização](05-offline-sincronizacao/README.md): nove tasks S01–S09; S01–S04 concluídas, próxima S05.
 
 Correção solicitada durante I07: I09 concluiu a espera de uma hora no autoatendimento do autor, conclusão online e ordenação mais recente primeiro em Histórico/logs. Migration 0007 foi aplicada no banco dev; integração em PostgreSQL descartável passou.
 

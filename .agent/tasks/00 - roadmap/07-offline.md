@@ -2,7 +2,7 @@
 
 ## Status
 
-Em andamento — execução detalhada na [slice 05](../05-offline-sincronizacao/README.md), S01–S09. S01 concluída por orientação do proprietário, com prova IndexedDB em harness e retomada manual reportada em Galaxy A12/Android 12 com Brave. A validação de outros navegadores/plataformas permanece para o escopo integrado da slice.
+Em andamento — execução detalhada na [slice 05](../05-offline-sincronizacao/README.md), S01–S09. S01–S04 concluídas: IndexedDB/journal, outbox local, proxy Electric autenticado e réplica/reconciliação. A UI, envio, PWA e validação de campo permanecem pendentes. A única retomada manual reportada continua sendo Galaxy A12/Android 12 com Brave; outros navegadores/plataformas permanecem para a validação integrada.
 
 ## Objetivo e escopo
 
@@ -22,7 +22,7 @@ Modo avião, fechar/reabrir, reiniciar aparelho, perda de resposta após commit,
 
 ## Recorte executável
 
-A slice 05 prepara armazenamento local e outbox, proxy autorizado, réplica/reconciliação, envio ordenado, acesso offline/conflitos/exportação, interface e PWA. Gestão administrativa de catálogo/equipe continua online. Preservar a regra da I09: autor inicia após uma hora de criação no servidor. A S01 definiu que issue criada offline recebe `created_at` ao sincronizar e o autor espera uma hora desse instante; relógio local não antecipa elegibilidade.
+A slice 05 prepara armazenamento local e outbox, proxy autorizado, réplica/reconciliação, envio ordenado, acesso offline/conflitos/exportação, interface e PWA. A S04 persiste snapshots/checkpoints e reconcilia ACK/tombstones; sua réplica ainda não está conectada às telas. Gestão administrativa de catálogo/equipe continua online. Preservar a regra da I09: autor inicia após uma hora de criação no servidor. A S01 definiu que issue criada offline recebe `created_at` ao sincronizar e o autor espera uma hora desse instante; relógio local não antecipa elegibilidade.
 
 A conclusão online já existe; a fila inclui sua extensão local e relato editável apenas antes de qualquer tentativa de envio. Não habilitar reabertura/arquivo de issues nem notificações. Só declarar suporte de plataforma depois de evidência correspondente; todas as tasks permanecem planejadas.
 

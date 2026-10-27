@@ -78,6 +78,20 @@ describe('proxy autorizado de shapes Electric', () => {
       expect(upstreamUrl?.searchParams.get('columns')).toBe(
         'id,workspace_id,park_id,turbine_id,text,completion_report,status,created_at,updated_at,revision',
       );
+      expect(upstreamUrl?.searchParams.get('where')).toBe(
+        "workspace_id = $1 AND status IN ('pending', 'in_progress')",
+      );
+      await app.inject({
+        url: `/api/sync/issue-events?workspaceId=${workspaceId}&offset=-1`,
+        headers: { 'x-sync-user': user.id },
+      });
+      expect(upstreamUrl?.searchParams.get('where')).toBe(
+        "workspace_id = $1 AND issue_id IN (SELECT id FROM public.issue_sync_rows WHERE workspace_id = $1 AND status IN ('pending', 'in_progress'))",
+      );
+      await app.inject({
+        url: `/api/sync/parks?workspaceId=${workspaceId}&offset=-1`,
+        headers: { 'x-sync-user': user.id },
+      });
       expect(upstreamUrl?.searchParams.get('where')).toBe('workspace_id = $1');
       expect(upstreamUrl?.searchParams.get('params[1]')).toBe(workspaceId);
       expect(upstreamUrl?.searchParams.get('secret')).toBe('server-only-secret');
@@ -102,7 +116,7 @@ describe('proxy autorizado de shapes Electric', () => {
         `/api/sync/issues?workspaceId=${workspaceId}&expired_handle=shape-handle`,
       );
       expect(rawExpiredHandle.statusCode).toBe(400);
-      expect(authorization.authorizeWorkspace).toHaveBeenCalledTimes(6);
+      expect(authorization.authorizeWorkspace).toHaveBeenCalledTimes(10);
     } finally {
       await app.close();
     }

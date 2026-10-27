@@ -49,7 +49,7 @@ const shapes = {
       'updated_at',
       'revision',
     ],
-    filter: 'workspace_id = $1',
+    filter: "workspace_id = $1 AND status IN ('pending', 'in_progress')",
   },
   'issue-events': {
     table: 'public.issue_sync_events',
@@ -63,7 +63,8 @@ const shapes = {
       'before',
       'after',
     ],
-    filter: 'workspace_id = $1',
+    filter:
+      "workspace_id = $1 AND issue_id IN (SELECT id FROM public.issue_sync_rows WHERE workspace_id = $1 AND status IN ('pending', 'in_progress'))",
   },
 } as const;
 

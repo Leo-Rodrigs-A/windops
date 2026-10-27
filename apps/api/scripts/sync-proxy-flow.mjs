@@ -98,6 +98,30 @@ try {
     'Every row in the workspace shape must match the authorized workspace.',
   );
 
+  const activeIssues = await app.inject({
+    url: `/api/sync/issues?workspaceId=${workspaceId}&offset=-1`,
+    headers: { 'x-sync-user': active.userId },
+  });
+  assert.equal(activeIssues.statusCode, 200, activeIssues.body);
+  const activeIssueIds = new Set(
+    activeIssues.json().flatMap((message) => (message.value?.id ? [message.value.id] : [])),
+  );
+  const issueEvents = await app.inject({
+    url: `/api/sync/issue-events?workspaceId=${workspaceId}&offset=-1`,
+    headers: { 'x-sync-user': active.userId },
+  });
+  assert.equal(issueEvents.statusCode, 200, issueEvents.body);
+  assert.ok(
+    issueEvents
+      .json()
+      .filter((message) => message.value)
+      .every(
+        (message) =>
+          message.value.workspace_id === workspaceId && activeIssueIds.has(message.value.issue_id),
+      ),
+    'Issue events must be tenant-scoped and limited to issues in the active shape.',
+  );
+
   authorizationCalls = 0;
   expireAfterFirstAuthorization = true;
   const startedAt = Date.now();
@@ -109,7 +133,9 @@ try {
   assert.equal(revokedDuringPoll.statusCode, 401, revokedDuringPoll.body);
   assert.ok(elapsedMs <= 12_000, `Revocation took ${elapsedMs}ms; maximum is 12000ms.`);
   assert.equal(authorizationCalls, 2);
-  console.log(`Electric proxy auth, fixed scope and revocation window verified (${elapsedMs}ms).`);
+  console.log(
+    `Electric proxy auth, active issue/event shapes, fixed scope and revocation window verified (${elapsedMs}ms).`,
+  );
 } finally {
   await app.close();
   await pool.end();

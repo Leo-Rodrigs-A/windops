@@ -2,7 +2,7 @@
 
 ## Status
 
-Em andamento desde 27/10/2026, após aprovação da slice 04 pelo proprietário. S01–S03 concluídas em 27/10; próxima task S04.
+Em andamento desde 27/10/2026, após aprovação da slice 04 pelo proprietário. S01–S04 concluídas em 27/10; próxima task S05.
 
 - [ ] Slice concluída
 
@@ -14,7 +14,7 @@ Um dispositivo previamente autenticado e preparado permite consultar catálogo/i
 
 - Slices [01](../01-fundacao/README.md), [02](../02-equipe-acesso/README.md), [03](../03-parques-turbinas/README.md) e [04](../04-registro-atendimento/README.md) concluídas. A aprovação da slice 04 é funcional online; não comprova durabilidade local nem suporte offline de aparelhos.
 - API de issues tem UUIDs, revisão, mutação/evento/recibo atômicos e retry autorizado. `sync_commands` é recibo remoto; S02 adiciona journal local de projeções/comandos, ainda sem envio.
-- `apps/api/src/modules/sync/routes.ts` expõe shapes pelo proxy autenticado; publication Electric contém workspaces, catálogo e projeções sanitizadas de issues/eventos. TanStack DB 0.15.2/Electric Collection 0.6.3 estão declarados em `apps/web/package.json`, sem réplica local integrada ao produto. A S01 provou IndexedDB em harness e S02 implementou banco v2 particionado e journal; navegadores reais ainda não foram certificados.
+- `apps/api/src/modules/sync/routes.ts` expõe shapes pelo proxy autenticado; a publication Electric contém workspaces, catálogo e projeções sanitizadas de issues/eventos. S04 coordena `ShapeStream`s e persiste rows/checkpoints no journal TanStack/IndexedDB da S02. A interface ainda não consome essa réplica; navegadores reais adicionais não foram certificados.
 - `AuthProvider` consulta sessão online nas transições; `issues-api.ts` usa HTTP diretamente; Cloud reflete apenas `navigator.onLine`. Manifest/ícones existem, mas não há service worker/offline pronto.
 - Regra atual do servidor: autor inicia após uma hora da criação; outros membros iniciam imediatamente; somente responsável devolve/conclui. Sessão com segunda etapa e membership ativa são obrigatórias para upload e shapes.
 
@@ -36,7 +36,7 @@ Executar na ordem S01–S09. A política temporal foi preservada na S01; Indexed
 - [x] S01 — Prova de persistência e contratos offline — prova com fake IndexedDB passou e retomada manual reportada em Galaxy A12/Android 12 com Brave. O proprietário dispensou validações separadas de Chrome/Android e Safari/iPhone como critério de bloqueio da S01; registrar essa cobertura real sem afirmar testes nesses navegadores.
 - [x] S02 — Armazenamento local e fila durável — journal IndexedDB transacional e particionado, dependências, recuperação, lease, exportação; seis testes passaram incluindo falha por quota simulada e upgrade v1→v2 preservando dados.
 - [x] S03 — Proxy Electric e publicação autorizada — proxy tenant-scoped, handles HMAC vinculados a workspace/coleção e projeções sanitizadas; Electric real, grants, migrations e restore validados. Evidências e limite do workspace único em [S03](03-proxy-electric-autorizado.md).
-- [ ] S04 — Réplica local e reconciliação
+- [x] S04 — Réplica local e reconciliação — snapshots/checkpoints atômicos, retomada, tombstones, ACK/revisão e retenção limitada; smoke Electric local e testes registrados em [S04](04-replica-reconciliacao.md).
 - [ ] S05 — Envio, dependências e retries de comandos
 - [ ] S06 — Acesso offline, conflitos e recuperação
 - [ ] S07 — Interface de campo e status de sincronização
