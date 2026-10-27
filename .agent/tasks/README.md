@@ -8,12 +8,16 @@ Cada nova slice fica em uma pasta `NN-nome/`, com um `README.md` que define resu
 
 ## Slice atual
 
+Próxima execução: [S01 — Prova de persistência e contratos offline](05-offline-sincronizacao/01-prova-persistencia-contratos.md).
+
 - [x] [01 — Fundação](01-fundacao/README.md): F01–F08 concluídas em 25/10/2026, com validação local e Android físico.
 - [x] [02 — Equipe e acesso ao workspace](02-equipe-acesso/README.md): E01–E07 concluídas; integrações, desktop, Android e ações entre cargos validados. Ajustes visuais mobile ficam para melhoria posterior.
 
 - [x] [03 — Parques e turbinas](03-parques-turbinas/README.md): P01–P06 concluídas em 26/10/2026; lifecycle com issues e catálogo offline permanecem nas etapas futuras.
 
 - [x] [04 — Registro e atendimento](04-registro-atendimento/README.md): slice concluída e aprovada pelo proprietário em 26/10/2026; I01–I09 concluídas. Limitações e escopo futuro registrados na task.
+
+- [ ] [05 — Operação offline e sincronização](05-offline-sincronizacao/README.md): planejada em 26/10/2026, nove tasks S01–S09. Prova de armazenamento, fila durável, proxy Electric, réplica, envio, acesso/conflitos, interface, PWA e validação. Nenhuma implementação iniciada.
 
 Correção solicitada durante I07: I09 concluiu a espera de uma hora no autoatendimento do autor, conclusão online e ordenação mais recente primeiro em Histórico/logs. Migration 0007 foi aplicada no banco dev; integração em PostgreSQL descartável passou.
 

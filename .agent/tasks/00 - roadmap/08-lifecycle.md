@@ -20,7 +20,7 @@ Criador espera 1h desde criação; reabrir limpa relato sem apagar log; restaura
 
 Limite de 1h, relógio incoerente, voltar sem salvar, relato opcional, edição após sync negada, restauração auditada, todas as permissões de arquivamento.
 
-A [slice 04](../04-registro-atendimento/README.md) planeja antecipar o núcleo append-only e consulta de eventos necessário a registro/atendimento online. Conclusão, espera de uma hora, relato, reabertura, arquivos/reativação de issues e restauração continuam nesta etapa; nenhuma entrega foi concluída apenas por esse plano.
+A [slice 04](../04-registro-atendimento/README.md) entregou eventos/consultas e conclusão online com relato opcional. A regra atual exige uma hora para o autor iniciar atendimento, usando relógio do banco. A [slice 05](../05-offline-sincronizacao/README.md) planeja persistência da conclusão offline e edição do relato local antes da primeira tentativa de envio; S01 deve resolver a semântica temporal de criação offline sem alterar silenciosamente a regra. Reabertura, arquivo/reativação e restauração de relatos continuam futuras.
 
 ## Referências e atualização
 

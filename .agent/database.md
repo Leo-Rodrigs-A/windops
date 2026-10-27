@@ -349,3 +349,10 @@ Better Auth 1.7.12 foi mapeado para `auth_*` em `identity/schema.ts`; OAuth toke
 - Publication `electric_publication_default` contém somente `public.workspaces`; identity, issues, audit e recibos permanecem fora dela.
 - Provas confirmam persistência PostgreSQL online, não persistência local/outbox offline nem percurso autenticado de UI. Nenhum inventário operacional foi alterado por I08.
 - O proprietário confirmou as funcionalidades implementadas e aprovou a slice em 26/10/2026. Esse aceite funcional não representa certificação independente por dispositivo ou acessibilidade.
+
+
+## Planejamento do armazenamento local — slice 05
+
+A [S01](tasks/05-offline-sincronizacao/01-prova-persistencia-contratos.md) definirá schema/versionamento, adaptador e prova de atomicidade entre intenção, fila e projeção. Planejam-se partições por conta/workspace, réplica confirmada, intenções, comandos/dependências, revisões, ACKs e checkpoints duráveis. `sync_commands` permanece recibo PostgreSQL; não equivale à fila no aparelho. Payload e identidade ficam congelados após primeira tentativa de envio. Nenhum schema final, migration ou grant foi criado neste planejamento.
+
+A S03 definirá a publicação mínima/projeções com autorização tenant e colunas aprovadas; não publicar identidade privada, convites, memberships privadas ou recibos. Modelo de projeções e eventual DDL devem ser registrados aqui antes da implementação. A publicação atual permanece somente `public.workspaces`.

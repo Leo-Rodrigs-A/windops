@@ -4,7 +4,7 @@
 
 Em andamento — slices 03 e parte da 04 implementadas; I08 revalidou lifecycle integrado a issues. Catálogo local durável permanece futuro.
 
-Execução detalhada nas slices [03 — Parques e turbinas](../03-parques-turbinas/README.md) e [04 — Registro e atendimento](../04-registro-atendimento/README.md). P01–P06 e o lifecycle integrado I06 foram implementados; I08 revalidou as corridas com issues em PostgreSQL descartável em 26/10/2026. A etapa permanece parcial pelo percurso manual pendente e pelo catálogo local durável da etapa 07.
+Execução detalhada nas slices [03 — Parques e turbinas](../03-parques-turbinas/README.md) e [04 — Registro e atendimento](../04-registro-atendimento/README.md). P01–P06 e o lifecycle integrado I06 foram implementados; I08 revalidou as corridas com issues em PostgreSQL descartável em 26/10/2026. A slice 04 recebeu aceite funcional; a etapa permanece parcial pelo catálogo local durável da etapa 07, planejado na [slice 05](../05-offline-sincronizacao/README.md). Escritas administrativas continuam online nesse recorte.
 
 ## Objetivo e escopo
 

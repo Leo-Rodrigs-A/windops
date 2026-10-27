@@ -24,7 +24,7 @@ Sem atribuição a terceiros; somente responsável ativo conclui/devolve; admin 
 
 Permissões por ator, edições concorrentes, transições inválidas, parque/turbina de outro workspace, repetição de comando.
 
-Execução detalhada na [slice 04 — Registro e atendimento](../04-registro-atendimento/README.md), I01–I08. I01 concluída em 26/10/2026; recorte online inclui histórico básico e recibos idempotentes; conclusão permanece na etapa 08.
+Execução online concluída na [slice 04 — Registro e atendimento](../04-registro-atendimento/README.md), incluindo conclusão pela I09. A [slice 05](../05-offline-sincronizacao/README.md) planeja persistência/fila local para os comandos existentes; reabertura e arquivo de issues permanecem na etapa 08. Planejamento não comprova operação offline.
 
 ## Referências e atualização
 

@@ -55,6 +55,8 @@ P03 adiciona GETs de catálogo em `/api/workspaces/:workspaceId/parks`, `/parks/
 
 ## Local-first e sincronização planejada
 
+Execução detalhada na [slice 05 — Operação offline e sincronização](tasks/05-offline-sincronizacao/README.md), planejada em 26/10/2026. S01 prova armazenamento/contratos antes de escolher o adaptador; S02–S09 integram fila durável, proxy, réplica, envio, acesso/conflitos, UI, PWA e validação. Nenhuma dessas entregas foi implementada pelo planejamento. Comandos administrativos de catálogo/equipe e liberação de atendimento continuam online nesse recorte.
+
 Não basta instalar TanStack DB. A [etapa 07 do roadmap](<tasks/00 - roadmap/07-offline.md>) deve integrar persistência durável das coleções e outbox de comandos antes de declarar offline pronto. Escolher a API suportada de persistência TanStack após prova em Safari/iPhone e Chrome/Android. Validar IndexedDB/SQLite conforme compatibilidade; documentar a decisão antes da implementação final.
 
 Gravação: UI -> armazenamento local + comando durável -> Fastify -> transação PostgreSQL contendo mudança, evento e trabalho de notificação -> confirmação -> réplica Electric -> reconciliação. Identificadores gerados no cliente, chave idempotente por comando, versão esperada por registro. Não apagar comando antes da confirmação; retries não duplicam issues, eventos ou notificações. Não interpretar atualização otimista em memória como persistência.

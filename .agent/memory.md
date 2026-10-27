@@ -54,14 +54,14 @@ Preferência permanente para commits: sugerir mensagens em português; nomenclat
 - Nova issue seleciona parque, turbina e texto livre obrigatório descrevendo o problema. Sem título separado, fotos ou lista de materiais nesta versão.
 - Decisão do proprietário em 26/10/2026: admin exclui definitivamente parque/turbina sem referências atuais ou históricas; com histórico sem issues abertas, arquiva preservando issues/eventos e permite restaurar. Se houver issue aberta atualmente na turbina, ou em qualquer turbina do parque, arquivamento é bloqueado com conflito. Parque arquivado torna turbinas efetivamente inativas sem alterar a desativação individual; restaurar o parque mantém arquivadas as turbinas que já estavam arquivadas individualmente. Issues existentes permanecem intactas e equipamento inativo não recebe issues novas. Criação/edição/atendimento concorrentes são serializados com lifecycle.
 - Filtros por parque/turbina. Concluídas e desativadas têm listas separadas.
-- Ordenação original dizia “cronológica invertida” mas esclarecia recentes abaixo: adotar criação crescente (antigas primeiro) como interpretação documentada; confirmar no layout.
+- Solicitação posterior do proprietário: issues, Histórico de concluídas e logs com os mais recentes acima. A Home implementada ainda usa criação crescente, conforme os registros da slice 04; S01/S07 da slice 05 devem alinhar consultas e paginação global, sem inverter apenas a página atual. Histórico/logs já estão decrescentes.
 
 ## Ciclo e permissões
 
 - Estados Pendente -> Em andamento -> Concluída. Iniciar atendimento é obrigatório antes de concluir.
 - Não existe atribuição a terceiros. A transição registra quem iniciou, que passa a controlar conclusão/devolução; histórico preserva atores anteriores.
 - Somente técnico que iniciou devolve para Pendente ou conclui. Admin pode liberar atendimento com problema, retornando para Pendente.
-- Criador pode atender sua issue, mas só concluir uma hora após criação. Outro técnico não precisa esperar. Horário do aparelho conta offline; banco local não fornece relógio independente confiável. Validação de coerência no servidor sem prometer proteção contra manipulação.
+- Regra atual aprovada na I09: o criador só inicia a própria issue uma hora após created_at do servidor; outro membro ativo inicia imediatamente. Isso substitui a formulação antiga de espera apenas para concluir. Horário local não concede autorização no servidor. A S01 da slice 05 deve resolver o caso de criação originalmente offline e consultar o proprietário antes de mudar essa regra; nenhuma nova política temporal foi aprovada pelo planejamento.
 - Qualquer cargo cria issues; cada usuário edita somente as próprias, enquanto abertas. Campos editáveis: texto, parque, turbina. Toda mudança registra antes/depois e autor. Admin não recebe exceção geral para editar conteúdo alheio.
 - Tocar Concluir abre tela semelhante ao detalhe, relato opcional; só confirma estado ao salvar nessa tela. Voltar mantém Em andamento.
 - Conclusão criada offline continua acessível localmente; autor da conclusão pode editar o relato somente enquanto offline e ainda não sincronizado. Após envio, bloqueado ao técnico.
@@ -180,3 +180,14 @@ Forma da torre — 26/10/2026: a pedido do proprietário, o símbolo recebeu sil
 
 
 I08 e slice 04 concluídas em 26/10/2026 após o proprietário confirmar todas as funcionalidades implementadas e aprovar a slice. Validação automatizada: `pnpm db:empty-check`, `pnpm db:restore-check`, `pnpm db:permissions` e integrações auth/workspaces/parks/issues passaram em PostgreSQL descartável; publicação Electric contém apenas `public.workspaces`. Issues cobriu rollback antes do commit, resposta perdida/replay, restart/reconstrução de serviço, autorização tenant/ator/revisão e corridas. Biome (167 arquivos), boundaries, build/typecheck contracts/API, typecheck/build web e Vitest (3 arquivos, 19 testes) passaram diretamente. `timeout 40s pnpm check` retornou 124 sem saída, não aprovado. Nenhum inventário operacional alterado. O aceite não é certificação independente de dispositivos ou acessibilidade. Próxima slice: persistência local/outbox durável, proxy Electric, reconciliação, retomada após restart do aparelho, exportação de pendências, expiração/revogação e resolução de conflitos. Sem promessa de offline; notificações e reabertura/arquivo de issues seguem futuras.
+
+
+## Planejamento da slice 05 — 26/10/2026
+
+A pedido do proprietário, planejada a [slice 05 — Operação offline e sincronização](tasks/05-offline-sincronizacao/README.md), com nove tasks S01–S09 e dependências explícitas. Próxima: S01, prova de persistência e contratos. Abrange armazenamento/fila durável, proxy Electric, réplica/reconciliação, envio ordenado, acesso offline/conflitos/exportação, UI e PWA, encerrando com validação de campo. A escolha do adaptador permanece dependente da prova; o plano não afirma compatibilidade de uma API de persistência não verificada.
+
+Base existente: chamadas HTTP, AuthProvider online, Cloud por navigator.onLine, proxy 503, manifest sem service worker e recibos remotos idempotentes. Criar/editar/iniciar/devolver/concluir issues entram no recorte offline; administração de catálogo/equipe e liberação continuam online. A regra de uma hora desde criação no servidor é preservada até eventual decisão explícita sobre criação offline. Relato local pode mudar somente offline e antes de qualquer tentativa de envio; resposta perdida exige reconciliação com chave/payload congelados.
+
+Sem implementação, migração, dependência nova, escrita de banco, edição de Pencil ou teste de aplicação nesta preparação. Todas as tasks permanecem planejadas; aceite da slice 04 não comprova persistência local nem compatibilidade offline Android/iPhone. Notificações, reabertura, arquivo/restauração e produção seguem futuras.
+
+Verificação documental da slice 05: 19 documentos, 85 links locais e nove tasks com seções/status/checklists conferidos; `git diff --check` passou. Sem testes da aplicação por se tratar apenas de planejamento.

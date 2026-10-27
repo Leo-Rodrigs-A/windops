@@ -22,4 +22,4 @@ A [slice 01 — Fundação](../01-fundacao/README.md) consolida a base da etapa 
 
 O status detalhado fica nas tasks executáveis; estas etapas registram a cobertura agregada e suas pendências. Nenhuma etapa é concluída apenas porque um plano foi escrito.
 
-Slices 01–03 concluídas. A [slice 04 — Registro e atendimento](../04-registro-atendimento/README.md) está em andamento; I01–I02 concluídas e I03 é a próxima. Detalha o recorte online da etapa 06 e o lifecycle de equipamentos pendente da 05; antecipa apenas eventos e recibos necessários, sem concluir as etapas 07–09.
+Slices 01–04 concluídas; a [slice 04 — Registro e atendimento](../04-registro-atendimento/README.md) entregou o fluxo online, lifecycle do catálogo e conclusão básica. A [slice 05 — Operação offline e sincronização](../05-offline-sincronizacao/README.md) está planejada com S01–S09; próxima task S01. Detalha a etapa 07, catálogo local da 05 e relato local de conclusão da 08; notificações, demais transições de lifecycle e produção seguem futuras. O plano não comprova implementação offline.
