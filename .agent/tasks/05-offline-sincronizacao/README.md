@@ -2,7 +2,7 @@
 
 ## Status
 
-Em andamento desde 27/10/2026, após aprovação da slice 04 pelo proprietário. S01 concluída em 27/10 por orientação explícita do proprietário; S02 é a próxima task.
+Em andamento desde 27/10/2026, após aprovação da slice 04 pelo proprietário. S01 e S02 concluídas em 27/10; próxima task S03.
 
 - [ ] Slice concluída
 
@@ -13,14 +13,14 @@ Um dispositivo previamente autenticado e preparado permite consultar catálogo/i
 ## Base existente conferida
 
 - Slices [01](../01-fundacao/README.md), [02](../02-equipe-acesso/README.md), [03](../03-parques-turbinas/README.md) e [04](../04-registro-atendimento/README.md) concluídas. A aprovação da slice 04 é funcional online; não comprova durabilidade local nem suporte offline de aparelhos.
-- API de issues tem UUIDs, revisão, mutação/evento/recibo atômicos e retry autorizado. `sync_commands` é recibo remoto; a fila local ainda não existe.
-- `apps/api/src/modules/sync/routes.ts` responde 503; publicação Electric atual contém somente workspaces. TanStack DB 0.15.2/Electric Collection 0.6.3 estão declarados em `apps/web/package.json`, sem sincronização local do produto. A S01 provou IndexedDB em harness e selecionou journal de uma Collection como candidato para S02; navegadores reais ainda não foram certificados.
+- API de issues tem UUIDs, revisão, mutação/evento/recibo atômicos e retry autorizado. `sync_commands` é recibo remoto; S02 adiciona journal local de projeções/comandos, ainda sem envio.
+- `apps/api/src/modules/sync/routes.ts` responde 503; publicação Electric atual contém somente workspaces. TanStack DB 0.15.2/Electric Collection 0.6.3 estão declarados em `apps/web/package.json`, sem sincronização local do produto. A S01 provou IndexedDB em harness e S02 implementou banco v2 particionado e journal; navegadores reais ainda não foram certificados.
 - `AuthProvider` consulta sessão online nas transições; `issues-api.ts` usa HTTP diretamente; Cloud reflete apenas `navigator.onLine`. Manifest/ícones existem, mas não há service worker/offline pronto.
 - Regra atual do servidor: autor inicia após uma hora da criação; outros membros iniciam imediatamente; somente responsável devolve/conclui. Sessão com segunda etapa e membership ativa são obrigatórias para upload e shapes.
 
 ## Ordem e dependências
 
-Executar na ordem S01–S09. A política temporal foi preservada na S01; IndexedDB é o adaptador candidato provado para S02. S01 foi concluída com a aceitação de escopo registrada; a única combinação real reportada é Galaxy A12/Android 12/Brave. Não anunciar suporte em outros navegadores/plataformas antes dos testes correspondentes.
+Executar na ordem S01–S09. A política temporal foi preservada na S01; IndexedDB foi provado na S01 e implementado na S02. S01 foi concluída com a aceitação de escopo registrada; a única combinação real reportada é Galaxy A12/Android 12/Brave. Não anunciar suporte em outros navegadores/plataformas antes dos testes correspondentes.
 
 | Task                                                                                  | Dependências                               |
 | ------------------------------------------------------------------------------------- | ------------------------------------------ |
@@ -34,7 +34,7 @@ Executar na ordem S01–S09. A política temporal foi preservada na S01; Indexed
 | [S08 — PWA, reabertura e atualizações seguras](08-pwa-atualizacoes.md)                | S02, S06, S07                              |
 | [S09 — Validação integrada de campo e encerramento](09-validacao-integrada.md)        | S01–S08                                    |
 - [x] S01 — Prova de persistência e contratos offline — prova com fake IndexedDB passou e retomada manual reportada em Galaxy A12/Android 12 com Brave. O proprietário dispensou validações separadas de Chrome/Android e Safari/iPhone como critério de bloqueio da S01; registrar essa cobertura real sem afirmar testes nesses navegadores.
-- [ ] S02 — Armazenamento local e fila durável
+- [x] S02 — Armazenamento local e fila durável — journal IndexedDB transacional e particionado, dependências, recuperação, lease, exportação; seis testes passaram incluindo falha por quota simulada e upgrade v1→v2 preservando dados.
 - [ ] S03 — Proxy Electric e publicação autorizada
 - [ ] S04 — Réplica local e reconciliação
 - [ ] S05 — Envio, dependências e retries de comandos
@@ -81,3 +81,5 @@ Executar na ordem S01–S09. A política temporal foi preservada na S01; Indexed
 27/10/2026: S01 iniciada e concluída. `fake-indexeddb` 6.0.0 foi adicionada somente como devDependency; duas provas do IndexedDB/TanStack passaram. IndexedDB/journal de Collection escolhido provisoriamente. Proprietário reportou teste manual bem-sucedido do webapp instalado em Samsung Galaxy A12/Android 12, com Brave 1.98.60 (64 bits), Chromium 156.0.8078.48; issue e navegação retomaram após fechar/reabrir com e sem internet. Por orientação explícita do proprietário, Chrome e Safari/iPhone não bloqueiam a S01; não foram testados. Sem migration, escrita no banco do produto, consulta/edição do Pencil ou ativação offline.
 
 Verificação documental em 26/10/2026: 19 documentos e 85 links locais conferidos; nove tasks com seções obrigatórias, dependências ordenadas e checkboxes abertos. `git diff --check` passou. `pnpm check` e testes de aplicação não foram executados naquela preparação documental.
+
+S02 concluída em 27/10/2026: veja [evidências e limitações](02-armazenamento-outbox.md). Os testes usam fake IndexedDB; quota física e evicção real do navegador não foram provocadas. Formulários e envio da outbox continuam para S05/S07.
