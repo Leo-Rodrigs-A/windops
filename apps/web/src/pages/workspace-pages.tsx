@@ -4,18 +4,10 @@ import type {
   WorkspaceInvitation,
   WorkspaceMember,
 } from '@windops/contracts';
-import {
-  Check,
-  CircleHelp,
-  House,
-  Search,
-  ShieldCheck,
-  Trees,
-  UsersRound,
-  Wind,
-} from 'lucide-react';
+import { Check, CircleHelp, House, Search, ShieldCheck, Trees, UsersRound } from 'lucide-react';
 import { type FormEvent, useCallback, useEffect, useRef, useState } from 'react';
 import { useAuth } from '../auth/auth-context';
+import { TowerMark } from '../components/brand/tower-mark';
 import { SignOutButton } from '../components/sign-out-button';
 import { ThemeToggle } from '../components/theme-toggle';
 import { Badge } from '../components/ui/badge';
@@ -50,10 +42,12 @@ import {
   TableHeader,
   TableRow,
 } from '../components/ui/table';
+import { workspaceNavigationItems } from '../components/ui/workspace-navigation';
 import {
   type WorkspaceNavigationItem,
   WorkspaceSidebarLayout,
 } from '../components/ui/workspace-sidebar';
+import { WorkspaceSystemActions } from '../components/workspace-system-actions';
 import { ApiRequestError } from '../lib/auth-api';
 import {
   captureInvitationToken,
@@ -112,20 +106,14 @@ export function WorkspaceHomePage() {
                   A base de acesso da sua operação está pronta.
                 </p>
               </div>
-              <div className="flex items-center gap-3">
-                <span className="max-w-52 truncate text-sm font-medium" title={me.user.name}>
-                  {me.user.name}
-                </span>
-                <ThemeToggle />
-                <SignOutButton />
-              </div>
+              <WorkspaceSystemActions />
             </header>
             <section className="mx-auto mt-10 grid w-full max-w-6xl gap-6 lg:grid-cols-[minmax(0,1.2fr)_minmax(18rem,0.8fr)]">
               <Card className="border-blue-400/10 bg-[radial-gradient(ellipse_at_85%_10%,rgb(37_99_235_/_0.14),transparent_42%),var(--card)]">
                 <CardHeader>
                   <div className="flex items-center gap-3">
                     <span className="grid size-10 place-items-center rounded-xl border border-blue-400/15 bg-blue-500/10 text-brand">
-                      <Wind aria-hidden="true" className="size-5" />
+                      <TowerMark className="size-5" />
                     </span>
                     <div className="space-y-1">
                       <CardTitle>Operação em preparação</CardTitle>
@@ -181,14 +169,10 @@ export function WorkspaceHomePage() {
               className="inline-flex min-w-0 items-center gap-2"
               to="/app"
             >
-              <Wind aria-hidden="true" className="size-5 shrink-0 text-primary" />
+              <TowerMark className="size-5 shrink-0 text-primary" />
               <span className="truncate font-semibold">{context.workspace.name}</span>
             </Link>
-            <div className="flex min-w-0 items-center gap-2">
-              <span className="max-w-32 truncate text-xs font-medium">{me.user.name}</span>
-              <ThemeToggle />
-              <SignOutButton iconOnly />
-            </div>
+            <WorkspaceSystemActions />
           </header>
           <section>
             <p className="text-sm text-muted-foreground">Visão geral</p>
@@ -273,11 +257,7 @@ export function NoWorkspacePage() {
   );
 }
 
-const teamNavigation: WorkspaceNavigationItem[] = [
-  { href: '/app', label: 'Visão geral', icon: House },
-  { href: '/parques', label: 'Parques', icon: Trees },
-  { href: '/equipe', label: 'Equipe', icon: UsersRound },
-];
+const teamNavigation: WorkspaceNavigationItem[] = [...workspaceNavigationItems];
 
 function displayRole(role: 'admin' | 'technician') {
   return role === 'admin' ? 'Administrador' : 'Técnico';
@@ -569,11 +549,10 @@ export function TeamManagementPage() {
   }
 
   const { me, context } = snapshot;
-  const titleName = me.user.name.trim() || me.user.email;
 
   return (
     <WorkspaceSidebarLayout
-      activeHref="/equipe"
+      activeHref="/conta"
       items={teamNavigation}
       workspaceName={context.workspace.name}
     >
@@ -589,13 +568,7 @@ export function TeamManagementPage() {
                 <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">Equipe</h1>
               </div>
             </div>
-            <div className="flex items-center gap-3">
-              <span className="max-w-44 truncate text-sm font-medium" title={titleName}>
-                {titleName}
-              </span>
-              <ThemeToggle />
-              <SignOutButton />
-            </div>
+            <WorkspaceSystemActions />
           </header>
 
           {notice && <Feedback message={notice} tone="success" />}
@@ -993,7 +966,7 @@ export function TeamManagementPage() {
           </section>
         </div>
         <HomeNavigation
-          activeHref="/equipe"
+          activeHref="/conta"
           className="fixed inset-x-0 bottom-0 md:hidden"
           items={teamNavigation}
         />

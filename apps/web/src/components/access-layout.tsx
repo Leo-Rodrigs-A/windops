@@ -1,6 +1,6 @@
 import { Link } from '@tanstack/react-router';
-import { Wind } from 'lucide-react';
 import type { ReactNode } from 'react';
+import { TowerMark } from './brand/tower-mark';
 import { ThemeToggle } from './theme-toggle';
 import { Button } from './ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
@@ -28,7 +28,7 @@ export function AccessLayout({
       />
       <header className="mx-auto flex w-full max-w-7xl items-center justify-between">
         <Link aria-label="Wind Ops, início" className="inline-flex items-center gap-2" to="/">
-          <Wind aria-hidden="true" className="size-6 text-primary" />
+          <TowerMark className="size-6 text-primary" />
           <span className="font-semibold tracking-tight">Wind Ops</span>
         </Link>
         <div className="flex items-center gap-2">

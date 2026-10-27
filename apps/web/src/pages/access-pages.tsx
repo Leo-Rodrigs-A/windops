@@ -3,6 +3,7 @@ import { ArrowRight, CheckCircle2, Globe, KeyRound, Mail, ShieldCheck, Wind } fr
 import { type FormEvent, useEffect, useRef, useState } from 'react';
 import { useAuth } from '../auth/auth-context';
 import { AccessLayout } from '../components/access-layout';
+import { TowerMark } from '../components/brand/tower-mark';
 import { SignOutButton } from '../components/sign-out-button';
 import { ThemeToggle } from '../components/theme-toggle';
 import { Button } from '../components/ui/button';
@@ -64,7 +65,7 @@ export function LandingPage() {
       />
       <header className="mx-auto flex w-full max-w-7xl items-center justify-between py-6">
         <Link aria-label="Wind Ops, início" className="inline-flex items-center gap-2" to="/">
-          <Wind aria-hidden="true" className="size-6 text-primary" />
+          <TowerMark className="size-6 text-primary" />
           <span className="font-semibold tracking-tight">Wind Ops</span>
         </Link>
         <div className="flex items-center gap-2">

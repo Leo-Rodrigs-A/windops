@@ -1,21 +1,19 @@
 import type { Park, Turbine } from '@windops/contracts';
 import {
+  Archive,
   ArrowLeft,
   ChevronRight,
   CircleHelp,
-  House,
   Pencil,
   Plus,
   RefreshCw,
+  RotateCcw,
   Search,
   Trees,
-  UsersRound,
   Wind,
 } from 'lucide-react';
 import { type FormEvent, useCallback, useEffect, useRef, useState } from 'react';
 import { useAuth } from '../auth/auth-context';
-import { SignOutButton } from '../components/sign-out-button';
-import { ThemeToggle } from '../components/theme-toggle';
 import { Badge } from '../components/ui/badge';
 import { Button } from '../components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
@@ -33,27 +31,29 @@ import { HomeNavigation } from '../components/ui/home-navigation';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import { SidebarTrigger } from '../components/ui/sidebar';
+import { workspaceNavigationItems } from '../components/ui/workspace-navigation';
 import {
   type WorkspaceNavigationItem,
   WorkspaceSidebarLayout,
 } from '../components/ui/workspace-sidebar';
+import { WorkspaceSystemActions } from '../components/workspace-system-actions';
 import { ApiRequestError } from '../lib/auth-api';
 import {
   createPark,
   createTurbine,
+  deletePark,
+  deleteTurbine,
   getPark,
   getParks,
   getParkTurbines,
   getTurbine,
+  restorePark,
+  restoreTurbine,
   updatePark,
   updateTurbine,
 } from '../lib/workspace-api';
 
-const catalogNavigation: WorkspaceNavigationItem[] = [
-  { href: '/app', label: 'Visão geral', icon: House },
-  { href: '/parques', label: 'Parques', icon: Trees },
-  { href: '/equipe', label: 'Equipe', icon: UsersRound },
-];
+const catalogNavigation: WorkspaceNavigationItem[] = [...workspaceNavigationItems];
 
 type CatalogForm =
   | { kind: 'create-park'; nextCode: string | null }
@@ -61,6 +61,16 @@ type CatalogForm =
   | { kind: 'edit-park'; park: Park; latest?: Park }
   | { kind: 'edit-turbine'; park: Park; turbine: Turbine; latest?: Turbine }
   | null;
+
+type LifecycleTarget =
+  | { kind: 'park'; action: 'remove' | 'restore'; park: Park; commandId: string }
+  | {
+      kind: 'turbine';
+      action: 'remove' | 'restore';
+      park: Park;
+      turbine: Turbine;
+      commandId: string;
+    };
 
 function getApiErrorMessage(error: unknown, action: string) {
   if (error instanceof ApiRequestError && error.status === 401)
@@ -117,6 +127,9 @@ export function ParksCatalogPage() {
   const [formNotice, setFormNotice] = useState('');
   const [formBusy, setFormBusy] = useState(false);
   const [notice, setNotice] = useState('');
+  const [lifecycleTarget, setLifecycleTarget] = useState<LifecycleTarget | null>(null);
+  const [lifecycleError, setLifecycleError] = useState('');
+  const [lifecycleBusy, setLifecycleBusy] = useState(false);
   const [ambiguousCreate, setAmbiguousCreate] = useState(false);
   const parksRequest = useRef(0);
   const detailRequest = useRef(0);
@@ -124,6 +137,92 @@ export function ParksCatalogPage() {
 
   const workspaceId = snapshot.status === 'authenticated' ? snapshot.context.workspace.id : '';
   const isAdmin = snapshot.status === 'authenticated' && snapshot.context.role === 'admin';
+
+  function askParkLifecycle(park: Park, action: 'remove' | 'restore') {
+    setLifecycleError('');
+    setLifecycleTarget({ kind: 'park', action, park, commandId: crypto.randomUUID() });
+  }
+
+  function askTurbineLifecycle(park: Park, turbine: Turbine, action: 'remove' | 'restore') {
+    setLifecycleError('');
+    setLifecycleTarget({ kind: 'turbine', action, park, turbine, commandId: crypto.randomUUID() });
+  }
+
+  async function confirmLifecycle() {
+    if (!lifecycleTarget || !workspaceId) return;
+    setLifecycleBusy(true);
+    setLifecycleError('');
+    let reloadSelectedPark = lifecycleTarget.kind === 'turbine';
+    try {
+      const { park, action, commandId } = lifecycleTarget;
+      const command = {
+        commandId,
+        expectedRevision:
+          lifecycleTarget.kind === 'park' ? park.revision : lifecycleTarget.turbine.revision,
+      };
+      if (lifecycleTarget.kind === 'park') {
+        const result =
+          action === 'remove'
+            ? await deletePark(workspaceId, park.id, command)
+            : await restorePark(workspaceId, park.id, command);
+        setNotice(
+          result.result === 'deleted'
+            ? `Parque ${result.code} excluído definitivamente.`
+            : result.result === 'archived'
+              ? `Parque ${result.park.code} arquivado. As turbinas continuam vinculadas.`
+              : `Parque ${result.park.code} restaurado. Turbinas arquivadas individualmente continuam desativadas.`,
+        );
+        if (result.result === 'deleted' && selectedParkId === park.id) setSelectedParkId('');
+        else if (selectedParkId === park.id) reloadSelectedPark = true;
+      } else {
+        const { turbine } = lifecycleTarget;
+        const result =
+          action === 'remove'
+            ? await deleteTurbine(workspaceId, park.id, turbine.id, command)
+            : await restoreTurbine(workspaceId, park.id, turbine.id, command);
+        setNotice(
+          result.result === 'deleted'
+            ? `Turbina ${result.code} excluída definitivamente.`
+            : result.result === 'archived'
+              ? `Turbina ${result.turbine.code} arquivada.`
+              : `Turbina ${result.turbine.code} restaurada.`,
+        );
+      }
+      setLifecycleTarget(null);
+      await loadParks(parksSearch);
+      if (reloadSelectedPark) await loadParkDetail(park.id, turbinesSearch);
+    } catch (error) {
+      if (error instanceof ApiRequestError && error.code === 'EQUIPMENT_HAS_OPEN_ISSUES') {
+        setLifecycleError(
+          'Há chamados abertos localizados neste equipamento. Resolva ou mova esses chamados antes de arquivar.',
+        );
+      } else if (error instanceof ApiRequestError && error.code === 'EQUIPMENT_NOT_ARCHIVED') {
+        setLifecycleError(
+          'O equipamento já está ativo. Atualize o catálogo antes de tentar novamente.',
+        );
+      } else if (error instanceof ApiRequestError && error.code === 'REVISION_CONFLICT') {
+        setLifecycleTarget(null);
+        setNotice(
+          'O equipamento mudou desde a abertura desta confirmação. O catálogo foi atualizado; confira o estado antes de tentar novamente.',
+        );
+        await loadParks(parksSearch);
+        if (lifecycleTarget.kind === 'turbine')
+          await loadParkDetail(lifecycleTarget.park.id, turbinesSearch);
+      } else if (error instanceof ApiRequestError && error.status === 401) {
+        setLifecycleError('Sua sessão expirou. Entre novamente para continuar.');
+        await refresh();
+      } else if (error instanceof ApiRequestError && error.status === 403) {
+        setLifecycleError('Seu acesso administrativo mudou. Atualize a sessão antes de continuar.');
+        await refresh();
+      } else {
+        setLifecycleError(
+          'Não foi possível confirmar a operação. Tente novamente; a mesma chave será usada para evitar duplicidade.',
+        );
+      }
+    } finally {
+      setLifecycleBusy(false);
+    }
+  }
 
   async function suggestParkCode() {
     return findNextCatalogCode('P', (cursor) =>
@@ -520,16 +619,7 @@ export function ParksCatalogPage() {
                 <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">Parques</h1>
               </div>
             </div>
-            <div className="flex items-center gap-2 sm:gap-3">
-              <span
-                className="max-w-20 truncate text-xs font-medium sm:max-w-44 sm:text-sm"
-                title={snapshot.me.user.name}
-              >
-                {snapshot.me.user.name.trim() || snapshot.me.user.email}
-              </span>
-              <ThemeToggle />
-              <SignOutButton />
-            </div>
+            <WorkspaceSystemActions />
           </header>
 
           {notice && <Feedback message={notice} tone="success" />}
@@ -625,7 +715,7 @@ export function ParksCatalogPage() {
                         <span className="min-w-0 flex-1">
                           <span className="block truncate font-medium">Parque {park.code}</span>
                           <span className="block text-xs text-muted-foreground">
-                            {park.deactivatedAt ? 'Desativado' : 'Ativo'}
+                            {park.deactivatedAt ? 'Arquivado' : 'Ativo'}
                           </span>
                         </span>
                         <ChevronRight
@@ -693,7 +783,7 @@ export function ParksCatalogPage() {
                             Parque {selectedPark.code}
                           </h2>
                           <Badge variant={selectedPark.deactivatedAt ? 'secondary' : 'outline'}>
-                            {selectedPark.deactivatedAt ? 'Desativado' : 'Ativo'}
+                            {selectedPark.deactivatedAt ? 'Arquivado' : 'Ativo'}
                           </Badge>
                         </div>
                         <p className="text-sm text-muted-foreground">
@@ -702,28 +792,59 @@ export function ParksCatalogPage() {
                         </p>
                       </div>
                     </div>
-                    {isAdmin && !selectedPark.deactivatedAt && (
-                      <div className="flex items-center gap-2">
-                        <Button
-                          onClick={() =>
-                            openForm({ kind: 'edit-park', park: selectedPark }, selectedPark.code)
-                          }
-                          size="sm"
-                          variant="outline"
-                        >
-                          <Pencil aria-hidden="true" />
-                          Editar parque
-                        </Button>
-                        <Button
-                          aria-label="Cadastrar turbina"
-                          onClick={() => void openCreateTurbine(selectedPark)}
-                          size="icon"
-                        >
-                          <Plus aria-hidden="true" />
-                        </Button>
+                    {isAdmin && (
+                      <div className="flex flex-wrap items-center gap-2">
+                        {selectedPark.deactivatedAt ? (
+                          <Button
+                            onClick={() => askParkLifecycle(selectedPark, 'restore')}
+                            size="sm"
+                            variant="outline"
+                          >
+                            <RotateCcw aria-hidden="true" />
+                            Restaurar parque
+                          </Button>
+                        ) : (
+                          <>
+                            <Button
+                              onClick={() =>
+                                openForm(
+                                  { kind: 'edit-park', park: selectedPark },
+                                  selectedPark.code,
+                                )
+                              }
+                              size="sm"
+                              variant="outline"
+                            >
+                              <Pencil aria-hidden="true" />
+                              Editar parque
+                            </Button>
+                            <Button
+                              onClick={() => askParkLifecycle(selectedPark, 'remove')}
+                              size="sm"
+                              variant="outline"
+                            >
+                              <Archive aria-hidden="true" />
+                              Excluir ou arquivar
+                            </Button>
+                            <Button
+                              aria-label="Cadastrar turbina"
+                              onClick={() => void openCreateTurbine(selectedPark)}
+                              size="icon"
+                            >
+                              <Plus aria-hidden="true" />
+                            </Button>
+                          </>
+                        )}
                       </div>
                     )}
                   </div>
+
+                  {selectedPark.deactivatedAt && (
+                    <Feedback
+                      message="Este parque está arquivado; suas turbinas permanecem vinculadas e indisponíveis para novos chamados."
+                      tone="info"
+                    />
+                  )}
 
                   <Card className="gap-0 py-0">
                     <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-3 border-b border-border/70 px-4 py-4 sm:px-5">
@@ -802,27 +923,66 @@ export function ParksCatalogPage() {
                               <div className="min-w-0 flex-1">
                                 <p className="truncate font-medium">Turbina {turbine.code}</p>
                                 <p className="text-xs text-muted-foreground">
-                                  {turbine.deactivatedAt ? 'Desativada' : 'Ativa'}
+                                  {selectedPark.deactivatedAt
+                                    ? 'Indisponível com o parque arquivado'
+                                    : turbine.deactivatedAt
+                                      ? 'Arquivada individualmente'
+                                      : 'Ativa'}
                                 </p>
                               </div>
-                              <Badge variant={turbine.deactivatedAt ? 'secondary' : 'outline'}>
-                                {turbine.deactivatedAt ? 'Desativada' : 'Ativa'}
+                              <Badge
+                                variant={
+                                  selectedPark.deactivatedAt || turbine.deactivatedAt
+                                    ? 'secondary'
+                                    : 'outline'
+                                }
+                              >
+                                {selectedPark.deactivatedAt
+                                  ? 'Indisponível'
+                                  : turbine.deactivatedAt
+                                    ? 'Arquivada'
+                                    : 'Ativa'}
                               </Badge>
-                              {isAdmin && !selectedPark.deactivatedAt && !turbine.deactivatedAt && (
-                                <Button
-                                  aria-label={`Editar turbina ${turbine.code}`}
-                                  onClick={() =>
-                                    openForm(
-                                      { kind: 'edit-turbine', park: selectedPark, turbine },
-                                      turbine.code,
-                                    )
-                                  }
-                                  size="icon"
-                                  variant="ghost"
-                                >
-                                  <Pencil aria-hidden="true" />
-                                </Button>
-                              )}
+                              {isAdmin &&
+                                !selectedPark.deactivatedAt &&
+                                (turbine.deactivatedAt ? (
+                                  <Button
+                                    aria-label={`Restaurar turbina ${turbine.code}`}
+                                    onClick={() =>
+                                      askTurbineLifecycle(selectedPark, turbine, 'restore')
+                                    }
+                                    size="icon"
+                                    variant="ghost"
+                                  >
+                                    <RotateCcw aria-hidden="true" />
+                                  </Button>
+                                ) : (
+                                  <div className="flex items-center gap-1">
+                                    <Button
+                                      aria-label={`Editar turbina ${turbine.code}`}
+                                      onClick={() =>
+                                        openForm(
+                                          { kind: 'edit-turbine', park: selectedPark, turbine },
+                                          turbine.code,
+                                        )
+                                      }
+                                      size="icon"
+                                      variant="ghost"
+                                    >
+                                      <Pencil aria-hidden="true" />
+                                    </Button>
+                                    <Button
+                                      aria-label={`Excluir ou arquivar turbina ${turbine.code}`}
+                                      onClick={() =>
+                                        askTurbineLifecycle(selectedPark, turbine, 'remove')
+                                      }
+                                      size="icon"
+                                      variant="ghost"
+                                    >
+                                      <Archive aria-hidden="true" />
+                                    </Button>
+                                  </div>
+                                ))}
                             </div>
                           ))}
                           {turbineCursor && (
@@ -967,6 +1127,49 @@ export function ParksCatalogPage() {
               </Button>
             </DialogFooter>
           </form>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        onOpenChange={(open) => {
+          if (!open && !lifecycleBusy) {
+            setLifecycleTarget(null);
+            setLifecycleError('');
+          }
+        }}
+        open={Boolean(lifecycleTarget)}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              {lifecycleTarget?.action === 'restore'
+                ? `Restaurar ${lifecycleTarget.kind === 'park' ? 'parque' : 'turbina'}?`
+                : `Excluir ou arquivar ${lifecycleTarget?.kind === 'park' ? 'parque' : 'turbina'}?`}
+            </DialogTitle>
+            <DialogDescription>
+              {lifecycleTarget?.action === 'restore'
+                ? 'O equipamento voltará a ficar disponível conforme seu estado individual. Turbinas arquivadas separadamente continuam desativadas.'
+                : 'Sem referências de chamados, o equipamento será excluído definitivamente. Com referências atuais ou históricas, será arquivado e preservado. Uma issue aberta atualmente localizada nele bloqueia a operação.'}
+            </DialogDescription>
+          </DialogHeader>
+          {lifecycleError && <Feedback message={lifecycleError} tone="error" />}
+          <DialogFooter>
+            <Button
+              disabled={lifecycleBusy}
+              onClick={() => setLifecycleTarget(null)}
+              type="button"
+              variant="outline"
+            >
+              Cancelar
+            </Button>
+            <Button disabled={lifecycleBusy} onClick={() => void confirmLifecycle()} type="button">
+              {lifecycleBusy
+                ? 'Aguardando confirmação…'
+                : lifecycleTarget?.action === 'restore'
+                  ? 'Confirmar restauração'
+                  : 'Confirmar exclusão/arquivo'}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </WorkspaceSidebarLayout>

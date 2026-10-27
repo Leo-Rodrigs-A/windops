@@ -1,20 +1,14 @@
 import { Link } from '@tanstack/react-router';
-import type { LucideIcon } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { Button } from './button';
-
-export type HomeNavigationItem = {
-  href: '/app' | '/parques' | '/equipe';
-  label: string;
-  icon: LucideIcon;
-};
+import type { WorkspaceNavigationItem } from './workspace-navigation';
 
 export function HomeNavigation({
   items,
   activeHref,
   className,
 }: {
-  items: HomeNavigationItem[];
+  items: WorkspaceNavigationItem[];
   activeHref: string;
   className?: string;
 }) {

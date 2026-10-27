@@ -2,7 +2,7 @@
 
 ## Status
 
-Em andamento desde 26/10/2026; I01–I06 concluídas, próxima task I07.
+Em andamento desde 26/10/2026; I01–I06 concluídas; I07 em implementação, com validação manual da interface pendente.
 
 - [ ] Slice concluída
 

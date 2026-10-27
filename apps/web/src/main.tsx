@@ -26,6 +26,7 @@ function RootLayout() {
 const rootRoute = createRootRoute({ component: RootLayout });
 const accessPages = () => import('./pages/access-pages');
 const workspacePages = () => import('./pages/workspace-pages');
+const issuePages = () => import('./pages/issues-pages');
 const indexRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/',
@@ -69,7 +70,22 @@ const noWorkspaceRoute = createRoute({
 const appRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/app',
-  component: lazyRouteComponent(workspacePages, 'WorkspaceHomePage'),
+  component: lazyRouteComponent(issuePages, 'WorkspaceHomePage'),
+});
+const issueDetailRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/chamados/$issueId',
+  component: lazyRouteComponent(issuePages, 'IssueDetailPage'),
+});
+const issueHistoryRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/historico',
+  component: lazyRouteComponent(issuePages, 'IssueHistoryPage'),
+});
+const accountRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/conta',
+  component: lazyRouteComponent(issuePages, 'AccountSettingsPage'),
 });
 const teamRoute = createRoute({
   getParentRoute: () => rootRoute,
@@ -103,6 +119,9 @@ const router = createRouter({
     resetRoute,
     noWorkspaceRoute,
     appRoute,
+    issueDetailRoute,
+    issueHistoryRoute,
+    accountRoute,
     parksRoute,
     teamRoute,
     invitationAcceptRoute,

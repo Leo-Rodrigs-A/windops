@@ -73,3 +73,11 @@ O proprietário autorizou cores Tailwind para atingir contraste AA. O primário 
 - Tokens CSS semânticos para modo claro e dark em `apps/web/src/styles.css`. A home inicial deverá selecionar `data-theme="dark"` em F07; não foi criado seletor de tema.
 - `Button`, campos acessíveis, feedback, loading, container de página e navegação inferior em `apps/web/src/components/ui/`.
 - Inter está empacotada localmente; `lucide-react` fornece ícones no bundle. `.pen`, screenshots e caminhos do Windows não são dependências do build/runtime.
+
+## Consulta I07 — 26/10/2026
+
+- Documento ativo confirmado novamente pelo MCP Windows: `G:\Meu Drive\01 - TRABALHO\08 - PENCIL WORKSPACES\WindOps.pen`. A seleção do editor estava vazia nessa consulta; não se presumiu que houvesse uma seleção escondida.
+- Foram revisados `QhQxw` (Home Screen Actions - dark mode), `FGvyG` (Home base), `D5Cuf7` (folha de ícones) e `LZscB` / `tA7il` (`Icon=Tower`). A Home continua 402 × 874, com busca, filtros, cards e navegação inferior de quatro ícones. A folha separa ícones Lucide como `house`, `history`, `gallery-vertical-end`, `user-round`, `calendar`, `panel-left`, `inbox`, `search`, `plus`, `bell` e estados de Cloud.
+- O proprietário autorizou compor as telas não existentes de Histórico, Parques e Conta e configurações usando a direção escrita: Home lista pendentes/em andamento; Histórico reserva auditoria e futuras recuperação/conferência de concluídas; Parques gerencia parques/turbinas; Conta agrupa conta, equipe e indicadores pessoais. A implementação continua sem conclusão/recuperação de issues, que dependem da etapa 08.
+- A geometria do path `tA7il` foi portada sem alterações para `TowerMark`, favicon SVG e ícone de instalação. Geraram-se também PNGs 192, 512 e Apple touch 180 a partir do SVG. O `.pen` permaneceu somente leitura e externo ao repositório.
+- A sidebar e navegação mobile usam os ícones Lucide `House`, `History`, `GalleryVerticalEnd` e `UserRound`. Cabeçalhos autenticados agrupam Bell (integração de notificações ainda desativada) e Cloud (`navigator.onLine` apenas; não indica sincronização durável). Tema e logout ficam em Conta e configurações.

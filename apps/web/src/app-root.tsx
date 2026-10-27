@@ -8,6 +8,9 @@ export function AppRoot() {
   const location = useLocation();
   const protectedPath =
     location.pathname === '/app' ||
+    location.pathname === '/historico' ||
+    location.pathname === '/conta' ||
+    location.pathname.startsWith('/chamados/') ||
     location.pathname === '/parques' ||
     location.pathname === '/sem-workspace' ||
     location.pathname === '/equipe';

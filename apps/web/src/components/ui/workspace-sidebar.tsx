@@ -1,6 +1,6 @@
 import { Link } from '@tanstack/react-router';
-import { type LucideIcon, Wind } from 'lucide-react';
 import type { ReactNode } from 'react';
+import { TowerMark } from '../brand/tower-mark';
 import {
   Sidebar,
   SidebarContent,
@@ -15,12 +15,9 @@ import {
   SidebarMenuItem,
   SidebarProvider,
 } from './sidebar';
+import type { WorkspaceNavigationItem } from './workspace-navigation';
 
-export type WorkspaceNavigationItem = {
-  href: '/app' | '/parques' | '/equipe';
-  label: string;
-  icon: LucideIcon;
-};
+export type { WorkspaceNavigationItem } from './workspace-navigation';
 
 export function WorkspaceSidebarLayout({
   workspaceName,
@@ -38,7 +35,7 @@ export function WorkspaceSidebarLayout({
       <Sidebar collapsible="icon" variant="inset">
         <SidebarHeader className="gap-4 p-4">
           <div className="flex items-center gap-3 px-2 py-1">
-            <Wind aria-hidden="true" className="size-5 shrink-0 text-primary" />
+            <TowerMark className="size-5 shrink-0 text-primary" />
             <span className="truncate text-sm font-semibold">Wind Ops</span>
           </div>
           <div className="min-w-0 px-2">

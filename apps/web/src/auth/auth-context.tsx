@@ -160,7 +160,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (snapshot.status === 'loading' || snapshot.status === 'error') return;
     const path = location.pathname;
     const isProtected =
-      path === '/app' || path === '/parques' || path === '/sem-workspace' || path === '/equipe';
+      path === '/app' ||
+      path === '/historico' ||
+      path === '/conta' ||
+      path.startsWith('/chamados/') ||
+      path === '/parques' ||
+      path === '/sem-workspace' ||
+      path === '/equipe';
 
     if (
       hasPendingInvitation() &&

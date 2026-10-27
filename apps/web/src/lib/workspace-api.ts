@@ -3,14 +3,19 @@ import {
   createParkSchema,
   createTurbineSchema,
   createWorkspaceInvitationSchema,
+  equipmentLifecycleCommandSchema,
   type Park,
+  type ParkLifecycleResult,
   type ParksPage,
   type ParksQuery,
+  parkLifecycleResultSchema,
   parkSchema,
   parksPageSchema,
   type Turbine,
+  type TurbineLifecycleResult,
   type TurbinesPage,
   type TurbinesQuery,
+  turbineLifecycleResultSchema,
   turbineSchema,
   turbinesPageSchema,
   updateParkSchema,
@@ -111,6 +116,64 @@ export async function updateTurbine(
       { method: 'PATCH', body: JSON.stringify(body) },
     ),
   ) as Turbine;
+}
+
+export async function deletePark(
+  workspaceId: string,
+  parkId: string,
+  input: { commandId: string; expectedRevision: number },
+) {
+  const body = equipmentLifecycleCommandSchema.parse(input);
+  return parkLifecycleResultSchema.parse(
+    await requestJson(`${workspacePath(workspaceId)}/parks/${encodeURIComponent(parkId)}`, {
+      method: 'DELETE',
+      body: JSON.stringify(body),
+    }),
+  ) as ParkLifecycleResult;
+}
+
+export async function restorePark(
+  workspaceId: string,
+  parkId: string,
+  input: { commandId: string; expectedRevision: number },
+) {
+  const body = equipmentLifecycleCommandSchema.parse(input);
+  return parkLifecycleResultSchema.parse(
+    await requestJson(`${workspacePath(workspaceId)}/parks/${encodeURIComponent(parkId)}/restore`, {
+      method: 'POST',
+      body: JSON.stringify(body),
+    }),
+  ) as ParkLifecycleResult;
+}
+
+export async function deleteTurbine(
+  workspaceId: string,
+  parkId: string,
+  turbineId: string,
+  input: { commandId: string; expectedRevision: number },
+) {
+  const body = equipmentLifecycleCommandSchema.parse(input);
+  return turbineLifecycleResultSchema.parse(
+    await requestJson(
+      `${workspacePath(workspaceId)}/parks/${encodeURIComponent(parkId)}/turbines/${encodeURIComponent(turbineId)}`,
+      { method: 'DELETE', body: JSON.stringify(body) },
+    ),
+  ) as TurbineLifecycleResult;
+}
+
+export async function restoreTurbine(
+  workspaceId: string,
+  parkId: string,
+  turbineId: string,
+  input: { commandId: string; expectedRevision: number },
+) {
+  const body = equipmentLifecycleCommandSchema.parse(input);
+  return turbineLifecycleResultSchema.parse(
+    await requestJson(
+      `${workspacePath(workspaceId)}/parks/${encodeURIComponent(parkId)}/turbines/${encodeURIComponent(turbineId)}/restore`,
+      { method: 'POST', body: JSON.stringify(body) },
+    ),
+  ) as TurbineLifecycleResult;
 }
 
 export async function getWorkspaceMembers(workspaceId: string, query: PageQuery = {}) {
