@@ -664,7 +664,7 @@ export function ParksCatalogPage() {
       workspaceName={workspaceName}
     >
       <main className="min-h-dvh bg-background px-4 pt-4 pb-24 text-foreground sm:px-6 md:px-8 md:py-7">
-        <div className="mx-auto w-full max-w-7xl space-y-7">
+        <div className="mx-auto w-full max-w-6xl space-y-7">
           <header className="flex flex-wrap items-center justify-between gap-4">
             <div className="flex min-w-0 items-center gap-3">
               <SidebarTrigger className="md:hidden" />
