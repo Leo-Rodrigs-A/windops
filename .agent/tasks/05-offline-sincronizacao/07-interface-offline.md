@@ -2,9 +2,9 @@
 
 ## Status
 
-Em andamento desde 27/10/2026. Interface conectada ao journal e à réplica; validação guiada em navegador concluída parcialmente, com critérios de campo ainda abertos.
+Concluída em 28/10/2026. Validação guiada pelo proprietário aprovada com a limitação explícita de que a continuação da paginação não foi exercitada.
 
-- [ ] Task concluída
+- [x] Task concluída
 
 ## Objetivo
 
@@ -12,11 +12,11 @@ Conectar Home, detalhe, catálogo e Histórico à base local e mostrar o estado 
 
 ## Estado atual
 
-Implementação iniciada em 27/10/2026. S06 continua aberta conforme o índice; S07 avançou com autorização explícita do proprietário. Ver evidências parciais abaixo e limites no [índice da slice](README.md).
+Implementação e validação do recorte concluídas em 28/10/2026; ver evidências e limites abaixo e no [índice da slice](README.md).
 
 ## Dependências
 
-Base S04–S06; S06 permanece aberta com autorização do proprietário para iniciar implementação S07. O encerramento de S07 continua condicionado às validações pendentes de S06 e desta task.
+Base S04–S06, todas concluídas.
 
 ## Escopo e exclusões
 
@@ -39,10 +39,11 @@ Consumidores locais em issues-pages, parks-page, auth e workspace-system-actions
 
 ## Testes e aceite
 
-- [ ] Percorrer admin/técnico online, modo avião, cache ausente, sessão expirada, quota, conflito e retomada; mensagem de sucesso só após commit local.
-- [ ] Concluir offline, voltar ao detalhe, editar relato permitido, enviar e confirmar bloqueio de edição após tentativa; avisos usam modais.
-- [ ] Conferir ordenação global/paginação da Home, Histórico e eventos e o indicador Cloud em rede disponível com API indisponível.
-- [ ] Registrar arquivos alterados, comandos/resultados e limitações antes de marcar conclusão.
+- [x] Percorrer admin/técnico online, rede indisponível com app carregado, cache ausente, sessão que precisa renovação, conflito e retomada. A expiração temporal real foi dispensada em S06. `QuotaExceededError` simulado no teste IndexedDB de S02; a UI só confirma após a Promise de gravação local resolver. Quota física do browser não foi forçada.
+- [x] Concluir offline, voltar ao detalhe, editar relato permitido, enviar e confirmar bloqueio de edição após tentativa; avisos usam modais.
+- [x] Conferir ordenação dos dados disponíveis em Home, Histórico e eventos e o indicador Cloud em rede disponível com API indisponível.
+- [x] Paginação além da primeira página registrada como não exercitada: o workspace tem cinco issues e o proprietário dispensou criar registros persistentes só para esse teste.
+- [x] Registrar arquivos alterados, comandos/resultados e limitações antes de marcar conclusão.
 
 ## Evidências
 
@@ -109,6 +110,14 @@ Vitest completo passou após as correções (9 arquivos/50 testes). `pnpm check`
 28/10/2026 — após F5 com API parada e os dois IndexedDBs removidos, proprietário confirmou que a Home deixou “Carregando workspace…”, exibiu “Chamados indisponíveis offline” com orientação para conectar e preparar os dados, e manteve “Novo chamado” desativado. Cache ausente validado sem tela vazia ou ação de gravação enganosa.
 
 28/10/2026 — após religar a API e atualizar, proprietário confirmou cinco coleções disponíveis e fila zerada. A preparação refez o cache após a exclusão dos IndexedDBs.
+
+28/10/2026 — com DevTools Network em Offline, a SPA já carregada navegou à Home, exibiu os chamados locais e o Cloud informou estado offline. `F5` exibiu o dinossauro por falta de app shell offline; reabertura offline após reload é escopo da S08/PWA. Após restaurar a rede e atualizar, proprietário confirmou que voltou ao app e a fila zerou.
+
+28/10/2026 — proprietário autorizou concluir S07 sem criar registros permanentes para forçar paginação além da primeira página. Limitação anotada como não observada, sem afirmar que a tela “Carregar chamados anteriores” foi exercitada. A quota foi verificada por `QuotaExceededError` simulado no LocalIssueStore; não houve exaustão física do armazenamento do browser.
+
+S07 concluída: fluxos locais e de sincronização, estados sem cache, Histórico cacheado, conclusão/revisão offline, recarga/navegação com sessão lenta, acessibilidade reportada e layouts foram implementados e validados conforme evidências acima. Arquivos/áreas: AuthProvider/guards, OfflineWorkspaceProvider, journal/outbox e réplica, telas Home/detalhe/Histórico/Parques/Conta, ações Cloud, proxy sync e testes local-issue-store/workspace-replica. Validação direta final: Biome (190 arquivos), boundaries, typecheck contracts/API/web, Vitest (9 arquivos/53 testes), build web e `git diff --check` passaram. `pnpm check` não emitiu saída durante 30s (código 124). Limites aceitos: paginação além da primeira página não exercitada; quota simulada em teste, sem forçar quota real de navegador; F5 offline depende da S08/PWA; storage.persist() não foi concedido pelo browser.
+
+28/10/2026 — com Network throttling em Offline e a aplicação já carregada, proprietário navegou até Home, viu os chamados mantidos no IndexedDB e confirmou o estado offline no Cloud. F5 sem rede exibiu o dinossauro do navegador: o shell da aplicação ainda depende do servidor e o suporte a reabertura sem rede pertence à S08/PWA; esta observação não invalida a navegação offline dentro da SPA carregada.
 
 28/10/2026 — com API restaurada, o proprietário confirmou que as três conclusões aparecem no Histórico. Ordem conjunta após recriação do cache ainda será conferida.
 

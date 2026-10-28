@@ -8,7 +8,7 @@ Cada nova slice fica em uma pasta `NN-nome/`, com um `README.md` que define resu
 
 ## Slice atual
 
-Task em andamento: [S07 — Interface de campo e status de sincronização](05-offline-sincronizacao/07-interface-offline.md). S06 foi concluída após validar offline, recarga, sincronização, conflito, logout/exportação, reautenticação, revogação com streams ativos, coordenação entre abas e troca de conta com request lento em voo. Expiração real foi dispensada pelo proprietário. S07 confirmou Histórico offline após sincronizar cache, cache ausente sem tela vazia e acessibilidade reportada; permanecem teste de quota e paginação além dos dados disponíveis.
+S06 e S07 concluídas. S06 validou offline, recarga, sincronização, conflito, logout/exportação, reautenticação, revogação com streams ativos, coordenação entre abas e troca de conta com request lento em voo; expiração real foi dispensada. S07 confirmou navegação offline com SPA carregada, Histórico cacheado, cache ausente sem tela vazia e acessibilidade reportada. Paginação além da primeira página foi dispensada por falta de dados; quota foi simulada no teste IndexedDB, sem exaustão física do browser. Próximas tasks da slice: S08 e S09.
 
 - [x] [01 — Fundação](01-fundacao/README.md): F01–F08 concluídas em 25/10/2026, com validação local e Android físico.
 - [x] [02 — Equipe e acesso ao workspace](02-equipe-acesso/README.md): E01–E07 concluídas; integrações, desktop, Android e ações entre cargos validados. Ajustes visuais mobile ficam para melhoria posterior.
@@ -17,7 +17,7 @@ Task em andamento: [S07 — Interface de campo e status de sincronização](05-o
 
 - [x] [04 — Registro e atendimento](04-registro-atendimento/README.md): slice concluída e aprovada pelo proprietário em 26/10/2026; I01–I09 concluídas. Limitações e escopo futuro registrados na task.
 
-- [ ] [05 — Operação offline e sincronização](05-offline-sincronizacao/README.md): nove tasks S01–S09; S01–S06 concluídas e S07 em andamento.
+- [ ] [05 — Operação offline e sincronização](05-offline-sincronizacao/README.md): nove tasks S01–S09; S01–S07 concluídas, S08–S09 restantes.
 
 Correção solicitada durante I07: I09 concluiu a espera de uma hora no autoatendimento do autor, conclusão online e ordenação mais recente primeiro em Histórico/logs. Migration 0007 foi aplicada no banco dev; integração em PostgreSQL descartável passou.
 

@@ -2,7 +2,7 @@
 
 ## Status
 
-Em andamento desde 27/10/2026, após aprovação da slice 04 pelo proprietário. S01–S05 concluídas; S06 segue aberta e S07 foi iniciada com autorização explícita do proprietário.
+Em andamento desde 27/10/2026, após aprovação da slice 04 pelo proprietário. S01–S07 concluídas; S08 e S09 permanecem.
 
 - [ ] Slice concluída
 
@@ -38,12 +38,12 @@ Executar na ordem S01–S09. A política temporal foi preservada na S01; Indexed
 - [x] S03 — Proxy Electric e publicação autorizada — proxy tenant-scoped, handles HMAC vinculados a workspace/coleção e projeções sanitizadas; Electric real, grants, migrations e restore validados. Evidências e limite do workspace único em [S03](03-proxy-electric-autorizado.md).
 - [x] S04 — Réplica local e reconciliação — snapshots/checkpoints atômicos, retomada, tombstones, ACK/revisão e retenção limitada; smoke Electric local e testes registrados em [S04](04-replica-reconciliacao.md).
 - [x] S05 — Envio, dependências e retries de comandos — executor revalida workspace, usa lease, persiste ACK/retries e preserva cadeia; evidências em [S05](05-envio-comandos.md).
-- [ ] S06 — Acesso offline, conflitos e recuperação (em andamento; não bloqueou o avanço autorizado a S07)
-- [ ] S07 — Interface de campo e status de sincronização (em andamento)
+- [x] S06 — Acesso offline, conflitos e recuperação — conclusão registrada em 28/10; expiração temporal real dispensada pelo proprietário.
+- [x] S07 — Interface de campo e status de sincronização — conclusão registrada em 28/10; paginação após primeira página não exercitada por decisão do proprietário, e quota verificada por simulação no IndexedDB.
 - [ ] S08 — PWA, reabertura e atualizações seguras
 - [ ] S09 — Validação integrada de campo e encerramento
 
-S06 concluída em 28/10: recuperação/logout/exportação, conflito revisável, isolamento, revogação com streams, coordenação de abas e troca de conta com request lento em voo foram confirmados. Expiração temporal real foi dispensada explicitamente pelo proprietário; ver limites e validações diretas em [S06](06-acesso-conflitos-exportacao.md). S07 segue em andamento: leitura e escrita locais, conclusão offline com relato, ordenação, Histórico offline após sincronizar cache, cache ausente sem tela vazia, indicador Cloud, teclado, zoom, tema, leitor de tela e viewport móvel foram confirmados pelo proprietário. Faltam quota e paginação além dos itens disponíveis. `pnpm check` completo (52 testes e build) passou em 28/10; após mudanças posteriores, Biome, boundaries, typechecks, 53 testes e build web passaram diretamente, mas `pnpm check` não emitiu saída em 30s. Ver [estado parcial de S07](07-interface-offline.md).
+S06 e S07 concluídas em 28/10. S06: recuperação/logout/exportação, conflito revisável, isolamento, revogação com streams, coordenação entre abas e troca de conta com request lento em voo; expiração temporal real dispensada explicitamente. S07: leitura e escrita locais, conclusão offline com relato, ordenação, Histórico offline após sincronizar cache, estado sem cache, navegação offline com app shell carregado, indicador Cloud, teclado, zoom, tema, leitor de tela e viewport móvel. Limites aceitos/registrados: paginação após primeira página não exercitada por não haver dados suficientes, quota simulada no IndexedDB sem exaustão real no browser, F5 offline pertence à S08/PWA e persistência de armazenamento não foi concedida pelo browser. Evidências em [S06](06-acesso-conflitos-exportacao.md) e [S07](07-interface-offline.md). Biome, boundaries, typechecks contracts/API/web, 53 testes e build web passaram diretamente; `pnpm check` não emitiu saída em 30s.
 
 ## Escopo e limites
 
