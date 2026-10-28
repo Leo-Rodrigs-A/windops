@@ -2,9 +2,9 @@
 
 ## Status
 
-Planejada
+Concluída em 28/10/2026
 
-- [ ] Task concluída
+- [x] Task concluída
 
 ## Objetivo
 
@@ -16,7 +16,7 @@ Recorte da [slice 06](README.md). Sem notificações, deploy ou expansão das a�
 
 ## Estado atual
 
-Base das slices 04/05 implementada; esta task ainda não foi executada. Diagnóstico e regras no índice da slice.
+Migration 0011 e espelhos implementados; instalação vazia e upgrade validados.
 
 ## Dependências
 
@@ -24,19 +24,19 @@ L01. Ler arquitetura, memória e decisões de L01 antes de implementar.
 
 ## Plano
 
-- [ ] Criar migration incremental para arquivo/metadados, constraints de relato/atendimento, índices e novos tipos de evento; atualizar schema e documentação do banco.
-- [ ] Preservar eventos e referências históricas append-only; novos eventos de lifecycle registram snapshots antes/depois sem alterar eventos anteriores.
-- [ ] Atualizar espelhos sanitizados e triggers Electric sem publicar identidade privada; definir compatibilidade com clientes antigos e recibos existentes.
-- [ ] Validar instalação vazia, upgrade com issues/eventos/recibos preexistentes, reaplicação, grants e restore em banco descartável; não popular dev com fixtures.
+- [x] Criar migration incremental 0011 com marcador de arquivo, índice e eventos; atualizar schemas/documentação.
+- [x] Preservar eventos e referências append-only; ampliar checks sem reescrever registros existentes.
+- [x] Atualizar espelho sanitizado, trigger e proxy Electric sem identidade privada; campo novo nullable.
+- [x] Validar instalação vazia, upgrade desde 0004, reaplicação, grants e restore em banco descartável.
 
 ## Contratos e dados afetados
 
-issues, audit, espelhos Electric e migrations; decidir número da migration ao executar.
+issues, audit, espelhos Electric; migration `0011_issue_lifecycle_archive`.
 
 ## Testes e aceite
 
-Upgrade preserva relatos e eventos; runtime não altera eventos antigos; constraints aceitam apenas estados definidos em L01; integração/container obrigatórios. Rodar `pnpm check` para alterações de fonte.
+Upgrade preserva issues, eventos e recibos; runtime não altera eventos antigos; validação de integração/container obrigatória. `pnpm check` aprovado.
 
 ## Evidências
 
-28/10/2026: planejamento documental. Implementação e testes desta task não executados.
+28/10/2026: migration 0011, snapshot/journal, schemas, trigger Electric e filtro de shapes implementados. Instalação vazia, reaplicação concorrente, restart, grants e upgrade desde 0004 passaram em PostgreSQL descartável. `pnpm check` passou após executar o pnpm 10.34.8 declarado pelo projeto; 53 testes. Nenhum dado persistente dev alterado.

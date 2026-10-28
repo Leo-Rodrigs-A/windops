@@ -44,12 +44,13 @@ const shapes = {
       'turbine_id',
       'text',
       'completion_report',
+      'archived_at',
       'status',
       'created_at',
       'updated_at',
       'revision',
     ],
-    filter: "workspace_id = $1 AND status IN ('pending', 'in_progress')",
+    filter: "workspace_id = $1 AND archived_at IS NULL AND status IN ('pending', 'in_progress')",
   },
   'issue-events': {
     table: 'public.issue_sync_events',
@@ -64,7 +65,7 @@ const shapes = {
       'after',
     ],
     filter:
-      "workspace_id = $1 AND issue_id IN (SELECT id FROM public.issue_sync_rows WHERE workspace_id = $1 AND status IN ('pending', 'in_progress'))",
+      "workspace_id = $1 AND issue_id IN (SELECT id FROM public.issue_sync_rows WHERE workspace_id = $1 AND archived_at IS NULL AND status IN ('pending', 'in_progress'))",
   },
 } as const;
 

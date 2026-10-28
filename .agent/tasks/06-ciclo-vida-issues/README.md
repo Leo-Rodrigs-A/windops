@@ -33,7 +33,7 @@ O ponto crítico é preservar pendências quando arquivo/conclusão removem uma 
 Executar L01→L02→L03→L04→L05→L06. Questões de produto da L01 bloqueiam somente implementação dependente delas.
 
 - [x] [L01 — Contratos e invariantes](01-contratos-invariantes.md) — depende de Slices 04 e 05.
-- [ ] [L02 — Persistência e auditoria](02-schema-auditoria.md) — depende de L01.
+- [x] [L02 — Persistência e auditoria](02-schema-auditoria.md) — depende de L01.
 - [ ] [L03 — Comandos de ciclo de vida](03-comandos-transacionais.md) — depende de L01 e L02.
 - [ ] [L04 — Consultas e reconciliação](04-consultas-replica.md) — depende de L02 e L03.
 - [ ] [L05 — Interfaces e confirmações](05-interface.md) — depende de L03 e L04.
@@ -46,6 +46,10 @@ Executar L01→L02→L03→L04→L05→L06. Questões de produto da L01 bloqueia
 - [ ] Retry não duplica evento; revogação, revisão e concorrência são verificadas no servidor.
 - [ ] Arquivadas consultáveis; saída/retorno da réplica não perde fila ou texto local.
 - [ ] Interface confirmada, integrações aprovadas e limitações documentadas.
+
+## Evidências da slice
+
+28/10/2026 — L02: migration 0011, espelho Electric e validação descartável de instalação/upgrade/restart/grants aprovados. 53 testes e `pnpm check` passaram. Ver [L02](02-schema-auditoria.md).
 
 ## Evidência da L01
 

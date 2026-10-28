@@ -47,7 +47,7 @@ export const issueEvents = pgTable(
     ),
     check(
       'issue_events_type_check',
-      sql`${table.type} IN ('created', 'edited', 'started', 'returned', 'released', 'completed')`,
+      sql`${table.type} IN ('created', 'edited', 'started', 'returned', 'released', 'completed', 'archived', 'reopened', 'reactivated')`,
     ),
     check('issue_events_actor_label_check', sql`length(btrim(${table.actorLabel})) > 0`),
     check(
@@ -101,7 +101,7 @@ export const issueSyncEvents = pgTable(
     ),
     check(
       'issue_sync_events_type_check',
-      sql`${table.type} IN ('created', 'edited', 'started', 'returned', 'released', 'completed')`,
+      sql`${table.type} IN ('created', 'edited', 'started', 'returned', 'released', 'completed', 'archived', 'reopened', 'reactivated')`,
     ),
     check('issue_sync_events_actor_label_check', sql`length(btrim(${table.actorLabel})) > 0`),
     check(

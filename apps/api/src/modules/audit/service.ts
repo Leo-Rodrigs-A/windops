@@ -24,6 +24,7 @@ const publicSnapshotKeys = [
   'turbineId',
   'status',
   'completionReport',
+  'archivedAt',
   'revision',
 ] as const;
 

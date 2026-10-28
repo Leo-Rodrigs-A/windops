@@ -445,6 +445,9 @@ function eventLabel(type: IssueEvent['type']) {
     returned: 'Chamado devolvido para a fila',
     released: 'Atendimento liberado',
     completed: 'Chamado concluído',
+    archived: 'Chamado arquivado',
+    reopened: 'Chamado reaberto',
+    reactivated: 'Chamado reativado',
   };
   return labels[type];
 }

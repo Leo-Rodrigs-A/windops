@@ -78,6 +78,13 @@
       "when": 1793141440522,
       "tag": "0010_sync_issue_rows",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1793220000000,
+      "tag": "0011_issue_lifecycle_archive",
+      "breakpoints": true
     }
   ]
 }

@@ -76,17 +76,17 @@ describe('proxy autorizado de shapes Electric', () => {
       expect(upstreamUrl?.pathname).toBe('/v1/shape');
       expect(upstreamUrl?.searchParams.get('table')).toBe('public.issue_sync_rows');
       expect(upstreamUrl?.searchParams.get('columns')).toBe(
-        'id,workspace_id,park_id,turbine_id,text,completion_report,status,created_at,updated_at,revision',
+        'id,workspace_id,park_id,turbine_id,text,completion_report,archived_at,status,created_at,updated_at,revision',
       );
       expect(upstreamUrl?.searchParams.get('where')).toBe(
-        "workspace_id = $1 AND status IN ('pending', 'in_progress')",
+        "workspace_id = $1 AND archived_at IS NULL AND status IN ('pending', 'in_progress')",
       );
       await app.inject({
         url: `/api/sync/issue-events?workspaceId=${workspaceId}&offset=-1`,
         headers: { 'x-sync-user': user.id },
       });
       expect(upstreamUrl?.searchParams.get('where')).toBe(
-        "workspace_id = $1 AND issue_id IN (SELECT id FROM public.issue_sync_rows WHERE workspace_id = $1 AND status IN ('pending', 'in_progress'))",
+        "workspace_id = $1 AND issue_id IN (SELECT id FROM public.issue_sync_rows WHERE workspace_id = $1 AND archived_at IS NULL AND status IN ('pending', 'in_progress'))",
       );
       await app.inject({
         url: `/api/sync/parks?workspaceId=${workspaceId}&offset=-1`,

@@ -49,7 +49,9 @@ try {
   await app.query('SELECT id FROM public.parks LIMIT 0');
   await app.query('SELECT id FROM public.turbines LIMIT 0');
   await app.query('SELECT id FROM public.issues LIMIT 0');
-  await app.query('SELECT id, text, completion_report FROM public.issue_sync_rows LIMIT 0');
+  await app.query(
+    'SELECT id, text, completion_report, archived_at FROM public.issue_sync_rows LIMIT 0',
+  );
   await app.query('SELECT id FROM public.issue_events LIMIT 0');
   await app.query('SELECT id, actor_label, before, after FROM public.issue_sync_events LIMIT 0');
   await app.query('SELECT event_id FROM public.issue_location_references LIMIT 0');
@@ -143,7 +145,7 @@ try {
   );
   await replication.query('SELECT id, workspace_id, park_id, code FROM public.turbines LIMIT 0');
   await replication.query(
-    'SELECT id, workspace_id, park_id, turbine_id, text, completion_report, status FROM public.issue_sync_rows LIMIT 0',
+    'SELECT id, workspace_id, park_id, turbine_id, text, completion_report, archived_at, status FROM public.issue_sync_rows LIMIT 0',
   );
   await replication.query(
     'SELECT id, workspace_id, issue_id, actor_label, before, after FROM public.issue_sync_events LIMIT 0',
@@ -186,6 +188,7 @@ try {
       'workspace_id',
     ],
     issue_sync_rows: [
+      'archived_at',
       'completion_report',
       'created_at',
       'id',

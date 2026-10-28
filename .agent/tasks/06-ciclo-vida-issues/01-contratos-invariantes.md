@@ -39,14 +39,14 @@ Contratos compartilhados, matriz de permissões e .agent/database.md; sem migra�
 
 Todas as ações novas desta slice são online. Cada comando contém `commandId` UUID e `expectedRevision` positiva; schema estrito rejeita campos extras. A API deriva ator e workspace da sessão/membership autorizada, revalida membership na transação e grava mudança, evento append-only e recibo idempotente no mesmo commit. Revisão obsoleta ou transição inválida retorna conflito sem mutação. Retry do mesmo comando/payload retorna resultado original; chave repetida com payload diferente conflita.
 
-| Ação | Permissão e pré-condição | Efeito e evento |
-| --- | --- | --- |
-| Reabrir issue Concluída | Admin ativo; parque e turbina ativos | Pendente, sem responsável e sem relato de conclusão; incrementa revisão; evento `reopened` com antes/depois. |
-| Arquivar issue Pendente | Criador ativo ou admin ativo | Marca como arquivada, mantém status operacional e histórico; evento `archived`. |
-| Arquivar issue Em andamento | Admin ativo | Marca como arquivada; mantém dados de atendimento para auditoria; evento `archived`. |
-| Arquivar issue Concluída | Ninguém | Rejeitado; issue concluída nunca é arquivável. |
-| Reativar issue arquivada Pendente/Em andamento | Admin ativo; parque e turbina ativos | Remove arquivo e retorna a Pendente, limpa responsável e relato; incrementa revisão; evento `reactivated`. |
-| Reativar issue arquivada Concluída | Ninguém | Rejeitado; concluídas não podem ser arquivadas, portanto esse estado é inválido. |
+| Ação                                           | Permissão e pré-condição             | Efeito e evento                                                                                              |
+| ---------------------------------------------- | ------------------------------------ | ------------------------------------------------------------------------------------------------------------ |
+| Reabrir issue Concluída                        | Admin ativo; parque e turbina ativos | Pendente, sem responsável e sem relato de conclusão; incrementa revisão; evento `reopened` com antes/depois. |
+| Arquivar issue Pendente                        | Criador ativo ou admin ativo         | Marca como arquivada, mantém status operacional e histórico; evento `archived`.                              |
+| Arquivar issue Em andamento                    | Admin ativo                          | Marca como arquivada; mantém dados de atendimento para auditoria; evento `archived`.                         |
+| Arquivar issue Concluída                       | Ninguém                              | Rejeitado; issue concluída nunca é arquivável.                                                               |
+| Reativar issue arquivada Pendente/Em andamento | Admin ativo; parque e turbina ativos | Remove arquivo e retorna a Pendente, limpa responsável e relato; incrementa revisão; evento `reactivated`.   |
+| Reativar issue arquivada Concluída             | Ninguém                              | Rejeitado; concluídas não podem ser arquivadas, portanto esse estado é inválido.                             |
 
 Arquivo é dimensão separada do estado de atendimento. Reabrir e reativar são distintas: reabrir exige Concluída; reativar exige arquivada. Localização não é alterada automaticamente. Parque arquivado, turbina arquivada ou turbina sob parque arquivado bloqueiam reabertura/reativação; primeiro admin restaura o equipamento no catálogo. Edição, início, devolução e conclusão sobre issue arquivada são rejeitados. Eventos anteriores nunca são alterados; a reabertura não oferece ação de recuperar relato substituído.
 

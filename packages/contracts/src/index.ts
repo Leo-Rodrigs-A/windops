@@ -230,6 +230,9 @@ export const issueEventTypeSchema = z.enum([
   'returned',
   'released',
   'completed',
+  'archived',
+  'reopened',
+  'reactivated',
 ]);
 export const issueLocationSchema = z.object({ parkId: z.uuid(), turbineId: z.uuid() }).strict();
 const issueTextSchema = z.string().trim().min(1).max(10_000);
