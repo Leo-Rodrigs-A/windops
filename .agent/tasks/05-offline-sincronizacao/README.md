@@ -2,7 +2,7 @@
 
 ## Status
 
-Em andamento desde 27/10/2026, após aprovação da slice 04 pelo proprietário. S01–S07 concluídas; S08 e S09 permanecem.
+Em andamento desde 27/10/2026, após aprovação da slice 04 pelo proprietário. S01–S08 concluídas; S09 restante.
 
 - [ ] Slice concluída
 
@@ -15,7 +15,7 @@ Um dispositivo previamente autenticado e preparado permite consultar catálogo/i
 - Slices [01](../01-fundacao/README.md), [02](../02-equipe-acesso/README.md), [03](../03-parques-turbinas/README.md) e [04](../04-registro-atendimento/README.md) concluídas. A aprovação da slice 04 é funcional online; não comprova durabilidade local nem suporte offline de aparelhos.
 - API de issues tem UUIDs, revisão, mutação/evento/recibo atômicos e retry autorizado. `sync_commands` é recibo remoto; S02 adiciona journal local de projeções/comandos, S05 adiciona envio ordenado e S07 conecta a interface ao sender.
 - `apps/api/src/modules/sync/routes.ts` expõe shapes pelo proxy autenticado; a publication Electric contém workspaces, catálogo e projeções sanitizadas de issues/eventos. S04 coordena `ShapeStream`s e persiste rows/checkpoints no journal TanStack/IndexedDB da S02. S07 conecta Home, detalhe, catálogo e Histórico; navegadores reais adicionais não foram certificados.
-- `AuthProvider` diferencia sessão online, expiração/rede com marcador local sem credenciais e revogação conhecida. Logout invalida o contexto local em todas as abas e preserva a partição. S07 conecta UI e Cloud ao journal/outbox; Manifest/ícones existem, mas não há service worker/offline pronto.
+- `AuthProvider` diferencia sessão online, expiração/rede com marcador local sem credenciais e revogação conhecida. Logout invalida o contexto local em todas as abas e preserva a partição. S07 conecta UI e Cloud ao journal/outbox; S08 adicionou service worker/app shell e validou navegação offline no desktop.
 - Regra atual do servidor: autor inicia após uma hora da criação; outros membros iniciam imediatamente; somente responsável devolve/conclui. Sessão com segunda etapa e membership ativa são obrigatórias para upload e shapes.
 
 ## Ordem e dependências
@@ -40,10 +40,10 @@ Executar na ordem S01–S09. A política temporal foi preservada na S01; Indexed
 - [x] S05 — Envio, dependências e retries de comandos — executor revalida workspace, usa lease, persiste ACK/retries e preserva cadeia; evidências em [S05](05-envio-comandos.md).
 - [x] S06 — Acesso offline, conflitos e recuperação — conclusão registrada em 28/10; expiração temporal real dispensada pelo proprietário.
 - [x] S07 — Interface de campo e status de sincronização — conclusão registrada em 28/10; paginação após primeira página não exercitada por decisão do proprietário, e quota verificada por simulação no IndexedDB.
-- [ ] S08 — PWA, reabertura e atualizações seguras
+- [x] S08 — PWA, reabertura e atualizações seguras — concluída em desktop: shell/reabertura, gravação e sync offline, upgrade em duas abas com fila, formulário e fechamento do navegador; Cache Storage sem `/api`/`/auth/`. Validação Android/iPhone transferida para S09/produção por decisão do proprietário; sem declaração de suporte móvel.
 - [ ] S09 — Validação integrada de campo e encerramento
 
-S06 e S07 concluídas em 28/10. S06: recuperação/logout/exportação, conflito revisável, isolamento, revogação com streams, coordenação entre abas e troca de conta com request lento em voo; expiração temporal real dispensada explicitamente. S07: leitura e escrita locais, conclusão offline com relato, ordenação, Histórico offline após sincronizar cache, estado sem cache, navegação offline com app shell carregado, indicador Cloud, teclado, zoom, tema, leitor de tela e viewport móvel. Limites aceitos/registrados: paginação após primeira página não exercitada por não haver dados suficientes, quota simulada no IndexedDB sem exaustão real no browser, F5 offline pertence à S08/PWA e persistência de armazenamento não foi concedida pelo browser. Evidências em [S06](06-acesso-conflitos-exportacao.md) e [S07](07-interface-offline.md). Biome, boundaries, typechecks contracts/API/web, 53 testes e build web passaram diretamente; `pnpm check` não emitiu saída em 30s.
+S06–S08 concluídas em 28/10. S06: recuperação/logout/exportação, conflito revisável, isolamento, revogação com streams, coordenação entre abas e troca de conta com request lento em voo; expiração temporal real dispensada explicitamente. S07: leitura e escrita locais, conclusão offline com relato, ordenação, Histórico offline após sincronizar cache, estado sem cache, indicador Cloud, teclado, zoom, tema, leitor de tela e viewport. S08: app shell e upgrade com fila validados no Preview desktop; Cache Storage sem `/api` e `/auth/`. Limites: paginação após primeira página não exercitada, quota simulada sem exaustão real e armazenamento persistente não concedido pelo browser. Android/iPhone serão validados em produção na S09; não declarar suporte móvel. Evidências em [S06](06-acesso-conflitos-exportacao.md), [S07](07-interface-offline.md) e [S08](08-pwa-atualizacoes.md). Biome, boundaries, typechecks contracts/API/web, 53 testes e build web passaram diretamente; `pnpm check` não emitiu saída em 30s.
 
 ## Escopo e limites
 

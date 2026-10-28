@@ -14,6 +14,8 @@ Comprovar o percurso campo→aparelho→servidor→outro aparelho, com perdas e 
 
 Planejada em 26/10/2026. O plano não comprova implementação nem validação. Ver a base existente e os limites no [índice da slice](README.md).
 
+S08 concluída em 28/10/2026 com validação desktop no Preview de build. Por decisão do proprietário, validação real em Android/iPhone e contexto HTTPS de aparelho serão executados em produção nesta S09; não declarar suporte móvel antes desses testes.
+
 ## Dependências
 
 S01–S08 concluídas para o escopo declarado; decisões temporais e limites de suporte registrados.
