@@ -6,9 +6,11 @@ import {
   type Issue,
   type IssueEventPage,
   type IssueEventQuery,
+  type IssueLifecycleCommand,
   type IssuesPage,
   type IssuesQuery,
   issueEventPageSchema,
+  issueLifecycleCommandSchema,
   issueSchema,
   issuesPageSchema,
   type ReleaseIssue,
@@ -109,6 +111,21 @@ export async function releaseIssue(workspaceId: string, issueId: string, input: 
   const body = releaseIssueSchema.parse(input);
   return issueSchema.parse(
     await requestJson(`${issuesPath(workspaceId, issueId)}/release`, {
+      method: 'POST',
+      body: JSON.stringify(body),
+    }),
+  ) as Issue;
+}
+
+export async function lifecycleIssue(
+  workspaceId: string,
+  issueId: string,
+  action: 'archive' | 'reopen' | 'reactivate',
+  input: IssueLifecycleCommand,
+) {
+  const body = issueLifecycleCommandSchema.parse(input);
+  return issueSchema.parse(
+    await requestJson(`${issuesPath(workspaceId, issueId)}/${action}`, {
       method: 'POST',
       body: JSON.stringify(body),
     }),

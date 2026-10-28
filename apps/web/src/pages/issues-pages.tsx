@@ -1,6 +1,7 @@
 import { Link, useParams } from '@tanstack/react-router';
 import type { Issue, IssueEvent, IssueStatus, Park, Turbine } from '@windops/contracts';
 import {
+  Archive,
   ArrowLeft,
   CalendarClock,
   Check,
@@ -17,7 +18,7 @@ import {
   ShieldCheck,
   UserRound,
 } from 'lucide-react';
-import { type FormEvent, useCallback, useEffect, useRef, useState } from 'react';
+import { type FormEvent, type ReactNode, useCallback, useEffect, useRef, useState } from 'react';
 import { useAuth } from '../auth/auth-context';
 import { SignOutButton } from '../components/sign-out-button';
 import { ThemeToggle } from '../components/theme-toggle';
@@ -49,7 +50,13 @@ import { workspaceNavigationItems } from '../components/ui/workspace-navigation'
 import { WorkspaceSidebarLayout } from '../components/ui/workspace-sidebar';
 import { WorkspaceSystemActions } from '../components/workspace-system-actions';
 import { ApiRequestError } from '../lib/auth-api';
-import { getIssue, getIssueEvents, getIssues, releaseIssue } from '../lib/issues-api';
+import {
+  getIssue,
+  getIssueEvents,
+  getIssues,
+  lifecycleIssue,
+  releaseIssue,
+} from '../lib/issues-api';
 import { getPark, getParks, getParkTurbines, getTurbine } from '../lib/workspace-api';
 import type {
   LocalIssueCommand,
@@ -78,6 +85,7 @@ type IssueDetailEntry = {
   status: IssueStatus;
   text: string;
   completionReport: string | null;
+  archivedAt: string | null;
   createdAt: string;
   updatedAt: string;
   revision: number;
@@ -97,6 +105,7 @@ function issueDetailEntry(issue: Issue): IssueDetailEntry {
     status: issue.status,
     text: issue.text,
     completionReport: issue.completionReport,
+    archivedAt: issue.archivedAt,
     createdAt: issue.createdAt,
     updatedAt: issue.updatedAt,
     revision: issue.revision,
@@ -170,6 +179,7 @@ function localIssueDetailEntry(
       (pendingCompletionReport
         ? projection.local.completionReport
         : (projection.serverIssue?.completionReport ?? projection.local.completionReport)) ?? null,
+    archivedAt: projection.serverIssue?.archivedAt ?? null,
     createdAt: projection.serverIssue?.createdAt ?? projection.createdAt ?? projection.updatedAt,
     updatedAt: projection.updatedAt,
     revision: projection.serverRevision ?? 1,
@@ -405,7 +415,7 @@ function issueErrorMessage(error: unknown, action: string) {
     if (error.code === 'ISSUE_NOT_EDITABLE')
       return 'Este chamado não pode mais ser editado neste estado.';
     if (error.code === 'EQUIPMENT_UNAVAILABLE')
-      return 'Este equipamento foi arquivado e não aceita novos chamados.';
+      return 'O parque ou a turbina estão arquivados. Reative o equipamento antes de criar ou reativar o chamado.';
     if (error.code === 'ISSUE_STATE_CONFLICT')
       return 'O estado do chamado mudou. Atualize os dados e tente novamente.';
     if (error.code === 'ISSUE_ACTION_FORBIDDEN')
@@ -1085,15 +1095,17 @@ export function WorkspaceHomePage() {
 function IssueListItem({
   issue,
   location,
+  action,
 }: {
   issue: Issue | IssueListEntry;
   location: { park: string; turbine: string } | undefined;
+  action?: ReactNode;
 }) {
   const item = 'creator' in issue ? issueListEntry(issue) : issue;
   return (
-    <li>
+    <li className="flex flex-col sm:flex-row sm:items-center">
       <Link
-        className="flex min-h-24 items-start gap-3 px-4 py-4 transition-colors hover:bg-muted/40 focus-visible:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring sm:px-5"
+        className="flex min-h-24 min-w-0 flex-1 items-start gap-3 px-4 py-4 transition-colors hover:bg-muted/40 focus-visible:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring sm:px-5"
         params={{ issueId: item.id }}
         to="/chamados/$issueId"
       >
@@ -1119,7 +1131,218 @@ function IssueListItem({
           </span>
         </span>
       </Link>
+      {action && <div className="px-4 pb-4 sm:pb-0 sm:pr-5">{action}</div>}
     </li>
+  );
+}
+
+export function ArchivedIssuesPage() {
+  const { snapshot } = useAuth();
+  const offline = useOfflineWorkspace();
+  const workspaceId = offline.workspaceId ?? '';
+  const [issues, setIssues] = useState<Issue[]>([]);
+  const [cursor, setCursor] = useState<string | null>(null);
+  const [search, setSearch] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [busyId, setBusyId] = useState('');
+  const [notice, setNotice] = useState('');
+  const [reactivateTarget, setReactivateTarget] = useState<Issue | null>(null);
+  const reactivateCommands = useRef<Record<string, string>>({});
+  const isAdmin =
+    snapshot.status === 'authenticated' && snapshot.context.role === 'admin' && offline.online;
+  const load = useCallback(
+    async (next?: string, append = false) => {
+      if (!workspaceId || !offline.online || snapshot.status !== 'authenticated') {
+        setError('Conecte-se para consultar os chamados arquivados.');
+        setLoading(false);
+        return;
+      }
+      setLoading(true);
+      setError('');
+      try {
+        const page = await getIssues(workspaceId, {
+          status: 'archived',
+          limit: 25,
+          ...(next ? { cursor: next } : {}),
+        });
+        setIssues((previous) => (append ? [...previous, ...page.items] : page.items));
+        setCursor(page.nextCursor);
+      } catch (cause) {
+        setError(issueErrorMessage(cause, 'carregar os chamados arquivados'));
+      } finally {
+        setLoading(false);
+      }
+    },
+    [offline.online, snapshot.status, workspaceId],
+  );
+  useEffect(() => {
+    void load();
+  }, [load]);
+  const visible = issues.filter(
+    (item) =>
+      item.text.toLocaleLowerCase('pt-BR').includes(search.trim().toLocaleLowerCase('pt-BR')) ||
+      item.parkId.toLowerCase().includes(search.trim().toLowerCase()) ||
+      item.turbineId.toLowerCase().includes(search.trim().toLowerCase()),
+  );
+  async function reactivate(issue: Issue): Promise<boolean> {
+    const commandId = reactivateCommands.current[issue.id] ?? crypto.randomUUID();
+    reactivateCommands.current[issue.id] = commandId;
+    setBusyId(issue.id);
+    setError('');
+    setNotice('');
+    try {
+      await lifecycleIssue(workspaceId, issue.id, 'reactivate', {
+        commandId,
+        expectedRevision: issue.revision,
+      });
+      delete reactivateCommands.current[issue.id];
+      setNotice('Chamado reativado e devolvido à lista de Pendentes.');
+      await load();
+      return true;
+    } catch (cause) {
+      setError(issueErrorMessage(cause, 'reativar o chamado'));
+      return false;
+    } finally {
+      setBusyId('');
+    }
+  }
+  return (
+    <WorkspaceSidebarLayout
+      activeHref="/arquivados"
+      items={navigation}
+      workspaceName={offline.workspaceName ?? 'Workspace'}
+    >
+      <main className="min-h-dvh bg-background px-4 pt-5 pb-24 text-foreground sm:px-6 md:px-8 md:py-7">
+        <div className="mx-auto w-full max-w-6xl space-y-6">
+          <AppPageHeader
+            eyebrow={`${offline.workspaceName ?? 'Workspace'} / Chamados`}
+            title="Arquivados"
+            subtitle="Chamados preservados com histórico; a consulta exige conexão."
+          />
+          <Card className="gap-0 overflow-hidden py-0">
+            <CardHeader className="border-b border-border/70 px-4 py-4 sm:px-5">
+              <Label htmlFor="archived-search">Pesquisar chamados arquivados</Label>
+              <Input
+                id="archived-search"
+                type="search"
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
+                placeholder="Texto ou identificação do equipamento"
+              />
+            </CardHeader>
+            <CardContent className="p-0">
+              {notice && (
+                <div className="p-4">
+                  <Feedback message={notice} tone="success" />
+                </div>
+              )}
+              {error && (
+                <div className="p-4">
+                  <Feedback message={error} tone="error" />
+                  <Button variant="outline" onClick={() => void load()}>
+                    Tentar novamente
+                  </Button>
+                </div>
+              )}
+              {loading ? (
+                <div className="p-8">
+                  <LoadingState label="Carregando chamados arquivados…" />
+                </div>
+              ) : visible.length === 0 ? (
+                <div className="grid min-h-56 place-items-center p-8 text-center">
+                  <div>
+                    <Archive
+                      aria-hidden="true"
+                      className="mx-auto mb-3 size-7 text-muted-foreground"
+                    />
+                    <h2 className="font-semibold">
+                      {search ? 'Nenhum chamado encontrado' : 'Nenhum chamado arquivado'}
+                    </h2>
+                    <p className="mt-1 text-sm text-muted-foreground">
+                      Os chamados arquivados aparecerão aqui.
+                    </p>
+                  </div>
+                </div>
+              ) : (
+                <ul className="divide-y divide-border/70">
+                  {visible.map((issue) => (
+                    <IssueListItem
+                      key={issue.id}
+                      issue={issue}
+                      location={undefined}
+                      action={
+                        isAdmin ? (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            disabled={Boolean(busyId)}
+                            onClick={() => setReactivateTarget(issue)}
+                          >
+                            {busyId === issue.id ? 'Reativando…' : 'Reativar'}
+                          </Button>
+                        ) : undefined
+                      }
+                    />
+                  ))}
+                </ul>
+              )}
+              {cursor && !loading && (
+                <div className="border-t p-3 text-center">
+                  <Button variant="ghost" onClick={() => void load(cursor, true)}>
+                    Carregar mais
+                  </Button>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+      </main>
+      <HomeNavigation
+        activeHref="/arquivados"
+        className="fixed inset-x-0 bottom-0 md:hidden"
+        items={navigation}
+      />
+      <Dialog
+        open={reactivateTarget !== null}
+        onOpenChange={(open) => {
+          if (!open && !busyId) setReactivateTarget(null);
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Reativar chamado?</DialogTitle>
+            <DialogDescription>
+              O chamado voltará para Pendentes e o atendimento atual será removido. A reativação
+              exige conexão e só será concluída se o parque e a turbina estiverem ativos.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              disabled={Boolean(busyId)}
+              onClick={() => setReactivateTarget(null)}
+              type="button"
+              variant="outline"
+            >
+              Cancelar
+            </Button>
+            <Button
+              disabled={Boolean(busyId) || !offline.online}
+              onClick={() => {
+                if (reactivateTarget) {
+                  void reactivate(reactivateTarget).then((succeeded) => {
+                    if (succeeded) setReactivateTarget(null);
+                  });
+                }
+              }}
+              type="button"
+            >
+              {busyId ? 'Reativando…' : 'Reativar chamado'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </WorkspaceSidebarLayout>
   );
 }
 
@@ -1232,6 +1455,9 @@ export function IssueDetailPage() {
   const [detailLoading, setDetailLoading] = useState(true);
   const [notice, setNotice] = useState('');
   const [busyAction, setBusyAction] = useState('');
+  const [lifecycleChoice, setLifecycleChoice] = useState<
+    'archive' | 'reopen' | 'reactivate' | null
+  >(null);
   const [clockNow, setClockNow] = useState(() => Date.now());
   const [completeOpen, setCompleteOpen] = useState(false);
   const [completionDraft, setCompletionDraft] = useState('');
@@ -1510,6 +1736,44 @@ export function IssueDetailPage() {
     return actionCommitted;
   }
 
+  async function confirmLifecycle() {
+    if (
+      !issue ||
+      !lifecycleChoice ||
+      snapshot.status !== 'authenticated' ||
+      !offlineWorkspace.online
+    )
+      return;
+    const action = lifecycleChoice;
+    const commandId = actionCommands.current[action] ?? crypto.randomUUID();
+    actionCommands.current[action] = commandId;
+    setBusyAction(action);
+    setDetailError('');
+    try {
+      const updated = await lifecycleIssue(workspaceId, issue.id, action, {
+        commandId,
+        expectedRevision: issue.revision,
+      });
+      delete actionCommands.current[action];
+      setIssue(issueDetailEntry(updated));
+      setLifecycleChoice(null);
+      setNotice(
+        action === 'archive'
+          ? 'Chamado arquivado.'
+          : action === 'reopen'
+            ? 'Chamado reaberto.'
+            : 'Chamado reativado.',
+      );
+      const history = await getIssueEvents(workspaceId, issue.id, { limit: 25 });
+      setEvents(history.items);
+      setEventCursor(history.nextCursor);
+    } catch (cause) {
+      setDetailError(issueErrorMessage(cause, 'atualizar o ciclo de vida'));
+    } finally {
+      setBusyAction('');
+    }
+  }
+
   async function submitCompletion(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const pendingCompletion = offlineWorkspace.store
@@ -1737,6 +2001,35 @@ export function IssueDetailPage() {
                         Editar meu chamado
                       </Button>
                     )}
+                    {isAdmin && issue.status === 'completed' && !issue.archivedAt && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => setLifecycleChoice('reopen')}
+                      >
+                        Reabrir
+                      </Button>
+                    )}
+                    {isAdmin && issue.archivedAt && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => setLifecycleChoice('reactivate')}
+                      >
+                        Reativar
+                      </Button>
+                    )}
+                    {!issue.archivedAt &&
+                      issue.status !== 'completed' &&
+                      (isAdmin || (isCreator && issue.status === 'pending')) && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => setLifecycleChoice('archive')}
+                        >
+                          Arquivar
+                        </Button>
+                      )}
                   </div>
                   <CardTitle className="text-base font-normal leading-relaxed whitespace-pre-wrap">
                     {issue.text}
@@ -1872,6 +2165,41 @@ export function IssueDetailPage() {
         />
       </main>
 
+      <Dialog
+        open={lifecycleChoice !== null}
+        onOpenChange={(open) => {
+          if (!open && !busyAction) setLifecycleChoice(null);
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              {lifecycleChoice === 'archive'
+                ? 'Arquivar chamado?'
+                : lifecycleChoice === 'reopen'
+                  ? 'Reabrir chamado?'
+                  : 'Reativar chamado?'}
+            </DialogTitle>
+            <DialogDescription>
+              A ação exige conexão. Reabrir ou reativar só funciona quando parque e turbina estão
+              ativos. O histórico permanece disponível.
+            </DialogDescription>
+          </DialogHeader>
+          {detailError && <Feedback message={detailError} tone="error" />}
+          <DialogFooter>
+            <Button
+              variant="outline"
+              disabled={Boolean(busyAction)}
+              onClick={() => setLifecycleChoice(null)}
+            >
+              Cancelar
+            </Button>
+            <Button disabled={Boolean(busyAction)} onClick={() => void confirmLifecycle()}>
+              {busyAction ? 'Salvando…' : 'Confirmar'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
       <Dialog
         onOpenChange={(open) => {
           if (!open && !editBusy) setEditOpen(false);

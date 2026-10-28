@@ -85,6 +85,11 @@ const issueHistoryRoute = createRoute({
   path: '/historico',
   component: lazyRouteComponent(issuePages, 'IssueHistoryPage'),
 });
+const archivedIssuesRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/arquivados',
+  component: lazyRouteComponent(issuePages, 'ArchivedIssuesPage'),
+});
 const accountRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/conta',
@@ -124,6 +129,7 @@ const router = createRouter({
     appRoute,
     issueDetailRoute,
     issueHistoryRoute,
+    archivedIssuesRoute,
     accountRoute,
     parksRoute,
     teamRoute,
