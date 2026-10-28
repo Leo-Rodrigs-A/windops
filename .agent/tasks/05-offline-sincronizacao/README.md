@@ -2,9 +2,8 @@
 
 ## Status
 
-Em andamento desde 27/10/2026, após aprovação da slice 04 pelo proprietário. S01–S08 concluídas; S09 restante.
+- [x] Slice concluída em 28/10/2026 para o escopo browser/desktop validado; validação Android/iPhone transferida à produção por decisão do proprietário. Não declarar suporte móvel.
 
-- [ ] Slice concluída
 
 ## Resultado esperado
 
@@ -40,10 +39,12 @@ Executar na ordem S01–S09. A política temporal foi preservada na S01; Indexed
 - [x] S05 — Envio, dependências e retries de comandos — executor revalida workspace, usa lease, persiste ACK/retries e preserva cadeia; evidências em [S05](05-envio-comandos.md).
 - [x] S06 — Acesso offline, conflitos e recuperação — conclusão registrada em 28/10; expiração temporal real dispensada pelo proprietário.
 - [x] S07 — Interface de campo e status de sincronização — conclusão registrada em 28/10; paginação após primeira página não exercitada por decisão do proprietário, e quota verificada por simulação no IndexedDB.
-- [x] S08 — PWA, reabertura e atualizações seguras — concluída em desktop: shell/reabertura, gravação e sync offline, upgrade em duas abas com fila, formulário e fechamento do navegador; Cache Storage sem `/api`/`/auth/`. Validação Android/iPhone transferida para S09/produção por decisão do proprietário; sem declaração de suporte móvel.
-- [ ] S09 — Validação integrada de campo e encerramento
+- [x] S08 — PWA, reabertura e atualizações seguras — concluída em desktop: shell/reabertura, gravação e sync offline, upgrade em duas abas com fila, formulário e fechamento do navegador; Cache Storage sem `/api`/`/auth/`. Validação Android/iPhone transferida para produção por decisão do proprietário; sem declaração de suporte móvel.
+- [x] S09 — Validação integrada de campo e encerramento — concluída no escopo browser/desktop. Integrações PostgreSQL/Electric, cobertura automatizada de failpoints e matriz funcional em sessões de navegador passaram; Android/iPhone/HTTPS em aparelho ficam para produção, sem declaração de suporte móvel.
 
-S06–S08 concluídas em 28/10. S06: recuperação/logout/exportação, conflito revisável, isolamento, revogação com streams, coordenação entre abas e troca de conta com request lento em voo; expiração temporal real dispensada explicitamente. S07: leitura e escrita locais, conclusão offline com relato, ordenação, Histórico offline após sincronizar cache, estado sem cache, indicador Cloud, teclado, zoom, tema, leitor de tela e viewport. S08: app shell e upgrade com fila validados no Preview desktop; Cache Storage sem `/api` e `/auth/`. Limites: paginação após primeira página não exercitada, quota simulada sem exaustão real e armazenamento persistente não concedido pelo browser. Android/iPhone serão validados em produção na S09; não declarar suporte móvel. Evidências em [S06](06-acesso-conflitos-exportacao.md), [S07](07-interface-offline.md) e [S08](08-pwa-atualizacoes.md). Biome, boundaries, typechecks contracts/API/web, 53 testes e build web passaram diretamente; `pnpm check` não emitiu saída em 30s.
+S06–S09 concluídas em 28/10 para o escopo browser/desktop. S06: recuperação/logout/exportação, conflito revisável, isolamento, revogação com streams, coordenação entre abas e troca de conta com request lento em voo; expiração temporal real dispensada explicitamente. S07: leitura e escrita locais, conclusão offline com relato, ordenação, Histórico offline após sincronizar cache, estado sem cache, indicador Cloud, teclado, zoom, tema, leitor de tela e viewport. S08: app shell e upgrade com fila validados no Preview desktop; Cache Storage sem `/api` e `/auth/`. Limites: paginação após primeira página não exercitada, quota simulada sem exaustão real e armazenamento persistente não concedido pelo browser. Android/iPhone/HTTPS em aparelho foram transferidos para produção; não declarar suporte móvel. Evidências em [S06](06-acesso-conflitos-exportacao.md), [S07](07-interface-offline.md), [S08](08-pwa-atualizacoes.md) e [S09](09-validacao-integrada.md). Biome, boundaries, typechecks contracts/API/web, 53 testes e build web passaram diretamente; `pnpm check` não emitiu saída por 31s.
+
+S09 concluída em 28/10 para o escopo browser/desktop: Biome/boundaries, typechecks, 53 testes, build web, integrações auth/workspaces/parks/issues, smoke de rollback/shape Electric e cobertura automatizada de failpoints passaram por comandos diretos. `pnpm check` ficou sem saída por 31s e foi interrompido. As integrações usaram bancos descartáveis e não deixaram fixtures; Docker Compose permaneceu saudável. A expectativa de ordenação do fixture issues foi alinhada à regra existente de mais recentes primeiro. Proprietário confirmou matriz funcional multi-sessão em abas anônimas; não repetir esses fluxos. Android/iPhone e HTTPS em aparelho permanecem como validação de produção; suporte móvel não declarado. Ver [S09](09-validacao-integrada.md).
 
 ## Escopo e limites
 
@@ -68,13 +69,13 @@ S06–S08 concluídas em 28/10. S06: recuperação/logout/exportação, conflito
 
 ## Aceite da slice
 
-- [ ] Preparação completa e durável com catálogo, issues e logs necessários; cache parcial claramente identificado.
-- [ ] Gravação local atômica, fila recuperável após encerramento/restart e update, sem sucesso falso em quota/erro.
-- [ ] Envio autorizado e idempotente, dependências ordenadas e reconciliação sem duplicação ou regressão.
-- [ ] Tenant/conta isolados em banco local, proxy, streams, caches, logout e respostas tardias.
-- [ ] Conflitos, expiração, revogação e perda de resposta preservam conteúdo e exportação; regra temporal comprovada.
-- [ ] PWA reabre offline; Cloud mostra estado real; percurso em aparelhos documentado com limitações e aceite funcional.
-- [ ] Checks e integrações pertinentes aprovados, evidências datadas e documentos atualizados sem prometer funcionalidades futuras.
+- [x] Preparação completa e durável com catálogo, issues e logs necessários; cache parcial claramente identificado.
+- [x] Gravação local atômica, fila recuperável após encerramento/restart e update, sem sucesso falso em quota/erro.
+- [x] Envio autorizado e idempotente, dependências ordenadas e reconciliação sem duplicação ou regressão.
+- [x] Tenant/conta isolados em banco local, proxy, streams, caches, logout e respostas tardias.
+- [x] Conflitos, revogação e perda de resposta preservam conteúdo e exportação; simulação temporal da espera de uma hora foi dispensada pelo proprietário.
+- [x] PWA reabre offline; Cloud mostra estado real; percursos browser/desktop documentados. Validação Android/iPhone deferida à produção; sem declaração de suporte móvel.
+- [x] Checks diretos e integrações pertinentes passaram; `pnpm check` ficou sem saída e não foi declarado aprovado. Evidências datadas e limitações registradas.
 
 ## Evidência do planejamento
 

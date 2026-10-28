@@ -49,6 +49,7 @@ const issueIds = [
   '00000000-0000-4000-8000-000000000102',
   '00000000-0000-4000-8000-000000000103',
 ];
+const issueIdsByRecency = [...issueIds].reverse();
 const eventIds = ['00000000-0000-4000-8000-000000000201', '00000000-0000-4000-8000-000000000202'];
 const issueBId = randomUUID();
 const parkIds = {
@@ -312,9 +313,9 @@ try {
     assert.equal(page.statusCode, 200, page.body);
     assert.deepEqual(
       page.json().items.map(({ id }) => id),
-      issueIds.slice(0, 2),
+      issueIdsByRecency.slice(0, 2),
     );
-    assert.equal(page.json().nextCursor, issueIds[1]);
+    assert.equal(page.json().nextCursor, issueIdsByRecency[1]);
     const next = await app.inject({
       url: `${root}/issues?limit=2&cursor=${page.json().nextCursor}`,
       headers: headers(user),
@@ -322,7 +323,7 @@ try {
     assert.equal(next.statusCode, 200, next.body);
     assert.deepEqual(
       next.json().items.map(({ id }) => id),
-      [issueIds[2]],
+      [issueIdsByRecency[2]],
     );
     assert.equal(next.json().nextCursor, null);
   }

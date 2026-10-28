@@ -4,6 +4,8 @@
 
 Planejada
 
+Follow-up registrado em 28/10/2026: a S09 foi concluída para browser/desktop. O proprietário transferiu validação Android/iPhone, restart físico e HTTPS em aparelho para esta etapa. Não declarar suporte móvel antes dessas evidências.
+
 ## Objetivo e escopo
 
 Validar aparelhos reais, limites storage, OAuth/Resend/push reais, Neon replication, VPS, domínio, backups, migrations/rollback, proteção main e monitoramento. Habilitar deploy somente após checklist aprovado.
