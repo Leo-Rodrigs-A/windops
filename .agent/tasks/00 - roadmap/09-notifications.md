@@ -2,7 +2,7 @@
 
 ## Status
 
-Planejada
+Planejada na [slice 07](../07-notificacoes/README.md), com N01–N06. Implementação ainda não iniciada.
 
 ## Objetivo e escopo
 

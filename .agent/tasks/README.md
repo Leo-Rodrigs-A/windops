@@ -8,7 +8,9 @@ Cada nova slice fica em uma pasta `NN-nome/`, com um `README.md` que define resu
 
 ## Slice atual
 
-Slice atual: [06 — Ciclo de vida das issues](06-ciclo-vida-issues/README.md), concluída em 28/10/2026 (L01–L06). Próxima slice ainda não planejada.
+- [ ] [07 — Campainha e Web Push](07-notificacoes/README.md): política, outbox transacional, campainha, worker e validação.
+
+Slice atual: [06 — Ciclo de vida das issues](06-ciclo-vida-issues/README.md), concluída em 28/10/2026 (L01–L06). Próxima execução: [07 — Campainha e Web Push](07-notificacoes/README.md), planejada com N01–N06. Iniciar pela N01.
 
 - [x] [06 — Ciclo de vida das issues](06-ciclo-vida-issues/README.md): reabertura, arquivo/reativação e integração segura com réplica/fila.
 
