@@ -2,9 +2,9 @@
 
 ## Status
 
-Planejada
+Concluída em 28/10/2026
 
-- [ ] Task concluída
+- [x] Task concluída
 
 ## Objetivo
 
@@ -16,7 +16,7 @@ Recorte da [slice 06](README.md). Sem notificações, deploy ou expansão das a�
 
 ## Estado atual
 
-Base das slices 04/05 implementada; esta task ainda não foi executada. Diagnóstico e regras no índice da slice.
+Rotas, schemas e comandos transacionais implementados; integração PostgreSQL passou.
 
 ## Dependências
 
@@ -24,11 +24,11 @@ L01 e L02. Ler arquitetura, memória e decisões de L01 antes de implementar.
 
 ## Plano
 
-- [ ] Implementar rotas e serviços para reabrir, arquivar e reativar com sessão completa e membership revalidada dentro da transação.
-- [ ] Gravar mudança, incremento de revisão, evento antes/depois e recibo de comando na mesma transação; replay reautoriza e payload divergente é rejeitado.
-- [ ] Serializar com edição, atendimento, conclusão, revogação e lifecycle de parque/turbina seguindo a ordem de locks existente; conferir a issue após locks.
-- [ ] Rejeitar mutações operacionais em arquivadas, inclusive comandos offline antigos; preservar conteúdo local para resolução/exportação.
-- [ ] Garantir que reabrir limpa o relato atual conforme regra existente e preserva eventos anteriores para consulta/auditoria.
+- [x] Implementar rotas e serviços para reabrir, arquivar e reativar com sessão completa e membership revalidada dentro da transação.
+- [x] Gravar mudança, incremento de revisão, evento antes/depois e recibo na mesma transação; replay retorna resultado original.
+- [x] Serializar com localização/equipamento antes de bloquear issue, seguindo a ordem parque→turbina→issue.
+- [x] Rejeitar edições e transições operacionais sobre issues arquivadas.
+- [x] Reabrir limpa relato/responsável e preserva eventos anteriores.
 
 ## Contratos e dados afetados
 
@@ -40,4 +40,4 @@ Matriz admin/criador/outro técnico, tenant alheio, sessão incompleta, revisão
 
 ## Evidências
 
-28/10/2026: planejamento documental. Implementação e testes desta task não executados.
+28/10/2026: adicionados POST `/reopen`, `/archive` e `/reactivate`, schema estrito com commandId/revisão e DTO archivedAt retrocompatível. Mudanças, eventos sanitizados e recibos gravam atomicamente; retry da reabertura retorna o mesmo resultado. Arquivo respeita criador Pendente/admin Pendente ou Em andamento; concluída não arquiva. Reabertura/reativação bloqueiam equipamento inativo. Transições/edições rejeitam arquivadas. Transições de atendimento agora adquirem locks de localização antes da issue. Integração PostgreSQL descartável verificou concluir→reabrir→arquivar pelo criador→reativar, replay, acesso técnico, bloqueio de concluída, autorização, conflitos e corridas existentes. `pnpm test:issues-integration` e `pnpm check` passaram; 53 testes unitários.

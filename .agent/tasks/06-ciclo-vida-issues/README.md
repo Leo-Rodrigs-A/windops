@@ -34,7 +34,7 @@ Executar L01→L02→L03→L04→L05→L06. Questões de produto da L01 bloqueia
 
 - [x] [L01 — Contratos e invariantes](01-contratos-invariantes.md) — depende de Slices 04 e 05.
 - [x] [L02 — Persistência e auditoria](02-schema-auditoria.md) — depende de L01.
-- [ ] [L03 — Comandos de ciclo de vida](03-comandos-transacionais.md) — depende de L01 e L02.
+- [x] [L03 — Comandos de ciclo de vida](03-comandos-transacionais.md) — depende de L01 e L02.
 - [ ] [L04 — Consultas e reconciliação](04-consultas-replica.md) — depende de L02 e L03.
 - [ ] [L05 — Interfaces e confirmações](05-interface.md) — depende de L03 e L04.
 - [ ] [L06 — Validação integrada e encerramento](06-validacao-integrada.md) — depende de L01–L05.
@@ -48,6 +48,8 @@ Executar L01→L02→L03→L04→L05→L06. Questões de produto da L01 bloqueia
 - [ ] Interface confirmada, integrações aprovadas e limitações documentadas.
 
 ## Evidências da slice
+
+28/10/2026 — L03 concluída: comandos transacionais, autorização, idempotência e locks validados na integração PostgreSQL; `pnpm test:issues-integration` e `pnpm check` passaram. Ver [L03](03-comandos-transacionais.md).
 
 28/10/2026 — L02: migration 0011, espelho Electric e validação descartável de instalação/upgrade/restart/grants aprovados. 53 testes e `pnpm check` passaram. Ver [L02](02-schema-auditoria.md).
 

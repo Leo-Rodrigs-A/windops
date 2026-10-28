@@ -185,6 +185,7 @@ it('validates issue contracts, strict fields, text limits, location pairs, and p
     handler: null,
     text: 'Elevador parado',
     completionReport: null,
+    archivedAt: null,
     status: 'pending',
     createdAt: '2026-10-26T12:00:00.000Z',
     updatedAt: '2026-10-26T12:00:00.000Z',

@@ -8,6 +8,7 @@ import type {
   IssueEvent,
   IssueEventPage,
   IssueEventQuery,
+  IssueLifecycleCommand,
   IssueStatus,
   IssuesPage,
   IssuesQuery,
@@ -101,6 +102,24 @@ export interface IssuesService {
     issueId: string,
     input: CompleteIssue,
   ): Promise<IssueWriteResult<Issue>>;
+  reopenIssue(
+    headers: IncomingHttpHeaders,
+    workspaceId: string,
+    issueId: string,
+    input: IssueLifecycleCommand,
+  ): Promise<IssueWriteResult<Issue>>;
+  archiveIssue(
+    headers: IncomingHttpHeaders,
+    workspaceId: string,
+    issueId: string,
+    input: IssueLifecycleCommand,
+  ): Promise<IssueWriteResult<Issue>>;
+  reactivateIssue(
+    headers: IncomingHttpHeaders,
+    workspaceId: string,
+    issueId: string,
+    input: IssueLifecycleCommand,
+  ): Promise<IssueWriteResult<Issue>>;
 }
 
 export interface IssueWriteDependencies {
@@ -121,6 +140,7 @@ interface IssueRow extends QueryResultRow {
   handlerUserId: string | null;
   text: string;
   completionReport: string | null;
+  archivedAt: Date | null;
   ownerWaitElapsed?: boolean;
   status: IssueStatus;
   createdAt: Date;
@@ -143,7 +163,8 @@ interface IssueEventRow extends QueryResultRow {
 const issueColumns = `i.id, i.workspace_id AS "workspaceId", i.park_id AS "parkId",
   i.turbine_id AS "turbineId", i.creator_membership_id AS "creatorMembershipId",
   i.creator_user_id AS "creatorUserId", i.handler_membership_id AS "handlerMembershipId",
-  i.handler_user_id AS "handlerUserId", i.text, i.completion_report AS "completionReport", i.status,
+  i.handler_user_id AS "handlerUserId", i.text, i.completion_report AS "completionReport",
+  i.archived_at AS "archivedAt", i.status,
   i.created_at AS "createdAt", i.updated_at AS "updatedAt", i.revision`;
 
 function toIssue(row: IssueRow, users: Map<string, AuthenticatedUser>): Issue {
@@ -162,6 +183,7 @@ function toIssue(row: IssueRow, users: Map<string, AuthenticatedUser>): Issue {
     handler,
     text: row.text,
     completionReport: row.completionReport,
+    archivedAt: row.archivedAt?.toISOString() ?? null,
     status: row.status,
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),
@@ -216,6 +238,7 @@ function issueSnapshot(issue: Issue): Record<string, unknown> {
     handlerMembershipId: issue.handlerMembershipId,
     handler: issue.handler,
     completionReport: issue.completionReport,
+    archivedAt: issue.archivedAt,
     revision: issue.revision,
   };
 }
@@ -303,6 +326,15 @@ export function createIssuesService(
       const replay = await replayReceipt(client, workspaceId, principal, input.commandId, hash);
       if (replay) return replay;
 
+      const observedResult = await client.query<IssueRow>(
+        `SELECT ${issueColumns} FROM public.issues i WHERE i.workspace_id = $1 AND i.id = $2`,
+        [workspaceId, issueId],
+      );
+      const observedRow = observedResult.rows[0];
+      if (!observedRow) return { status: 'not_found' };
+      await writeDependencies.parks.lockIssueLocations(client, workspaceId, [
+        { parkId: observedRow.parkId, turbineId: observedRow.turbineId },
+      ]);
       const currentResult = await client.query<IssueRow>(
         `SELECT ${issueColumns},
                 (i.created_at + interval '1 hour' <= clock_timestamp()) AS "ownerWaitElapsed"
@@ -312,6 +344,13 @@ export function createIssuesService(
       );
       const currentRow = currentResult.rows[0];
       if (!currentRow) return { status: 'not_found' };
+      if (currentRow.archivedAt) return { status: 'state_conflict' };
+      if (
+        currentRow.revision !== observedRow.revision ||
+        currentRow.parkId !== observedRow.parkId ||
+        currentRow.turbineId !== observedRow.turbineId
+      )
+        return { status: 'revision_conflict' };
       if (currentRow.revision !== input.expectedRevision) return { status: 'revision_conflict' };
       if (operation === 'start' && currentRow.status !== 'pending')
         return { status: 'state_conflict' };
@@ -395,6 +434,103 @@ export function createIssuesService(
       });
       return { status: 'ok', value: issue };
     });
+  }
+
+  async function lifecycleIssue(
+    operation: 'reopen' | 'archive' | 'reactivate',
+    headers: IncomingHttpHeaders,
+    workspaceId: string,
+    issueId: string,
+    input: IssueLifecycleCommand,
+  ): Promise<IssueWriteResult<Issue>> {
+    return withWriteTransaction(
+      headers,
+      workspaceId,
+      operation === 'archive' ? undefined : ['admin'],
+      async (client, principal) => {
+        const hash = commandHash({ operation, issueId, expectedRevision: input.expectedRevision });
+        const replay = await replayReceipt(client, workspaceId, principal, input.commandId, hash);
+        if (replay) return replay;
+
+        const observed = await client.query<IssueRow>(
+          `SELECT ${issueColumns} FROM public.issues i WHERE i.workspace_id = $1 AND i.id = $2`,
+          [workspaceId, issueId],
+        );
+        const observedRow = observed.rows[0];
+        if (!observedRow) return { status: 'not_found' };
+        const locations = await writeDependencies.parks.lockIssueLocations(client, workspaceId, [
+          { parkId: observedRow.parkId, turbineId: observedRow.turbineId },
+        ]);
+        const location = locations[0];
+        const locked = await client.query<IssueRow>(
+          `SELECT ${issueColumns} FROM public.issues i WHERE i.workspace_id = $1 AND i.id = $2 FOR UPDATE`,
+          [workspaceId, issueId],
+        );
+        const current = locked.rows[0];
+        if (!current) return { status: 'not_found' };
+        if (
+          current.revision !== input.expectedRevision ||
+          current.parkId !== observedRow.parkId ||
+          current.turbineId !== observedRow.turbineId
+        )
+          return { status: 'revision_conflict' };
+        if (operation === 'reopen' && (current.status !== 'completed' || current.archivedAt))
+          return { status: 'state_conflict' };
+        if (operation === 'archive' && (current.status === 'completed' || current.archivedAt))
+          return { status: 'state_conflict' };
+        if (
+          operation === 'archive' &&
+          principal.workspace.role !== 'admin' &&
+          (current.creatorUserId !== principal.user.id || current.status !== 'pending')
+        )
+          return { status: 'action_forbidden' };
+        if (operation === 'reactivate' && (!current.archivedAt || current.status === 'completed'))
+          return { status: 'state_conflict' };
+        if (operation !== 'archive' && !location?.active)
+          return { status: 'equipment_unavailable' };
+
+        const before = toIssue(current, await getUsers(identity, [current]));
+        const update = await client.query<IssueRow>(
+          `UPDATE public.issues i
+           SET archived_at = CASE WHEN $3 = 'archive' THEN clock_timestamp() WHEN $3 = 'reactivate' THEN NULL ELSE i.archived_at END,
+               status = CASE WHEN $3 IN ('reopen', 'reactivate') THEN 'pending' ELSE i.status END,
+               handler_membership_id = CASE WHEN $3 IN ('reopen', 'reactivate') THEN NULL ELSE i.handler_membership_id END,
+               handler_user_id = CASE WHEN $3 IN ('reopen', 'reactivate') THEN NULL ELSE i.handler_user_id END,
+               completion_report = CASE WHEN $3 IN ('reopen', 'reactivate') THEN NULL ELSE i.completion_report END,
+               revision = revision + 1, updated_at = clock_timestamp()
+           WHERE i.workspace_id = $1 AND i.id = $2 RETURNING ${issueColumns}`,
+          [workspaceId, issueId, operation],
+        );
+        const updated = update.rows[0];
+        if (!updated) throw new Error('Issue lifecycle update returned no row.');
+        const issue = toIssue(updated, await getUsers(identity, [updated]));
+        await writeDependencies.audit.appendIssueEvent(client, {
+          id: randomUUID(),
+          workspaceId,
+          issueId,
+          actorMembershipId: principal.membershipId,
+          actorUserId: principal.user.id,
+          actorLabel: principal.user.name,
+          type:
+            operation === 'reopen'
+              ? 'reopened'
+              : operation === 'archive'
+                ? 'archived'
+                : 'reactivated',
+          before: issueSnapshot(before),
+          after: issueSnapshot(issue),
+        });
+        await writeDependencies.sync.appendCommandReceipt(client, {
+          workspaceId,
+          actorMembershipId: principal.membershipId,
+          actorUserId: principal.user.id,
+          commandId: input.commandId,
+          payloadHash: hash,
+          result: issue as unknown as Record<string, unknown>,
+        });
+        return { status: 'ok', value: issue };
+      },
+    );
   }
 
   return {
@@ -606,6 +742,7 @@ export function createIssuesService(
         );
         const observedRow = observedResult.rows[0];
         if (!observedRow) return { status: 'not_found' };
+        if (observedRow.archivedAt) return { status: 'not_editable' };
         if (observedRow.creatorUserId !== principal.user.id) return { status: 'action_forbidden' };
         if (observedRow.status === 'completed') return { status: 'not_editable' };
         if (observedRow.revision !== input.expectedRevision) return { status: 'revision_conflict' };
@@ -641,6 +778,7 @@ export function createIssuesService(
         );
         const currentRow = currentResult.rows[0];
         if (!currentRow) return { status: 'not_found' };
+        if (currentRow.archivedAt) return { status: 'not_editable' };
         if (
           currentRow.revision !== input.expectedRevision ||
           currentRow.parkId !== observedRow.parkId ||
@@ -704,5 +842,11 @@ export function createIssuesService(
     completeIssue(headers, workspaceId, issueId, input) {
       return transitionIssue('complete', headers, workspaceId, issueId, input);
     },
+    reopenIssue: (headers, workspaceId, issueId, input) =>
+      lifecycleIssue('reopen', headers, workspaceId, issueId, input),
+    archiveIssue: (headers, workspaceId, issueId, input) =>
+      lifecycleIssue('archive', headers, workspaceId, issueId, input),
+    reactivateIssue: (headers, workspaceId, issueId, input) =>
+      lifecycleIssue('reactivate', headers, workspaceId, issueId, input),
   };
 }

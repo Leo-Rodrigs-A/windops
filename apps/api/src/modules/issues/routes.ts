@@ -4,6 +4,7 @@ import {
   errorSchema,
   issueEventPageSchema,
   issueEventQuerySchema,
+  issueLifecycleCommandSchema,
   issueSchema,
   issuesPageSchema,
   issuesQuerySchema,
@@ -90,6 +91,42 @@ export function registerIssuesRoutes(
   authorization: WorkspaceAuthorizationService,
   issues: IssuesService,
 ) {
+  const lifecycleActions = [
+    ['reopen', 'reopenIssue'],
+    ['archive', 'archiveIssue'],
+    ['reactivate', 'reactivateIssue'],
+  ] as const;
+  for (const [action, method] of lifecycleActions) {
+    app.post(
+      `/api/workspaces/:workspaceId/issues/:issueId/${action}`,
+      {
+        schema: {
+          params: issuePathParamsSchema,
+          body: issueLifecycleCommandSchema,
+          response: {
+            200: issueSchema,
+            400: errorSchema,
+            401: errorSchema,
+            403: errorSchema,
+            404: errorSchema,
+            409: errorSchema,
+          },
+        },
+      },
+      async (request, reply) => {
+        const { workspaceId, issueId } = issuePathParamsSchema.parse(request.params);
+        const result = await issues[method](
+          request.headers,
+          workspaceId,
+          issueId,
+          issueLifecycleCommandSchema.parse(request.body),
+        );
+        if (result.status !== 'ok') return respondIssueWriteError(reply, request, result.status);
+        return reply.send(result.value);
+      },
+    );
+  }
+
   app.post(
     '/api/workspaces/:workspaceId/issues/:issueId/complete',
     {

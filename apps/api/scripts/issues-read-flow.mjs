@@ -1199,7 +1199,70 @@ try {
   });
   assert.equal(activeList.statusCode, 200, activeList.body);
   assert.ok(activeList.json().items.every((issue) => issue.status !== 'completed'));
+  await expectError(
+    await app.inject({
+      method: 'POST',
+      url: `${root}/issues/${ownerWaitIssueId}/reopen`,
+      headers: headers(ids.tech),
+      payload: { commandId: randomUUID(), expectedRevision: 6 },
+    }),
+    403,
+    'WORKSPACE_ACCESS_DENIED',
+  );
+  await expectError(
+    await app.inject({
+      method: 'POST',
+      url: `${root}/issues/${newerCompletedId}/archive`,
+      headers: headers(ids.admin),
+      payload: { commandId: randomUUID(), expectedRevision: 3 },
+    }),
+    409,
+    'ISSUE_STATE_CONFLICT',
+  );
 
+  const reopenCommand = { commandId: randomUUID(), expectedRevision: 3 };
+  const reopened = await app.inject({
+    method: 'POST',
+    url: `${root}/issues/${ownerWaitIssueId}/reopen`,
+    headers: headers(ids.admin),
+    payload: reopenCommand,
+  });
+  assert.equal(reopened.statusCode, 200, reopened.body);
+  assert.equal(reopened.json().status, 'pending');
+  assert.equal(reopened.json().completionReport, null);
+  const reopenedAgain = await app.inject({
+    method: 'POST',
+    url: `${root}/issues/${ownerWaitIssueId}/reopen`,
+    headers: headers(ids.admin),
+    payload: reopenCommand,
+  });
+  assert.equal(reopenedAgain.statusCode, 200, reopenedAgain.body);
+  assert.deepEqual(reopenedAgain.json(), reopened.json());
+  const archiveCommand = { commandId: randomUUID(), expectedRevision: 4 };
+  const archivedByCreator = await app.inject({
+    method: 'POST',
+    url: `${root}/issues/${ownerWaitIssueId}/archive`,
+    headers: headers(ids.tech),
+    payload: archiveCommand,
+  });
+  assert.equal(archivedByCreator.statusCode, 200, archivedByCreator.body);
+  assert.ok(archivedByCreator.json().archivedAt);
+  const reactivated = await app.inject({
+    method: 'POST',
+    url: `${root}/issues/${ownerWaitIssueId}/reactivate`,
+    headers: headers(ids.admin),
+    payload: { commandId: randomUUID(), expectedRevision: 5 },
+  });
+  assert.equal(reactivated.statusCode, 200, reactivated.body);
+  assert.equal(reactivated.json().archivedAt, null);
+  assert.equal(reactivated.json().status, 'pending');
+  const lifecycleEvents = await pool.query(
+    `SELECT type FROM public.issue_events WHERE issue_id = $1 ORDER BY occurred_at, id`,
+    [ownerWaitIssueId],
+  );
+  assert.ok(lifecycleEvents.rows.some((event) => event.type === 'reopened'));
+  assert.ok(lifecycleEvents.rows.some((event) => event.type === 'archived'));
+  assert.ok(lifecycleEvents.rows.some((event) => event.type === 'reactivated'));
   await expectError(
     await app.inject({
       method: 'DELETE',

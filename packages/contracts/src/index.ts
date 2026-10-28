@@ -248,6 +248,7 @@ export const issueSchema = z
     handler: authenticatedUserSchema.nullable(),
     text: issueTextSchema,
     completionReport: z.string().max(10_000).nullable(),
+    archivedAt: z.iso.datetime().nullable().default(null),
     status: issueStatusSchema,
     createdAt: z.iso.datetime(),
     updatedAt: z.iso.datetime(),
@@ -320,6 +321,7 @@ export const releaseIssueSchema = issueActionSchema;
 export const completeIssueSchema = issueActionSchema.extend({
   report: z.string().trim().max(10_000).optional(),
 });
+export const issueLifecycleCommandSchema = issueActionSchema;
 export type IssueStatus = z.infer<typeof issueStatusSchema>;
 export type IssueListStatus = z.infer<typeof issueListStatusSchema>;
 export type IssueEventType = z.infer<typeof issueEventTypeSchema>;
@@ -335,6 +337,7 @@ export type StartIssue = z.infer<typeof startIssueSchema>;
 export type ReturnIssue = z.infer<typeof returnIssueSchema>;
 export type ReleaseIssue = z.infer<typeof releaseIssueSchema>;
 export type CompleteIssue = z.infer<typeof completeIssueSchema>;
+export type IssueLifecycleCommand = z.infer<typeof issueLifecycleCommandSchema>;
 
 export type WorkspaceRole = z.infer<typeof workspaceRoleSchema>;
 export type AuthenticatedUser = z.infer<typeof authenticatedUserSchema>;
