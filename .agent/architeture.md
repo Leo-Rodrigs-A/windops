@@ -112,3 +112,7 @@ Migrações rodam uma vez sob lock antes do rollout. Falha impede atualização.
 - https://tanstack.com/db/latest/docs/guides/mutations
 - https://resend.com/docs/send-with-nodejs
 - https://docs.github.com/en/actions/security-for-github-actions/security-guides/security-hardening-for-github-actions
+
+## Lifecycle de issues
+
+Slice 06 concluída para browser/desktop. Reabertura, arquivo e reativação são comandos online autorizados por tenant, revisão e recibo idempotente. Eventos são append-only; arquivo remove a issue das consultas ativas sem apagar referências ou pendências locais. A projeção Electric autorizada e a reconciliação preservam os limites tenant e comandos locais pendentes. Não expor Electric diretamente nem aceitar filtros fornecidos pelo cliente. Integração PostgreSQL e testes offline de restart, conflito e replay passaram; dispositivos móveis, HTTPS em aparelho e quota/evicção física seguem sem validação de produção.

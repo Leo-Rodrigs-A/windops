@@ -4,7 +4,7 @@
 
 Em andamento desde 28/10/2026.
 
-- [ ] Slice concluída
+- [x] Slice concluída
 
 ## Resultado esperado
 
@@ -37,15 +37,15 @@ Executar L01→L02→L03→L04→L05→L06. Questões de produto da L01 bloqueia
 - [x] [L03 — Comandos de ciclo de vida](03-comandos-transacionais.md) — depende de L01 e L02.
 - [x] [L04 — Consultas e reconciliação](04-consultas-replica.md) — depende de L02 e L03.
 - [x] [L05 — Interfaces e confirmações](05-interface.md) — concluída; validações manuais finais reportadas pelo usuário.
-- [ ] [L06 — Validação integrada e encerramento](06-validacao-integrada.md) — depende de L01–L05.
+- [x] [L06 — Validação integrada e encerramento](06-validacao-integrada.md) — depende de L01–L05.
 
 ## Aceite da slice
 
-- [ ] Matriz de permissões e transições respeitada, inclusive Concluída não arquivável.
-- [ ] Reabertura limpa relato; reativação remove atendimento; logs permanecem íntegros.
-- [ ] Retry não duplica evento; revogação, revisão e concorrência são verificadas no servidor.
-- [ ] Arquivadas consultáveis; saída/retorno da réplica não perde fila ou texto local.
-- [ ] Interface confirmada, integrações aprovadas e limitações documentadas.
+- [x] Matriz de permissões e transições respeitada, inclusive Concluída não arquivável.
+- [x] Reabertura limpa relato; reativação remove atendimento; logs permanecem íntegros.
+- [x] Retry não duplica evento; revogação, revisão e concorrência são verificadas no servidor.
+- [x] Arquivadas consultáveis; saída/retorno da réplica não perde fila ou texto local.
+- [x] Interface confirmada, integrações aprovadas e limitações documentadas.
 
 ## Evidências da slice
 
@@ -54,6 +54,8 @@ Executar L01→L02→L03→L04→L05→L06. Questões de produto da L01 bloqueia
 28/10/2026 — L05: adicionada a tela Arquivados com pesquisa e paginação, ações de reativação/reabertura/arquivo com confirmação, mensagens de conexão e integração pelo cliente API. `pnpm check` passou (lint, typecheck, 54 testes e builds). Conferido WindOps.pen: há referências de lista mobile e componentes, sem tela Arquivados dedicada; o documento não foi alterado. No browser admin foram conferidos tema claro/escuro, estados vazios desktop/mobile, foco inicial, ciclo de Tab, cancelamento/Escape, restauração de foco e árvore de acessibilidade. Foi corrigida a restauração de foco, além da navegação inferior mobile ausente e do rótulo inglês. A issue de teste foi reativada e conferida em Pendentes, onde permanece. A simulação offline validou a mensagem e a ocultação da ação, mas sem cortar a rede real. O usuário reportou que os percursos manuais finais (timeout/retry, cache, pendência local, leitor de tela e preservação de conclusão offline/Cloud) estão funcionando. A validação de Electric e conflito real continua na L06.
 
 28/10/2026 — L03 concluída: comandos transacionais, autorização, idempotência e locks validados na integração PostgreSQL; `pnpm test:issues-integration` e `pnpm check` passaram. Ver [L03](03-comandos-transacionais.md).
+
+28/10/2026 — L06 concluída: `pnpm check` e integrações auth/workspaces/parks/issues passaram; ciclo completo, equipamento inativo, revogação, espera de uma hora, conflitos e corridas verificados em PostgreSQL descartável. Testes offline cobrem restart/reconciliação e replay de resposta perdida sem duplicar evento; proprietário confirmou o percurso funcional no front. Containers PostgreSQL/Electric/Mailpit saudáveis. Sem mudança de fonte/schema/infra. Limites de dispositivos móveis, HTTPS em aparelho e quota/evicção física permanecem na produção. Ver [L06](06-validacao-integrada.md).
 
 28/10/2026 — L02: migration 0011, espelho Electric e validação descartável de instalação/upgrade/restart/grants aprovados. 53 testes e `pnpm check` passaram. Ver [L02](02-schema-auditoria.md).
 

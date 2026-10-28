@@ -2,7 +2,7 @@
 
 ## Status
 
-Parcialmente implementada: conclusão online na I09 e relato offline na slice 05. Reabertura e arquivo/reativação planejados na [slice 06](../06-ciclo-vida-issues/README.md).
+Entregue para o escopo browser/desktop: conclusão online e relato offline nas slices 04/05; reabertura, arquivo/reativação e logs na [slice 06](../06-ciclo-vida-issues/README.md). Validação integrada concluída em 28/10/2026. Dispositivos móveis, HTTPS em aparelho e quota/evicção física continuam no roadmap 11.
 
 ## Objetivo e escopo
 
@@ -20,7 +20,7 @@ Criador espera 1h desde criação; reabrir limpa relato sem apagar log; concluí
 
 Limite de 1h, relógio incoerente, voltar sem salvar, relato opcional, edição após sync negada, todas as permissões de arquivamento.
 
-A [slice 04](../04-registro-atendimento/README.md) entregou eventos/consultas e conclusão online. O autor espera uma hora desde created_at do servidor para iniciar atendimento. A [slice 05](../05-offline-sincronizacao/README.md) entregou conclusão offline durável e edição do relato antes da primeira tentativa de envio, com validação browser/desktop. Criação offline recebe created_at ao ser aceita pelo servidor. A [slice 06](../06-ciclo-vida-issues/README.md) detalha o restante; implementação ainda não iniciada.
+A [slice 04](../04-registro-atendimento/README.md) entregou eventos/consultas e conclusão online. O autor espera uma hora desde created_at do servidor para iniciar atendimento. A [slice 05](../05-offline-sincronizacao/README.md) entregou conclusão offline durável e edição do relato antes da primeira tentativa de envio, com validação browser/desktop. Criação offline recebe created_at ao ser aceita pelo servidor. A [slice 06](../06-ciclo-vida-issues/README.md) concluiu reabertura, arquivo/reativação e validação integrada no escopo browser/desktop.
 
 ## Referências e atualização
 

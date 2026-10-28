@@ -8,9 +8,9 @@ Cada nova slice fica em uma pasta `NN-nome/`, com um `README.md` que define resu
 
 ## Slice atual
 
-Próxima execução: [06 — Ciclo de vida das issues](06-ciclo-vida-issues/README.md), em andamento desde 28/10/2026. L01–L05 concluídas; L06 é a próxima validação integrada. Uma task aberta.
+Slice atual: [06 — Ciclo de vida das issues](06-ciclo-vida-issues/README.md), concluída em 28/10/2026 (L01–L06). Próxima slice ainda não planejada.
 
-- [ ] [06 — Ciclo de vida das issues](06-ciclo-vida-issues/README.md): reabertura, arquivo/reativação e integração segura com réplica/fila.
+- [x] [06 — Ciclo de vida das issues](06-ciclo-vida-issues/README.md): reabertura, arquivo/reativação e integração segura com réplica/fila.
 
 Slice 05 concluída em 28/10/2026 para o escopo browser/desktop, com validação integrada PostgreSQL/Electric e failpoints automatizados. O proprietário transferiu validação Android/iPhone e HTTPS em aparelho para produção; nenhum suporte móvel é declarado. A S09 não exigiu `pnpm check` aprovado (ficou sem saída por 31s); equivalentes diretos e integrações passaram. Ver [Slice 05](05-offline-sincronizacao/README.md) e evidências S09.
 
