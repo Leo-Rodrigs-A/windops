@@ -46,6 +46,7 @@ export type LocalCommandStatus =
   | 'waiting_eligibility'
   | 'blocked'
   | 'conflict'
+  | 'superseded'
   | 'rejected'
   | 'confirmed_waiting_replica'
   | 'confirmed';
@@ -96,11 +97,19 @@ export type LocalIssueProjection = {
     turbineId: string;
     text: string;
     status: Issue['status'] | 'local';
+    completionReport?: string | null;
   };
   serverRevision: number | null;
   serverActive: boolean | null;
   localRevision: number;
+  createdAt?: string;
   updatedAt: string;
+  localIdentity?: {
+    creatorUserId: string | null;
+    creatorName: string | null;
+    handlerUserId: string | null;
+    handlerName: string | null;
+  };
 };
 
 export type LocalIssueCommand = {
@@ -117,6 +126,7 @@ export type LocalIssueCommand = {
   attemptedAt: string | null;
   frozenPayload: unknown | null;
   blockReason: string | null;
+  baseServerIssue?: SyncedIssueRow | null;
   acknowledgedIssue?: SyncedIssueRow | null;
 };
 
@@ -140,6 +150,22 @@ function validatePartition(partition: Partition): Partition {
   return z.object({ accountId: z.uuid(), workspaceId: z.uuid() }).strict().parse(partition);
 }
 
+function sameSyncedIssue(left: SyncedIssueRow | null, right: SyncedIssueRow) {
+  return Boolean(
+    left &&
+      left.id === right.id &&
+      left.workspaceId === right.workspaceId &&
+      left.parkId === right.parkId &&
+      left.turbineId === right.turbineId &&
+      left.text === right.text &&
+      left.completionReport === right.completionReport &&
+      left.status === right.status &&
+      left.createdAt === right.createdAt &&
+      left.updatedAt === right.updatedAt &&
+      left.revision === right.revision,
+  );
+}
+
 function makeJournal(db: IndexedDBInstance) {
   return createCollection(
     indexedDBCollectionOptions<JournalRow>({
@@ -151,6 +177,7 @@ function makeJournal(db: IndexedDBInstance) {
 }
 
 export class LocalIssueStore {
+  private readonly listeners = new Set<() => void>();
   private constructor(
     readonly partition: Partition,
     private readonly db: IndexedDBInstance,
@@ -179,6 +206,15 @@ export class LocalIssueStore {
     this.db.close();
   }
 
+  subscribe(listener: () => void) {
+    this.listeners.add(listener);
+    return () => this.listeners.delete(listener);
+  }
+
+  listIssues() {
+    return [...this.journal.values()].flatMap((row) => (row.kind === 'issue' ? [row.value] : []));
+  }
+
   async requestPersistentStorage(): Promise<boolean> {
     if (!navigator.storage?.persist) return false;
     return navigator.storage.persist();
@@ -199,6 +235,7 @@ export class LocalIssueStore {
     }
     if (this.getIssue(payload.issueId))
       throw new Error('O ID do chamado já existe nesta partição local.');
+    const createdAt = new Date().toISOString();
     const issue: LocalIssueProjection = {
       id: payload.issueId,
       workspaceId: this.partition.workspaceId,
@@ -212,7 +249,14 @@ export class LocalIssueStore {
       serverRevision: null,
       serverActive: null,
       localRevision: 1,
-      updatedAt: new Date().toISOString(),
+      createdAt,
+      updatedAt: createdAt,
+      localIdentity: {
+        creatorUserId: this.partition.accountId,
+        creatorName: null,
+        handlerUserId: null,
+        handlerName: null,
+      },
     };
     const command = this.newCommand(
       payload.commandId,
@@ -260,19 +304,102 @@ export class LocalIssueStore {
       localRevision: current.localRevision + 1,
       updatedAt: new Date().toISOString(),
     };
-    const command = this.newCommand(
-      payload.commandId,
-      input.issueId,
-      'update',
-      payload,
-      dependency?.id ?? null,
-      current.serverRevision,
-    );
+    const command = {
+      ...this.newCommand(
+        payload.commandId,
+        input.issueId,
+        'update',
+        payload,
+        dependency?.id ?? null,
+        current.serverRevision,
+      ),
+      baseServerIssue: current.serverIssue,
+    };
     await this.commitRows([
       { id: `issue:${projection.id}`, kind: 'issue', value: projection },
       { id: `command:${command.id}`, kind: 'command', value: command },
     ]);
     return { issue: projection, command };
+  }
+
+  async recreateUpdateAfterConflict(input: {
+    conflictedCommandId: string;
+    commandId: string;
+    text: string;
+  }) {
+    const previous = this.getCommand(input.conflictedCommandId);
+    if (!previous || !['conflict', 'rejected'].includes(previous.status))
+      throw new Error('Somente um conflito ou rejeição conhecida pode ser corrigido.');
+    if (previous.kind !== 'update')
+      throw new Error(
+        'Esta recuperação é exclusiva de conflitos de conteúdo; status usa ação online.',
+      );
+    if (previous.frozenPayload === null && previous.status === 'rejected')
+      throw new Error('A rejeição não contém uma tentativa conhecida para corrigir.');
+    const current = this.getIssue(previous.issueId);
+    if (!current?.serverIssue || current.serverRevision === null)
+      throw new Error('A versão remota precisa ser recebida antes de corrigir o conflito.');
+    const payload = updateIssueSchema.parse({
+      commandId: input.commandId,
+      expectedRevision: current.serverRevision,
+      text: input.text,
+    });
+    if (this.getCommand(input.commandId))
+      throw new Error('A correção precisa usar uma nova identidade de comando.');
+    const descendants = this.listPendingCommands().filter((command) => {
+      let parent = command.dependsOn;
+      const seen = new Set<string>();
+      while (parent && !seen.has(parent)) {
+        if (parent === previous.id) return true;
+        seen.add(parent);
+        parent = this.getCommand(parent)?.dependsOn ?? null;
+      }
+      return false;
+    });
+    const command: LocalIssueCommand = {
+      ...this.newCommand(
+        input.commandId,
+        previous.issueId,
+        'update',
+        payload,
+        null,
+        current.serverRevision,
+      ),
+      baseServerIssue: current.serverIssue,
+    };
+    const projection: LocalIssueProjection = {
+      ...current,
+      local: { ...current.local, text: input.text },
+      localRevision: current.localRevision + 1,
+      updatedAt: new Date().toISOString(),
+    };
+    await this.commitRows([
+      { id: `issue:${projection.id}`, kind: 'issue', value: projection },
+      { id: `command:${command.id}`, kind: 'command', value: command },
+      {
+        id: `command:${previous.id}`,
+        kind: 'command',
+        value: {
+          ...previous,
+          status: 'superseded',
+          blockReason: 'Substituído por uma correção revisada pelo técnico.',
+        },
+      },
+      ...descendants.map((child) => ({
+        id: `command:${child.id}`,
+        kind: 'command' as const,
+        value: {
+          ...child,
+          status: 'blocked' as const,
+          blockReason: 'Recrie esta etapa após resolver o conflito anterior.',
+        },
+      })),
+    ]);
+    return {
+      issue: projection,
+      command,
+      preservedDescendantIds: descendants.map((item) => item.id),
+    };
   }
 
   async queueMutation(input: {
@@ -287,14 +414,17 @@ export class LocalIssueStore {
     const retry = this.retryFor(input.commandId, input.issueId, input.kind, payload);
     if (retry) return retry;
     const dependency = this.latestCommandFor(input.issueId);
-    const command = this.newCommand(
-      input.commandId,
-      input.issueId,
-      input.kind,
-      payload,
-      dependency?.id ?? null,
-      current.serverRevision,
-    );
+    const command = {
+      ...this.newCommand(
+        input.commandId,
+        input.issueId,
+        input.kind,
+        payload,
+        dependency?.id ?? null,
+        current.serverRevision,
+      ),
+      baseServerIssue: current.serverIssue,
+    };
     const nextStatus =
       input.kind === 'start'
         ? 'in_progress'
@@ -306,9 +436,31 @@ export class LocalIssueStore {
     const projection: LocalIssueProjection = {
       ...current,
       local: { ...current.local, status: nextStatus },
+      ...(input.kind === 'start'
+        ? {
+            localIdentity: {
+              creatorUserId: current.localIdentity?.creatorUserId ?? null,
+              creatorName: current.localIdentity?.creatorName ?? null,
+              handlerUserId: this.partition.accountId,
+              handlerName: current.localIdentity?.handlerName ?? null,
+            },
+          }
+        : input.kind === 'return'
+          ? {
+              localIdentity: {
+                creatorUserId: current.localIdentity?.creatorUserId ?? null,
+                creatorName: current.localIdentity?.creatorName ?? null,
+                handlerUserId: null,
+                handlerName: null,
+              },
+            }
+          : {}),
       localRevision: current.localRevision + 1,
       updatedAt: new Date().toISOString(),
     };
+    const completePayload = payload as unknown as { report?: unknown };
+    if (input.kind === 'complete' && typeof completePayload.report === 'string')
+      projection.local.completionReport = completePayload.report;
     await this.commitRows([
       { id: `issue:${projection.id}`, kind: 'issue', value: projection },
       { id: `command:${command.id}`, kind: 'command', value: command },
@@ -333,6 +485,35 @@ export class LocalIssueStore {
     };
     await this.commitRows([{ id: `command:${id}`, kind: 'command', value: updated }]);
     return updated;
+  }
+
+  async updatePendingCompletionReport(commandId: string, report: string) {
+    const command = this.getCommand(commandId);
+    if (
+      command?.kind !== 'complete' ||
+      command.status !== 'pending' ||
+      command.attemptedAt !== null ||
+      command.frozenPayload !== null
+    )
+      throw new Error('O relato já foi enviado ou não pode mais ser editado.');
+    const payload = completeIssueSchema.parse({
+      ...(command.payload as Record<string, unknown>),
+      report,
+    });
+    const issue = this.getIssue(command.issueId);
+    if (!issue) throw new Error('O chamado desta conclusão não existe na partição local.');
+    const updatedCommand = { ...command, payload };
+    const updatedIssue: LocalIssueProjection = {
+      ...issue,
+      local: { ...issue.local, completionReport: report },
+      localRevision: issue.localRevision + 1,
+      updatedAt: new Date().toISOString(),
+    };
+    await this.commitRows([
+      { id: `command:${commandId}`, kind: 'command', value: updatedCommand },
+      { id: `issue:${issue.id}`, kind: 'issue', value: updatedIssue },
+    ]);
+    return updatedCommand;
   }
 
   async prepareCommandForSend(id: string, payload: unknown) {
@@ -361,11 +542,93 @@ export class LocalIssueStore {
     return row?.kind === 'issue' ? row.value : undefined;
   }
 
+  async recordIssueIdentity(input: {
+    issueId: string;
+    creatorUserId: string;
+    creatorName: string;
+    handlerUserId: string | null;
+    handlerName: string | null;
+  }) {
+    const current = this.getIssue(input.issueId);
+    if (!current) return;
+    const localIdentity = {
+      creatorUserId: input.creatorUserId,
+      creatorName: input.creatorName,
+      handlerUserId: input.handlerUserId,
+      handlerName: input.handlerName,
+    };
+    if (JSON.stringify(current.localIdentity) === JSON.stringify(localIdentity)) return;
+    await this.commitRows([
+      {
+        id: `issue:${input.issueId}`,
+        kind: 'issue',
+        value: { ...current, localIdentity },
+      },
+    ]);
+  }
+
+  async recordServerIssue(issue: Issue) {
+    await this.recordServerIssuePage([issue]);
+  }
+
+  async recordServerIssuePage(issues: Issue[], completeActiveSnapshot = false) {
+    const incomingIds = new Set<string>();
+    const rows: JournalRow[] = [];
+    for (const issue of issues) {
+      if (issue.workspaceId !== this.partition.workspaceId)
+        throw new Error('O chamado pertence a outro workspace.');
+      incomingIds.add(issue.id);
+      const remote: SyncedIssueRow = {
+        id: issue.id,
+        workspaceId: issue.workspaceId,
+        parkId: issue.parkId,
+        turbineId: issue.turbineId,
+        text: issue.text,
+        completionReport: issue.completionReport,
+        status: issue.status,
+        createdAt: issue.createdAt,
+        updatedAt: issue.updatedAt,
+        revision: issue.revision,
+      };
+      rows.push(...this.reconcileRemoteIssue(issue.id, remote));
+    }
+    if (completeActiveSnapshot) {
+      for (const projection of this.listIssues()) {
+        if (
+          incomingIds.has(projection.id) ||
+          projection.serverActive === false ||
+          (!projection.serverIssue && projection.serverRevision === null)
+        )
+          continue;
+        rows.push({
+          id: `issue:${projection.id}`,
+          kind: 'issue',
+          value: { ...projection, serverActive: false },
+        });
+        rows.push(...this.confirmCompletedIssueDeparture(projection.id));
+      }
+    }
+    if (rows.length > 0) await this.commitRows(rows);
+  }
+
   getCommand(id: string) {
     const row = this.journal.get(`command:${id}`);
     return row?.kind === 'command'
       ? { ...row.value, chainId: row.value.chainId ?? row.value.issueId }
       : undefined;
+  }
+
+  getConflictReview(commandId: string) {
+    const command = this.getCommand(commandId);
+    if (command?.status !== 'conflict') return null;
+    const issue = this.getIssue(command.issueId);
+    if (!issue?.serverIssue) return null;
+    return {
+      command,
+      base: command.baseServerIssue ?? null,
+      local: issue.local,
+      remote: issue.serverIssue,
+    };
   }
 
   getCheckpoint(collection: ReplicaCollection) {
@@ -587,6 +850,7 @@ export class LocalIssueStore {
             },
             serverRevision: remote.revision,
             serverActive: true,
+            createdAt: remote.createdAt,
             localRevision: 0,
             updatedAt: remote.updatedAt,
           },
@@ -594,7 +858,32 @@ export class LocalIssueStore {
       ];
     }
     if ((current.serverRevision ?? 0) > remote.revision) return [];
-    if ((current.serverRevision ?? 0) === remote.revision && current.serverActive) return [];
+    if ((current.serverRevision ?? 0) === remote.revision && current.serverActive) {
+      const issueCommands = this.listPendingCommands().filter((command) => command.issueId === id);
+      if (sameSyncedIssue(current.serverIssue, remote)) return [];
+      return [
+        {
+          id: `issue:${id}`,
+          kind: 'issue',
+          value: {
+            ...current,
+            serverIssue: remote,
+            serverActive: true,
+            createdAt: current.createdAt ?? remote.createdAt,
+            ...(issueCommands.length === 0
+              ? {
+                  local: {
+                    parkId: remote.parkId,
+                    turbineId: remote.turbineId,
+                    text: remote.text,
+                    status: remote.status,
+                  },
+                }
+              : {}),
+          },
+        },
+      ];
+    }
 
     const pending = this.listPendingCommands().filter((command) => command.issueId === id);
     const rows: JournalRow[] = [];
@@ -637,6 +926,7 @@ export class LocalIssueStore {
         serverIssue: remote,
         serverRevision: remote.revision,
         serverActive: true,
+        createdAt: current.createdAt ?? remote.createdAt,
         ...(unresolved.length === 0
           ? {
               local: {
@@ -712,7 +1002,7 @@ export class LocalIssueStore {
   listPendingCommands() {
     return [...this.journal.values()]
       .flatMap((row) => (row.kind === 'command' ? [row.value] : []))
-      .filter((command) => command.status !== 'confirmed')
+      .filter((command) => command.status !== 'confirmed' && command.status !== 'superseded')
       .map((command) => ({ ...command, chainId: command.chainId ?? command.issueId }))
       .sort((a, b) => a.createdAt.localeCompare(b.createdAt));
   }
@@ -776,6 +1066,7 @@ export class LocalIssueStore {
           attemptedAt,
           frozenPayload,
           blockReason,
+          baseServerIssue,
         }) => ({
           id,
           issueId,
@@ -790,10 +1081,21 @@ export class LocalIssueStore {
           attemptedAt,
           frozenPayload,
           blockReason,
+          baseServerIssue: baseServerIssue ?? null,
         }),
       ),
     });
     return JSON.stringify(document, null, 2);
+  }
+
+  downloadPendingExport() {
+    const blob = new Blob([this.exportPending()], { type: 'application/json;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.download = `windops-pendencias-${this.partition.accountId}-${this.partition.workspaceId}.json`;
+    anchor.click();
+    globalThis.setTimeout(() => URL.revokeObjectURL(url), 1_000);
   }
 
   private latestCommandFor(issueId: string) {
@@ -854,6 +1156,7 @@ export class LocalIssueStore {
       }
     });
     await tx.commit();
+    for (const listener of this.listeners) listener();
   }
 }
 

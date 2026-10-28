@@ -427,8 +427,8 @@ export function createIssuesService(
            AND ($2::text IS NULL OR ($2 = 'active' AND i.status IN ('pending', 'in_progress')) OR i.status = $2)
            AND ($3::uuid IS NULL OR i.park_id = $3)
            AND ($4::uuid IS NULL OR i.turbine_id = $4)
-           AND ($5::timestamptz IS NULL OR ((CASE WHEN $2 = 'completed' THEN i.updated_at ELSE i.created_at END), i.id) ${query.status === 'completed' ? '<' : '>'} ($5, $6::uuid))
-         ORDER BY (CASE WHEN $2 = 'completed' THEN i.updated_at ELSE i.created_at END) ${query.status === 'completed' ? 'DESC' : 'ASC'}, i.id ${query.status === 'completed' ? 'DESC' : 'ASC'}
+           AND ($5::timestamptz IS NULL OR ((CASE WHEN $2 = 'completed' THEN i.updated_at ELSE i.created_at END), i.id) < ($5, $6::uuid))
+         ORDER BY (CASE WHEN $2 = 'completed' THEN i.updated_at ELSE i.created_at END) DESC, i.id DESC
          LIMIT $7`,
         [
           workspaceId,

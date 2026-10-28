@@ -34,6 +34,102 @@ afterEach(() => {
 });
 
 describe('armazenamento local de issues e outbox', () => {
+  it('preserva chamados concluídos recebidos para consulta offline do histórico', async () => {
+    const scope = { ...partition, workspaceId: crypto.randomUUID() };
+    const store = await open(scope);
+    await store.recordServerIssue({
+      id: issueId,
+      workspaceId: scope.workspaceId,
+      parkId,
+      turbineId,
+      creatorMembershipId: '70000000-0000-4000-8000-000000000001',
+      creator: {
+        id: partition.accountId,
+        email: 'tecnico@example.test',
+        name: 'Técnico',
+      },
+      handlerMembershipId: null,
+      handler: null,
+      text: 'Falha no alternador',
+      completionReport: 'Troca concluída',
+      status: 'completed',
+      createdAt: '2026-10-27T12:00:00.000Z',
+      updatedAt: '2026-10-27T12:10:00.000Z',
+      revision: 3,
+    });
+    await store.recordIssueIdentity({
+      issueId,
+      creatorUserId: partition.accountId,
+      creatorName: 'Técnico',
+      handlerUserId: null,
+      handlerName: null,
+    });
+    store.close();
+
+    const reopened = await open(scope);
+    expect(reopened.getIssue(issueId)).toMatchObject({
+      serverIssue: { status: 'completed', text: 'Falha no alternador' },
+      localIdentity: { creatorName: 'Técnico' },
+    });
+  });
+
+  it('grava no IndexedDB a versão atual do chamado recebida pela API', async () => {
+    const scope = { ...partition, workspaceId: crypto.randomUUID() };
+    const store = await open(scope);
+    await store.recordServerIssue({
+      id: issueId,
+      workspaceId: scope.workspaceId,
+      parkId,
+      turbineId,
+      creatorMembershipId: '70000000-0000-4000-8000-000000000001',
+      creator: {
+        id: partition.accountId,
+        email: 'tecnico@example.test',
+        name: 'Técnico',
+      },
+      handlerMembershipId: null,
+      handler: null,
+      text: 'Versão confirmada pela API',
+      completionReport: null,
+      status: 'pending',
+      createdAt: '2026-10-27T12:00:00.000Z',
+      updatedAt: '2026-10-27T12:05:00.000Z',
+      revision: 2,
+    });
+
+    expect(store.getIssue(issueId)).toMatchObject({
+      serverRevision: 2,
+      serverIssue: { text: 'Versão confirmada pela API', revision: 2 },
+      local: { text: 'Versão confirmada pela API', status: 'pending' },
+      serverActive: true,
+    });
+
+    const completeCommandId = '60000000-0000-4000-8000-000000000021';
+    await store.queueMutation({
+      issueId,
+      commandId: completeCommandId,
+      kind: 'complete',
+      payload: { commandId: completeCommandId, expectedRevision: 2, report: 'Concluído' },
+    });
+    await store.recordCommandAck(completeCommandId, {
+      id: issueId,
+      workspaceId: scope.workspaceId,
+      parkId,
+      turbineId,
+      text: 'Versão confirmada pela API',
+      completionReport: 'Concluído',
+      status: 'completed',
+      createdAt: '2026-10-27T12:00:00.000Z',
+      updatedAt: '2026-10-27T12:10:00.000Z',
+      revision: 3,
+    });
+    expect(store.getCommand(completeCommandId)?.status).toBe('confirmed_waiting_replica');
+
+    await store.recordServerIssuePage([], true);
+    expect(store.getIssue(issueId)?.serverActive).toBe(false);
+    expect(store.getCommand(completeCommandId)?.status).toBe('confirmed');
+  });
+
   it('persiste criação, edição e dependências após reabrir, isolado por conta', async () => {
     const scope = { ...partition, workspaceId: crypto.randomUUID() };
     const first = await open(scope);
@@ -49,6 +145,7 @@ describe('armazenamento local de issues e outbox', () => {
       commandId: '60000000-0000-4000-8000-000000000002',
       text: 'Falha confirmada na inspeção',
     });
+    expect(edited.issue.createdAt).toBe(created.issue.createdAt);
     expect(edited.command.dependsOn).toBe(created.command.id);
     expect(edited.issue.serverRevision).toBeNull();
     expect(edited.issue.localRevision).toBe(2);
@@ -220,5 +317,98 @@ describe('armazenamento local de issues e outbox', () => {
     const reopened = await open(scope);
     expect(reopened.getIssue(issueId)).toBeUndefined();
     expect(reopened.listPendingCommands()).toHaveLength(0);
+  });
+
+  it('recria uma edição conflitante com nova identidade e conserva a intenção anterior', async () => {
+    const scope = { ...partition, workspaceId: crypto.randomUUID() };
+    const store = await open(scope);
+    const remoteV1 = {
+      id: issueId,
+      workspaceId: scope.workspaceId,
+      parkId,
+      turbineId,
+      text: 'Versão base',
+      completionReport: null,
+      status: 'pending' as const,
+      createdAt: '2026-10-27T12:00:00.000Z',
+      updatedAt: '2026-10-27T12:00:00.000Z',
+      revision: 1,
+    };
+    await store.applyReplicaBatch({
+      collection: 'issues',
+      changes: [],
+      snapshotRows: [remoteV1],
+      checkpoint: {
+        collection: 'issues',
+        workspaceId: scope.workspaceId,
+        offset: '10',
+        handle: null,
+        snapshotComplete: true,
+        updatedAt: new Date().toISOString(),
+      },
+    });
+    await store.saveUpdate({
+      issueId,
+      commandId: '60000000-0000-4000-8000-000000000011',
+      text: 'Texto local em conflito',
+    });
+    await store.applyReplicaBatch({
+      collection: 'issues',
+      changes: [
+        {
+          operation: 'update',
+          id: issueId,
+          row: {
+            ...remoteV1,
+            text: 'Versão remota vencedora',
+            updatedAt: '2026-10-27T12:10:00.000Z',
+            revision: 2,
+          },
+        },
+      ],
+      checkpoint: {
+        collection: 'issues',
+        workspaceId: scope.workspaceId,
+        offset: '11',
+        handle: 'next',
+        snapshotComplete: true,
+        updatedAt: new Date().toISOString(),
+      },
+    });
+    const old = store.listPendingCommands()[0];
+    if (!old) throw new Error('O comando local deveria estar pendente.');
+    expect(old.status).toBe('conflict');
+    expect(store.getConflictReview(old.id)).toMatchObject({
+      base: { text: 'Versão base', revision: 1 },
+      local: { text: 'Texto local em conflito' },
+      remote: { text: 'Versão remota vencedora', revision: 2 },
+    });
+    const replacement = await store.recreateUpdateAfterConflict({
+      conflictedCommandId: old.id,
+      commandId: '60000000-0000-4000-8000-000000000012',
+      text: 'Texto local revisado',
+    });
+    expect(replacement.command.id).not.toBe(old.id);
+    expect(replacement.command.payload).toMatchObject({ expectedRevision: 2 });
+    expect(replacement.command.dependsOn).toBeNull();
+    expect(store.getIssue(issueId)?.serverIssue?.text).toBe('Versão remota vencedora');
+    expect(store.getIssue(issueId)?.local.text).toBe('Texto local revisado');
+    expect(store.getCommand(old.id)?.status).toBe('superseded');
+    expect(store.listPendingCommands().map((command) => command.id)).toEqual([
+      replacement.command.id,
+    ]);
+    const unknown = await store.saveUpdate({
+      issueId,
+      commandId: '60000000-0000-4000-8000-000000000013',
+      text: 'Outra edição em voo',
+    });
+    await store.setCommandStatus(unknown.command.id, 'sending');
+    await expect(
+      store.recreateUpdateAfterConflict({
+        conflictedCommandId: unknown.command.id,
+        commandId: '60000000-0000-4000-8000-000000000014',
+        text: 'Substituição não permitida',
+      }),
+    ).rejects.toThrow('Somente um conflito ou rejeição conhecida');
   });
 });

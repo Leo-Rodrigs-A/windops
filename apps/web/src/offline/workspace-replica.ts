@@ -5,6 +5,7 @@ import {
   type Offset,
   ShapeStream,
 } from '@electric-sql/client';
+import { registerOfflineResource } from './local-access';
 import type {
   LocalIssueStore,
   ReplicaChange,
@@ -27,9 +28,10 @@ type StreamFactory = (
   handle: string | null,
   signal: AbortSignal,
 ) => Stream;
-type ReplicaStatus = {
+export type ReplicaStatus = {
   ready: boolean;
   snapshots: Record<ReplicaCollection, boolean>;
+  caughtUp: Record<ReplicaCollection, boolean>;
   errors: Partial<Record<ReplicaCollection, string>>;
 };
 
@@ -39,18 +41,27 @@ function emptyStatus(): ReplicaStatus {
     snapshots: Object.fromEntries(
       replicaCollections.map((name) => [name, false]),
     ) as ReplicaStatus['snapshots'],
+    caughtUp: Object.fromEntries(
+      replicaCollections.map((name) => [name, false]),
+    ) as ReplicaStatus['caughtUp'],
     errors: {},
   };
 }
 
-function camelizeRow(collection: ReplicaCollection, value: Record<string, unknown>): ReplicaRow {
+function camelizeRow(
+  collection: ReplicaCollection,
+  value: Record<string, unknown>,
+  workspaceId: string,
+  messageKey: string,
+): ReplicaRow {
   const row: Record<string, unknown> = {};
   for (const [key, field] of Object.entries(value))
     row[key.replace(/_([a-z])/g, (_, letter: string) => letter.toUpperCase())] = field;
-  const id = String(row.id ?? '');
-  const workspaceId = String(row.workspaceId ?? (collection === 'workspace' ? id : ''));
-  if (!id || !workspaceId) throw new Error(`Linha inválida recebida em ${collection}.`);
-  return { ...row, id, workspaceId } as ReplicaRow;
+  const id = String(row.id ?? messageKey ?? '');
+  const rowWorkspaceId = String(row.workspaceId ?? (collection === 'workspace' ? id : workspaceId));
+  if (!id || !rowWorkspaceId)
+    throw new Error(`Linha inválida recebida em ${collection} (identidade ausente).`);
+  return { ...row, id, workspaceId: rowWorkspaceId } as ReplicaRow;
 }
 
 function defaultStreamFactory(workspaceId: string): StreamFactory {
@@ -75,6 +86,7 @@ export class WorkspaceReplica {
   private readonly listeners = new Set<(status: ReplicaStatus) => void>();
   private readonly status = emptyStatus();
   private started = false;
+  private unregisterResource: (() => void) | undefined;
 
   constructor(
     private readonly store: LocalIssueStore,
@@ -92,6 +104,7 @@ export class WorkspaceReplica {
     return {
       ...this.status,
       snapshots: { ...this.status.snapshots },
+      caughtUp: { ...this.status.caughtUp },
       errors: { ...this.status.errors },
     };
   }
@@ -105,6 +118,7 @@ export class WorkspaceReplica {
   start() {
     if (this.started) return;
     this.started = true;
+    this.unregisterResource = registerOfflineResource(() => this.close());
     for (const collection of replicaCollections) this.openCollection(collection);
   }
 
@@ -116,9 +130,20 @@ export class WorkspaceReplica {
     this.streams.clear();
     this.controllers.clear();
     this.started = false;
+    this.unregisterResource?.();
+    this.unregisterResource = undefined;
+  }
+
+  retry() {
+    this.close();
+    for (const collection of replicaCollections) delete this.status.errors[collection];
+    this.status.ready = this.store.isReplicaReady();
+    this.start();
+    this.publish();
   }
 
   private openCollection(collection: ReplicaCollection) {
+    this.status.caughtUp[collection] = false;
     const checkpoint = this.store.getCheckpoint(collection);
     const complete = checkpoint?.snapshotComplete === true;
     const controller = new AbortController();
@@ -133,11 +158,14 @@ export class WorkspaceReplica {
     if (!complete) this.snapshots.set(collection, new Map());
     stream.subscribe(
       async (messages) => {
+        if (this.streams.get(collection) !== stream) return;
         try {
           await this.receive(collection, stream, messages);
         } catch (error) {
+          if (this.streams.get(collection) !== stream) return;
           this.status.errors[collection] =
             error instanceof Error ? error.message : 'Falha ao persistir a réplica local.';
+          this.status.caughtUp[collection] = false;
           this.status.ready = this.store.isReplicaReady();
           stream.unsubscribeAll();
           this.controllers.get(collection)?.abort();
@@ -147,6 +175,7 @@ export class WorkspaceReplica {
         }
       },
       (error) => {
+        if (this.streams.get(collection) !== stream) return;
         this.status.errors[collection] = error.message;
         this.publish();
       },
@@ -154,6 +183,7 @@ export class WorkspaceReplica {
   }
 
   private async receive(collection: ReplicaCollection, stream: Stream, messages: Message[]) {
+    if (this.streams.get(collection) !== stream) return;
     let staging = this.snapshots.get(collection);
     let completedSnapshot: ReplicaRow[] | undefined;
     const changes: ReplicaChange[] = [];
@@ -165,11 +195,15 @@ export class WorkspaceReplica {
           staging = new Map();
           this.snapshots.set(collection, staging);
           this.status.snapshots[collection] = false;
+          this.status.caughtUp[collection] = false;
           reset = true;
         } else if (message.headers.control === 'up-to-date' && staging) {
           completedSnapshot = [...staging.values()];
           this.snapshots.delete(collection);
           staging = undefined;
+          this.status.caughtUp[collection] = true;
+        } else if (message.headers.control === 'up-to-date') {
+          this.status.caughtUp[collection] = true;
         }
       } else if (isChangeMessage(message)) {
         const operation = message.headers.operation;
@@ -178,17 +212,26 @@ export class WorkspaceReplica {
           if (staging) staging.delete(id);
           else changes.push({ operation, id });
         } else {
-          const row = camelizeRow(collection, message.value as Record<string, unknown>);
+          const row = camelizeRow(
+            collection,
+            message.value as Record<string, unknown>,
+            this.store.partition.workspaceId,
+            String(message.key ?? ''),
+          );
           if (staging) staging.set(id, row);
           else changes.push({ operation, id, row });
         }
       }
     }
 
-    if (reset) await this.store.markReplicaSnapshotIncomplete(collection);
+    if (reset) {
+      if (this.streams.get(collection) !== stream) return;
+      await this.store.markReplicaSnapshotIncomplete(collection);
+    }
     if (staging) {
       // Do not persist the advancing Electric offset while snapshot rows live only in memory.
       // A crash must restart this shape from -1 instead of skipping uncommitted snapshot data.
+      if (this.streams.get(collection) !== stream) return;
       await this.store.markReplicaSnapshotIncomplete(collection);
       this.status.ready = false;
       this.publish();
@@ -205,6 +248,7 @@ export class WorkspaceReplica {
         this.store.getCheckpoint(collection)?.snapshotComplete === true,
       updatedAt: new Date().toISOString(),
     };
+    if (this.streams.get(collection) !== stream) return;
     await this.store.applyReplicaBatch({
       collection,
       changes,

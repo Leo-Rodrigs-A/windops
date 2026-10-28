@@ -11,6 +11,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../co
 import { Feedback, LoadingState } from '../components/ui/feedback';
 import { TextField } from '../components/ui/form-field';
 import { ApiRequestError, authPost, getAuthProviders } from '../lib/auth-api';
+import { reconnectLocalAccount } from '../offline/local-access';
 
 function failureMessage(error: unknown, fallback: string) {
   if (error instanceof ApiRequestError && error.status === 429) {
@@ -219,6 +220,7 @@ export function SignInPage() {
     setBusy(true);
     try {
       await authPost('/api/auth/sign-in/email', { email, password });
+      reconnectLocalAccount();
       const next = await refresh();
       if (next.status === 'pending') await navigate({ to: '/confirmar-acesso', replace: true });
       else if (next.status === 'authenticated') await navigate({ to: '/app', replace: true });
@@ -240,6 +242,7 @@ export function SignInPage() {
         callbackURL: window.location.origin,
         errorCallbackURL: `${window.location.origin}/entrar?erro=google`,
       });
+      reconnectLocalAccount();
       const parsed = result as { url?: unknown } | null;
       if (typeof parsed?.url !== 'string') throw new Error('Resposta inválida do provedor.');
       const target = new URL(parsed.url);
@@ -509,6 +512,7 @@ export function SecondStepPage() {
     setBusy(true);
     try {
       await authPost('/api/auth/second-step/verify', { code });
+      reconnectLocalAccount();
       const next = await refresh();
       if (next.status === 'authenticated') await navigate({ to: '/app', replace: true });
       else if (next.status === 'orphan') await navigate({ to: '/sem-workspace', replace: true });

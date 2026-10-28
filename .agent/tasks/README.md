@@ -8,7 +8,7 @@ Cada nova slice fica em uma pasta `NN-nome/`, com um `README.md` que define resu
 
 ## Slice atual
 
-Próxima task: [S06 — Acesso offline, conflitos e recuperação](05-offline-sincronizacao/06-acesso-conflitos-exportacao.md). S01–S05 concluídas; S05 implementa executor ordenado com sessão/membership revalidadas, ACK durável e retries idempotentes. S01 teve retomada manual reportada em Galaxy A12/Android 12 com Brave; Chrome/Android e Safari/iPhone não foram testados e não bloquearam a conclusão.
+Task em andamento: [S07 — Interface de campo e status de sincronização](05-offline-sincronizacao/07-interface-offline.md). S06 foi concluída após validar offline, recarga, sincronização, conflito, logout/exportação, reautenticação, revogação com streams ativos, coordenação entre abas e troca de conta com request lento em voo. Expiração real foi dispensada pelo proprietário. S07 confirmou Histórico offline após sincronizar cache, cache ausente sem tela vazia e acessibilidade reportada; permanecem teste de quota e paginação além dos dados disponíveis.
 
 - [x] [01 — Fundação](01-fundacao/README.md): F01–F08 concluídas em 25/10/2026, com validação local e Android físico.
 - [x] [02 — Equipe e acesso ao workspace](02-equipe-acesso/README.md): E01–E07 concluídas; integrações, desktop, Android e ações entre cargos validados. Ajustes visuais mobile ficam para melhoria posterior.
@@ -17,7 +17,7 @@ Próxima task: [S06 — Acesso offline, conflitos e recuperação](05-offline-si
 
 - [x] [04 — Registro e atendimento](04-registro-atendimento/README.md): slice concluída e aprovada pelo proprietário em 26/10/2026; I01–I09 concluídas. Limitações e escopo futuro registrados na task.
 
-- [ ] [05 — Operação offline e sincronização](05-offline-sincronizacao/README.md): nove tasks S01–S09; S01–S05 concluídas, próxima S06.
+- [ ] [05 — Operação offline e sincronização](05-offline-sincronizacao/README.md): nove tasks S01–S09; S01–S06 concluídas e S07 em andamento.
 
 Correção solicitada durante I07: I09 concluiu a espera de uma hora no autoatendimento do autor, conclusão online e ordenação mais recente primeiro em Histórico/logs. Migration 0007 foi aplicada no banco dev; integração em PostgreSQL descartável passou.
 

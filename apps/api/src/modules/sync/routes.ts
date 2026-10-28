@@ -42,10 +42,10 @@ function readRequestParameters(request: FastifyRequest) {
   const protocol = new Map<string, string>();
   for (const [key, value] of values) {
     if (key === 'workspaceId') continue;
-    if (key === 'offset' && !(/^(-1)$/.test(value) || /^[0-9]+_[0-9]+$/.test(value))) return null;
+    if (key === 'offset' && !/^(?:-1|0_inf|[0-9]+_[0-9]+)$/.test(value)) return null;
     if (key === 'handle' && !opaqueToken.test(value)) return null;
     if (key === 'live' && value !== 'true' && value !== 'false') return null;
-    if (key === 'cursor' && !opaqueToken.test(value)) return null;
+    if (key === 'cursor' && value !== '' && !opaqueToken.test(value)) return null;
     if (key === 'expired_handle' && !opaqueToken.test(value)) return null;
     if (key === 'log' && value !== 'full' && value !== 'changes_only') return null;
     if (key === 'cache-buster' && !opaqueToken.test(value)) return null;

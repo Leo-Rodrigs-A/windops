@@ -1,4 +1,4 @@
-import type { Park, Turbine } from '@windops/contracts';
+import { type Park, parkSchema, type Turbine, turbineSchema } from '@windops/contracts';
 import {
   Archive,
   ArrowLeft,
@@ -52,6 +52,7 @@ import {
   updatePark,
   updateTurbine,
 } from '../lib/workspace-api';
+import { useOfflineWorkspace } from '../offline/offline-workspace-context';
 
 const catalogNavigation: WorkspaceNavigationItem[] = [...workspaceNavigationItems];
 
@@ -107,6 +108,7 @@ async function findNextCatalogCode(
 
 export function ParksCatalogPage() {
   const { snapshot, refresh } = useAuth();
+  const offlineWorkspace = useOfflineWorkspace();
   const [parks, setParks] = useState<Park[]>([]);
   const [parkCursor, setParkCursor] = useState<string | null>(null);
   const [parksSearch, setParksSearch] = useState('');
@@ -135,8 +137,27 @@ export function ParksCatalogPage() {
   const detailRequest = useRef(0);
   const formGeneration = useRef(0);
 
-  const workspaceId = snapshot.status === 'authenticated' ? snapshot.context.workspace.id : '';
-  const isAdmin = snapshot.status === 'authenticated' && snapshot.context.role === 'admin';
+  const workspaceId = offlineWorkspace.workspaceId ?? '';
+  const isAdmin =
+    snapshot.status === 'authenticated' &&
+    snapshot.context.role === 'admin' &&
+    offlineWorkspace.online;
+  const workspaceName = offlineWorkspace.workspaceName ?? 'Workspace';
+
+  const cachedParks = useCallback(() => {
+    return (offlineWorkspace.store?.listReplica('parks') ?? [])
+      .map((row) => parkSchema.safeParse(row).data)
+      .filter((park): park is Park => Boolean(park));
+  }, [offlineWorkspace.store]);
+
+  const cachedTurbines = useCallback(
+    (parkId: string) => {
+      return (offlineWorkspace.store?.listReplica('turbines') ?? [])
+        .map((row) => turbineSchema.safeParse(row).data)
+        .filter((turbine): turbine is Turbine => Boolean(turbine && turbine.parkId === parkId));
+    },
+    [offlineWorkspace.store],
+  );
 
   function askParkLifecycle(park: Park, action: 'remove' | 'restore') {
     setLifecycleError('');
@@ -243,6 +264,17 @@ export function ParksCatalogPage() {
       append ? setParksMoreLoading(true) : setParksLoading(true);
       setParksError('');
       try {
+        if (!offlineWorkspace.online || snapshot.status !== 'authenticated') {
+          const cached = cachedParks().filter((park) =>
+            park.code.includes(search.trim().toUpperCase()),
+          );
+          setParks(cached);
+          setParkCursor(null);
+          setSelectedParkId((previous) => previous || cached[0]?.id || '');
+          if (cached.length === 0)
+            setParksError('Catálogo local indisponível. Conecte-se para carregar os parques.');
+          return;
+        }
         const page = await getParks(workspaceId, {
           limit: 25,
           ...(search.trim() ? { search: search.trim() } : {}),
@@ -258,7 +290,15 @@ export function ParksCatalogPage() {
         });
       } catch (error) {
         if (requestId !== parksRequest.current) return;
-        setParksError(getApiErrorMessage(error, 'carregar os parques'));
+        const cached = cachedParks().filter((park) =>
+          park.code.includes(search.trim().toUpperCase()),
+        );
+        if (cached.length) {
+          setParks(cached);
+          setParkCursor(null);
+          setSelectedParkId((previous) => previous || cached[0]?.id || '');
+          setParksError('Servidor indisponível; exibindo o catálogo salvo neste aparelho.');
+        } else setParksError(getApiErrorMessage(error, 'carregar os parques'));
         if (error instanceof ApiRequestError && [401, 403].includes(error.status)) await refresh();
       } finally {
         if (requestId === parksRequest.current) {
@@ -267,7 +307,7 @@ export function ParksCatalogPage() {
         }
       }
     },
-    [refresh, workspaceId],
+    [cachedParks, offlineWorkspace.online, refresh, snapshot.status, workspaceId],
   );
 
   const loadParkDetail = useCallback(
@@ -282,6 +322,17 @@ export function ParksCatalogPage() {
       append ? setTurbinesMoreLoading(true) : setTurbinesLoading(true);
       setTurbinesError('');
       try {
+        if (!offlineWorkspace.online || snapshot.status !== 'authenticated') {
+          const park = cachedParks().find((item) => item.id === parkId) ?? null;
+          const cached = cachedTurbines(parkId).filter((item) =>
+            item.code.includes(search.trim().toUpperCase()),
+          );
+          setSelectedPark(park);
+          setTurbines(cached);
+          setTurbineCursor(null);
+          if (!park) setTurbinesError('Detalhe do parque não está disponível no cache local.');
+          return;
+        }
         const [park, page] = await Promise.all([
           getPark(workspaceId, parkId),
           getParkTurbines(workspaceId, parkId, {
@@ -296,7 +347,14 @@ export function ParksCatalogPage() {
         setTurbineCursor(page.nextCursor);
       } catch (error) {
         if (requestId !== detailRequest.current) return;
-        setTurbinesError(getApiErrorMessage(error, 'carregar as turbinas'));
+        const park = cachedParks().find((item) => item.id === parkId) ?? null;
+        const cached = cachedTurbines(parkId);
+        if (park) {
+          setSelectedPark(park);
+          setTurbines(cached);
+          setTurbineCursor(null);
+          setTurbinesError('Servidor indisponível; exibindo o detalhe salvo neste aparelho.');
+        } else setTurbinesError(getApiErrorMessage(error, 'carregar as turbinas'));
         if (error instanceof ApiRequestError && [401, 403].includes(error.status)) await refresh();
       } finally {
         if (requestId === detailRequest.current) {
@@ -305,7 +363,7 @@ export function ParksCatalogPage() {
         }
       }
     },
-    [refresh, workspaceId],
+    [cachedParks, cachedTurbines, offlineWorkspace.online, refresh, snapshot.status, workspaceId],
   );
 
   useEffect(() => {
@@ -569,7 +627,7 @@ export function ParksCatalogPage() {
     }
   }
 
-  if (snapshot.status !== 'authenticated') {
+  if (snapshot.status !== 'authenticated' && snapshot.status !== 'offline') {
     return (
       <main className="grid min-h-dvh place-items-center px-5">
         <LoadingState label="Conferindo sua sessão…" />
@@ -601,11 +659,9 @@ export function ParksCatalogPage() {
     <WorkspaceSidebarLayout
       activeHref="/parques"
       items={
-        snapshot.context.role === 'admin'
-          ? catalogNavigation
-          : catalogNavigation.filter((item) => item.href !== '/equipe')
+        isAdmin ? catalogNavigation : catalogNavigation.filter((item) => item.href !== '/equipe')
       }
-      workspaceName={snapshot.context.workspace.name}
+      workspaceName={workspaceName}
     >
       <main className="min-h-dvh bg-background px-4 pt-4 pb-24 text-foreground sm:px-6 md:px-8 md:py-7">
         <div className="mx-auto w-full max-w-7xl space-y-7">
@@ -613,9 +669,7 @@ export function ParksCatalogPage() {
             <div className="flex min-w-0 items-center gap-3">
               <SidebarTrigger className="md:hidden" />
               <div className="min-w-0">
-                <p className="mb-1 text-sm text-muted-foreground">
-                  {snapshot.context.workspace.name} / Operação
-                </p>
+                <p className="mb-1 text-sm text-muted-foreground">{workspaceName} / Operação</p>
                 <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">Parques</h1>
               </div>
             </div>
@@ -1034,9 +1088,7 @@ export function ParksCatalogPage() {
         <HomeNavigation
           activeHref="/parques"
           className="fixed inset-x-0 bottom-0 md:hidden"
-          items={catalogNavigation.filter(
-            (item) => snapshot.context.role === 'admin' || item.href !== '/equipe',
-          )}
+          items={catalogNavigation.filter((item) => isAdmin || item.href !== '/equipe')}
         />
       </main>
 

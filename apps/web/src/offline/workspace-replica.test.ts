@@ -83,6 +83,38 @@ function issueRow(workspaceId = partition.workspaceId, revision = 1, text = 'Rel
 }
 
 describe('réplica local Electric', () => {
+  it('só confirma atualização da réplica após alcançar o servidor em cada coleção', async () => {
+    const scope = { ...partition, workspaceId: crypto.randomUUID() };
+    const store = await open(scope);
+    for (const collection of replicaCollections) {
+      await store.applyReplicaBatch({
+        collection,
+        changes: [],
+        checkpoint: {
+          collection,
+          workspaceId: scope.workspaceId,
+          offset: '1_0',
+          handle: `handle-${collection}`,
+          snapshotComplete: true,
+          updatedAt: new Date().toISOString(),
+        },
+        snapshotRows: [],
+      });
+    }
+
+    const streams = streamFactory();
+    const replica = new WorkspaceReplica(store, streams.factory);
+    replica.start();
+    expect(replica.getStatus().ready).toBe(true);
+    expect(Object.values(replica.getStatus().caughtUp).every(Boolean)).toBe(false);
+
+    for (const collection of replicaCollections)
+      await streams.streams.get(collection)?.emit([control('up-to-date')]);
+
+    expect(Object.values(replica.getStatus().caughtUp).every(Boolean)).toBe(true);
+    replica.close();
+  });
+
   it('refaz snapshot interrompido e só marca pronto após persistir os cinco snapshots', async () => {
     const scope = { ...partition, workspaceId: crypto.randomUUID() };
     const store = await open(scope);
@@ -103,12 +135,22 @@ describe('réplica local Electric', () => {
     resumed.start();
     expect(second.streams.get('parks')?.lastOffset).toBe('-1');
     for (const collection of replicaCollections) {
-      const rows = collection === 'issues' ? [insert(issueId, issueRow(scope.workspaceId))] : [];
+      const rows =
+        collection === 'issues'
+          ? [
+              {
+                key: issueId,
+                value: { ...issueRow(scope.workspaceId), id: undefined, workspace_id: undefined },
+                headers: { operation: 'insert' },
+              } as unknown as Message,
+            ]
+          : [];
       await second.streams.get(collection)?.emit([...rows, control('up-to-date')]);
     }
     expect(reopened.isReplicaReady()).toBe(true);
     expect(reopened.listReplica('issues')[0]).toMatchObject({
       id: issueId,
+      workspaceId: scope.workspaceId,
       text: 'Relato do servidor',
     });
     await second.streams.get('parks')?.emit(
@@ -130,6 +172,20 @@ describe('réplica local Electric', () => {
     expect(afterRestart.listReplica('issues')).toHaveLength(1);
     expect(afterRestart.listReplica('parks')[0]).toMatchObject({ code: 'P-2' });
     expect(afterRestart.getCheckpoint('parks')?.offset).toBe('1_1');
+  });
+
+  it('descarta mensagens recebidas depois de fechar uma réplica', async () => {
+    const scope = { ...partition, workspaceId: crypto.randomUUID() };
+    const store = await open(scope);
+    const streams = streamFactory();
+    const replica = new WorkspaceReplica(store, streams.factory);
+    replica.start();
+    replica.close();
+    await streams.streams
+      .get('issues')
+      ?.emit([insert(issueId, issueRow(scope.workspaceId)), control('up-to-date')]);
+    expect(store.getCheckpoint('issues')).toBeUndefined();
+    expect(store.listReplica('issues')).toHaveLength(0);
   });
 
   it('mantém cache anterior durante resnapshot e troca os dados junto ao checkpoint', async () => {

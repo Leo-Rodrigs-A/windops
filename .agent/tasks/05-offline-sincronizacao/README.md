@@ -2,7 +2,7 @@
 
 ## Status
 
-Em andamento desde 27/10/2026, após aprovação da slice 04 pelo proprietário. S01–S05 concluídas em 27/10; próxima task S06.
+Em andamento desde 27/10/2026, após aprovação da slice 04 pelo proprietário. S01–S05 concluídas; S06 segue aberta e S07 foi iniciada com autorização explícita do proprietário.
 
 - [ ] Slice concluída
 
@@ -13,9 +13,9 @@ Um dispositivo previamente autenticado e preparado permite consultar catálogo/i
 ## Base existente conferida
 
 - Slices [01](../01-fundacao/README.md), [02](../02-equipe-acesso/README.md), [03](../03-parques-turbinas/README.md) e [04](../04-registro-atendimento/README.md) concluídas. A aprovação da slice 04 é funcional online; não comprova durabilidade local nem suporte offline de aparelhos.
-- API de issues tem UUIDs, revisão, mutação/evento/recibo atômicos e retry autorizado. `sync_commands` é recibo remoto; S02 adiciona journal local de projeções/comandos e S05 adiciona envio ordenado com retries idempotentes. As telas ainda não criam comandos locais.
-- `apps/api/src/modules/sync/routes.ts` expõe shapes pelo proxy autenticado; a publication Electric contém workspaces, catálogo e projeções sanitizadas de issues/eventos. S04 coordena `ShapeStream`s e persiste rows/checkpoints no journal TanStack/IndexedDB da S02. A interface ainda não consome essa réplica; navegadores reais adicionais não foram certificados.
-- `AuthProvider` consulta sessão online nas transições; `issues-api.ts` usa HTTP diretamente; Cloud reflete apenas `navigator.onLine`. Manifest/ícones existem, mas não há service worker/offline pronto.
+- API de issues tem UUIDs, revisão, mutação/evento/recibo atômicos e retry autorizado. `sync_commands` é recibo remoto; S02 adiciona journal local de projeções/comandos, S05 adiciona envio ordenado e S07 conecta a interface ao sender.
+- `apps/api/src/modules/sync/routes.ts` expõe shapes pelo proxy autenticado; a publication Electric contém workspaces, catálogo e projeções sanitizadas de issues/eventos. S04 coordena `ShapeStream`s e persiste rows/checkpoints no journal TanStack/IndexedDB da S02. S07 conecta Home, detalhe, catálogo e Histórico; navegadores reais adicionais não foram certificados.
+- `AuthProvider` diferencia sessão online, expiração/rede com marcador local sem credenciais e revogação conhecida. Logout invalida o contexto local em todas as abas e preserva a partição. S07 conecta UI e Cloud ao journal/outbox; Manifest/ícones existem, mas não há service worker/offline pronto.
 - Regra atual do servidor: autor inicia após uma hora da criação; outros membros iniciam imediatamente; somente responsável devolve/conclui. Sessão com segunda etapa e membership ativa são obrigatórias para upload e shapes.
 
 ## Ordem e dependências
@@ -38,15 +38,17 @@ Executar na ordem S01–S09. A política temporal foi preservada na S01; Indexed
 - [x] S03 — Proxy Electric e publicação autorizada — proxy tenant-scoped, handles HMAC vinculados a workspace/coleção e projeções sanitizadas; Electric real, grants, migrations e restore validados. Evidências e limite do workspace único em [S03](03-proxy-electric-autorizado.md).
 - [x] S04 — Réplica local e reconciliação — snapshots/checkpoints atômicos, retomada, tombstones, ACK/revisão e retenção limitada; smoke Electric local e testes registrados em [S04](04-replica-reconciliacao.md).
 - [x] S05 — Envio, dependências e retries de comandos — executor revalida workspace, usa lease, persiste ACK/retries e preserva cadeia; evidências em [S05](05-envio-comandos.md).
-- [ ] S06 — Acesso offline, conflitos e recuperação
-- [ ] S07 — Interface de campo e status de sincronização
+- [ ] S06 — Acesso offline, conflitos e recuperação (em andamento; não bloqueou o avanço autorizado a S07)
+- [ ] S07 — Interface de campo e status de sincronização (em andamento)
 - [ ] S08 — PWA, reabertura e atualizações seguras
 - [ ] S09 — Validação integrada de campo e encerramento
+
+S06 concluída em 28/10: recuperação/logout/exportação, conflito revisável, isolamento, revogação com streams, coordenação de abas e troca de conta com request lento em voo foram confirmados. Expiração temporal real foi dispensada explicitamente pelo proprietário; ver limites e validações diretas em [S06](06-acesso-conflitos-exportacao.md). S07 segue em andamento: leitura e escrita locais, conclusão offline com relato, ordenação, Histórico offline após sincronizar cache, cache ausente sem tela vazia, indicador Cloud, teclado, zoom, tema, leitor de tela e viewport móvel foram confirmados pelo proprietário. Faltam quota e paginação além dos itens disponíveis. `pnpm check` completo (52 testes e build) passou em 28/10; após mudanças posteriores, Biome, boundaries, typechecks, 53 testes e build web passaram diretamente, mas `pnpm check` não emitiu saída em 30s. Ver [estado parcial de S07](07-interface-offline.md).
 
 ## Escopo e limites
 
 - Recorte executável da [etapa 07](<../00 - roadmap/07-offline.md>), incluindo catálogo local da [05](<../00 - roadmap/05-parks.md>), operações já entregues na [06](<../00 - roadmap/06-issues.md>) e relato de conclusão local da [08](<../00 - roadmap/08-lifecycle.md>). Não depende da etapa 08 inteira: conclusão online já foi entregue na I09.
-- Offline: leitura de catálogo, issues ativas e seus logs; criação, edição própria pendente, início/devolução e conclusão com relato opcional. Concluídas remotas são online salvo cache existente; conclusão local pendente permanece acessível. Não sincronizar o histórico inteiro indefinidamente por conveniência.
+- Offline: leitura de catálogo, issues ativas e seus logs; criação, edição própria pendente, início/devolução e conclusão com relato opcional. Histórico remoto permanece online; conclusões ainda presentes no cache limitado da reconciliação podem ser consultadas offline. Não sincronizar indefinidamente todo o histórico. Rever retenção/volume na validação integrada S09.
 - Cadastro/edição/lifecycle de equipamentos, gestão de equipe e liberação administrativa permanecem online nesta slice. Não acrescentar fila de comandos administrativos sem ampliar contratos/idempotência e escopo explicitamente.
 - Primeiro login exige conexão. Sessão expirada permite trabalho local previamente habilitado; upload exige autenticação renovada com segunda etapa. Revogação conhecida bloqueia envio e novas operações, preservando exportação das pendências do próprio usuário.
 - Base temporal registrada na S01: uma hora desde `created_at` do servidor para o autor iniciar. Issue criada offline recebe essa data ao ser aceita pelo servidor; a cadeia do autor aguarda até completar uma hora. Tempo do aparelho não antecipa autorização.

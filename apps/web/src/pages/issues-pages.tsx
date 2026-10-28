@@ -49,21 +49,348 @@ import { workspaceNavigationItems } from '../components/ui/workspace-navigation'
 import { WorkspaceSidebarLayout } from '../components/ui/workspace-sidebar';
 import { WorkspaceSystemActions } from '../components/workspace-system-actions';
 import { ApiRequestError } from '../lib/auth-api';
-import {
-  completeIssue,
-  createIssue,
-  getIssue,
-  getIssueEvents,
-  getIssues,
-  releaseIssue,
-  returnIssue,
-  startIssue,
-  updateIssue,
-} from '../lib/issues-api';
+import { getIssue, getIssueEvents, getIssues, releaseIssue } from '../lib/issues-api';
 import { getPark, getParks, getParkTurbines, getTurbine } from '../lib/workspace-api';
+import type {
+  LocalIssueCommand,
+  LocalIssueProjection,
+  LocalIssueStore,
+} from '../offline/local-issue-store';
+import { useOfflineWorkspace } from '../offline/offline-workspace-context';
 
 const navigation = workspaceNavigationItems;
 type StatusFilter = 'all' | Exclude<IssueStatus, 'completed'>;
+type IssueListEntry = {
+  id: string;
+  status: IssueStatus;
+  parkId: string;
+  turbineId: string;
+  text: string;
+  creatorLabel: string;
+  handlerLabel: string | null;
+  createdAt: string;
+};
+type IssueDetailEntry = {
+  id: string;
+  workspaceId: string;
+  parkId: string;
+  turbineId: string;
+  status: IssueStatus;
+  text: string;
+  completionReport: string | null;
+  createdAt: string;
+  updatedAt: string;
+  revision: number;
+  creatorId: string | null;
+  creatorLabel: string;
+  handlerId: string | null;
+  handlerLabel: string | null;
+  locallyCreated: boolean;
+};
+
+function issueDetailEntry(issue: Issue): IssueDetailEntry {
+  return {
+    id: issue.id,
+    workspaceId: issue.workspaceId,
+    parkId: issue.parkId,
+    turbineId: issue.turbineId,
+    status: issue.status,
+    text: issue.text,
+    completionReport: issue.completionReport,
+    createdAt: issue.createdAt,
+    updatedAt: issue.updatedAt,
+    revision: issue.revision,
+    creatorId: issue.creator.id,
+    creatorLabel: issue.creator.name,
+    handlerId: issue.handler?.id ?? null,
+    handlerLabel: issue.handler?.name ?? null,
+    locallyCreated: false,
+  };
+}
+
+function localIssueDetailEntry(
+  projection: LocalIssueProjection,
+  accountId: string,
+  store?: LocalIssueStore,
+): IssueDetailEntry {
+  const isLocalCreate = projection.serverIssue === null;
+  const commands =
+    store?.listPendingCommands().filter((command) => command.issueId === projection.id) ?? [];
+  const unresolvedStatuses = new Set(['pending', 'sending', 'waiting_auth', 'waiting_eligibility']);
+  const pendingStatusChange = commands.some(
+    (command) =>
+      ['start', 'return', 'complete'].includes(command.kind) &&
+      unresolvedStatuses.has(command.status),
+  );
+  const pendingTextChange = commands.some(
+    (command) =>
+      ['create', 'update'].includes(command.kind) &&
+      [
+        'pending',
+        'sending',
+        'waiting_auth',
+        'waiting_eligibility',
+        'conflict',
+        'rejected',
+      ].includes(command.status),
+  );
+  const pendingCompletionReport = commands.some(
+    (command) =>
+      command.kind === 'complete' &&
+      [
+        'pending',
+        'sending',
+        'waiting_auth',
+        'waiting_eligibility',
+        'confirmed_waiting_replica',
+      ].includes(command.status),
+  );
+  const acknowledged = commands.find(
+    (command) => command.status === 'confirmed_waiting_replica' && command.acknowledgedIssue,
+  )?.acknowledgedIssue;
+  const confirmedStatus =
+    acknowledged?.status ??
+    (projection.serverActive === false ? 'completed' : projection.serverIssue?.status);
+  return {
+    id: projection.id,
+    workspaceId: projection.workspaceId,
+    parkId: projection.local.parkId,
+    turbineId: projection.local.turbineId,
+    status:
+      pendingStatusChange || confirmedStatus === undefined
+        ? projection.local.status === 'local'
+          ? 'pending'
+          : projection.local.status
+        : confirmedStatus,
+    text:
+      pendingTextChange || !projection.serverIssue
+        ? projection.local.text
+        : projection.serverIssue.text,
+    completionReport:
+      (pendingCompletionReport
+        ? projection.local.completionReport
+        : (projection.serverIssue?.completionReport ?? projection.local.completionReport)) ?? null,
+    createdAt: projection.serverIssue?.createdAt ?? projection.createdAt ?? projection.updatedAt,
+    updatedAt: projection.updatedAt,
+    revision: projection.serverRevision ?? 1,
+    creatorId: projection.localIdentity?.creatorUserId ?? null,
+    creatorLabel:
+      projection.localIdentity?.creatorName ??
+      (isLocalCreate ? 'Criado neste aparelho' : 'Registrado no servidor'),
+    handlerId: projection.localIdentity?.handlerUserId ?? null,
+    handlerLabel: projection.localIdentity?.handlerName ?? null,
+    locallyCreated: isLocalCreate && projection.localIdentity?.creatorUserId === accountId,
+  };
+}
+
+function issueListEntry(issue: Issue): IssueListEntry {
+  return {
+    id: issue.id,
+    status: issue.status,
+    parkId: issue.parkId,
+    turbineId: issue.turbineId,
+    text: issue.text,
+    creatorLabel: issue.creator.name,
+    handlerLabel: issue.handler?.name ?? null,
+    createdAt: issue.createdAt,
+  };
+}
+
+function compareIssuesByRecency(
+  left: Pick<IssueListEntry, 'createdAt' | 'id'>,
+  right: Pick<IssueListEntry, 'createdAt' | 'id'>,
+) {
+  const recency = Date.parse(right.createdAt) - Date.parse(left.createdAt);
+  return Number.isFinite(recency) && recency !== 0 ? recency : right.id.localeCompare(left.id);
+}
+
+function projectionStatus(projection: LocalIssueProjection, commands: LocalIssueCommand[]) {
+  const unresolvedStatuses = new Set(['pending', 'sending', 'waiting_auth', 'waiting_eligibility']);
+  const pendingStatusChange = commands.some(
+    (command) =>
+      ['start', 'return', 'complete'].includes(command.kind) &&
+      unresolvedStatuses.has(command.status),
+  );
+  if (pendingStatusChange && projection.local.status !== 'local') return projection.local.status;
+  const acknowledged = commands.find(
+    (command) => command.status === 'confirmed_waiting_replica' && command.acknowledgedIssue,
+  )?.acknowledgedIssue;
+  return (
+    acknowledged?.status ??
+    (projection.serverActive === false ? 'completed' : projection.serverIssue?.status) ??
+    (projection.local.status === 'local' ? 'pending' : projection.local.status)
+  );
+}
+
+function localIssueListEntries(store: LocalIssueStore, filter: StatusFilter): IssueListEntry[] {
+  const commands = store.listPendingCommands();
+  const commandsByIssue = new Map<string, LocalIssueCommand[]>();
+  for (const command of commands) {
+    const forIssue = commandsByIssue.get(command.issueId) ?? [];
+    forIssue.push(command);
+    commandsByIssue.set(command.issueId, forIssue);
+  }
+  const pendingIssueIds = new Set(commands.map((command) => command.issueId));
+  return store
+    .listIssues()
+    .filter((projection) => projection.serverActive !== false || pendingIssueIds.has(projection.id))
+    .map((projection) => {
+      const issueCommands = commandsByIssue.get(projection.id) ?? [];
+      const pendingTextChange = issueCommands.some(
+        (command) =>
+          ['create', 'update'].includes(command.kind) &&
+          [
+            'pending',
+            'sending',
+            'waiting_auth',
+            'waiting_eligibility',
+            'conflict',
+            'rejected',
+          ].includes(command.status),
+      );
+      return {
+        id: projection.id,
+        status: projectionStatus(projection, issueCommands),
+        parkId: projection.local.parkId,
+        turbineId: projection.local.turbineId,
+        text:
+          pendingTextChange || !projection.serverIssue
+            ? projection.local.text
+            : projection.serverIssue.text,
+        creatorLabel:
+          projection.localIdentity?.creatorName ??
+          (projection.serverIssue ? 'Registrado no servidor' : 'Novo neste aparelho'),
+        handlerLabel: projection.localIdentity?.handlerName ?? null,
+        createdAt:
+          projection.serverIssue?.createdAt ?? projection.createdAt ?? projection.updatedAt,
+      };
+    })
+    .filter((issue) => filter === 'all' || issue.status === filter)
+    .sort(compareIssuesByRecency);
+}
+
+function localLocations(store: LocalIssueStore) {
+  const parks = new Map(
+    store.listReplica('parks').map((row) => [row.id, String(row.code ?? 'Parque')]),
+  );
+  const turbines = new Map(
+    store
+      .listReplica('turbines')
+      .map((row) => [`${String(row.parkId)}:${row.id}`, String(row.code ?? 'Turbina')]),
+  );
+  return Object.fromEntries(
+    [...turbines.entries()].map(([key, turbine]) => {
+      const [parkId] = key.split(':');
+      return [key, { park: parks.get(parkId ?? '') ?? 'Parque', turbine }];
+    }),
+  );
+}
+
+function reconcileVisibleIssuesFromJournal(
+  visible: IssueListEntry[],
+  store: LocalIssueStore,
+  filter: StatusFilter,
+) {
+  const pendingCommands = store.listPendingCommands();
+  const pendingIssueIds = new Set(pendingCommands.map((command) => command.issueId));
+  const locallyChangingStatuses = new Set([
+    'pending',
+    'sending',
+    'waiting_auth',
+    'waiting_eligibility',
+  ]);
+  return visible
+    .flatMap((item) => {
+      const projection = store.getIssue(item.id);
+      if (!projection) return [item];
+      if (projection.serverActive === false && !pendingIssueIds.has(item.id)) return [];
+      const issueCommands = pendingCommands.filter((command) => command.issueId === item.id);
+      const hasPendingStatusChange = issueCommands.some(
+        (command) =>
+          ['start', 'return', 'complete'].includes(command.kind) &&
+          locallyChangingStatuses.has(command.status),
+      );
+      const hasPendingTextChange = issueCommands.some(
+        (command) =>
+          ['create', 'update'].includes(command.kind) &&
+          locallyChangingStatuses.has(command.status),
+      );
+      const status =
+        hasPendingStatusChange && projection.local.status !== 'local'
+          ? projection.local.status
+          : item.status;
+      if (status === 'completed') return [];
+      if (filter !== 'all' && status !== filter) return [];
+      return [
+        {
+          ...item,
+          status,
+          ...(hasPendingTextChange ? { text: projection.local.text } : {}),
+          createdAt: projection.serverIssue?.createdAt ?? item.createdAt,
+          creatorLabel: projection.localIdentity?.creatorName ?? item.creatorLabel,
+          handlerLabel: projection.localIdentity?.handlerName ?? item.handlerLabel,
+        },
+      ];
+    })
+    .sort(compareIssuesByRecency);
+}
+
+function pendingLocalEntries(store: LocalIssueStore, filter: StatusFilter) {
+  const pendingIds = new Set(store.listPendingCommands().map((command) => command.issueId));
+  return localIssueListEntries(store, filter).filter(
+    (entry) => pendingIds.has(entry.id) && entry.status !== 'completed',
+  );
+}
+
+function locallyCompletedEntries(store: LocalIssueStore) {
+  const commands = store.listPendingCommands();
+  const completingCommands = new Set(
+    commands
+      .filter(
+        (command) =>
+          command.kind === 'complete' &&
+          [
+            'pending',
+            'sending',
+            'waiting_auth',
+            'waiting_eligibility',
+            'confirmed_waiting_replica',
+          ].includes(command.status),
+      )
+      .map((command) => command.issueId),
+  );
+  const pendingTextChanges = new Set(
+    commands
+      .filter(
+        (command) =>
+          ['create', 'update'].includes(command.kind) &&
+          ['pending', 'sending', 'waiting_auth', 'waiting_eligibility'].includes(command.status),
+      )
+      .map((command) => command.issueId),
+  );
+  return store
+    .listIssues()
+    .filter(
+      (projection) =>
+        projection.serverIssue?.status === 'completed' ||
+        projection.serverActive === false ||
+        (projection.local.status === 'completed' && completingCommands.has(projection.id)),
+    )
+    .map((projection) => ({
+      id: projection.id,
+      status: 'completed' as const,
+      parkId: projection.local.parkId,
+      turbineId: projection.local.turbineId,
+      text:
+        pendingTextChanges.has(projection.id) || !projection.serverIssue
+          ? projection.local.text
+          : projection.serverIssue.text,
+      creatorLabel: projection.localIdentity?.creatorName ?? 'Registrado neste aparelho',
+      handlerLabel: projection.localIdentity?.handlerName ?? null,
+      createdAt: projection.serverIssue?.createdAt ?? projection.createdAt ?? projection.updatedAt,
+    }))
+    .sort(compareIssuesByRecency);
+}
 
 function issueErrorMessage(error: unknown, action: string) {
   if (error instanceof ApiRequestError) {
@@ -165,13 +492,16 @@ function AppPageHeader({
 
 export function WorkspaceHomePage() {
   const { snapshot, refresh } = useAuth();
-  const workspaceId = snapshot.status === 'authenticated' ? snapshot.context.workspace.id : '';
+  const offlineWorkspace = useOfflineWorkspace();
+  const workspaceId = offlineWorkspace.workspaceId ?? '';
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
-  const [issues, setIssues] = useState<Issue[]>([]);
+  const [issues, setIssues] = useState<IssueListEntry[]>([]);
   const [issueCursor, setIssueCursor] = useState<string | null>(null);
   const [issueLoading, setIssueLoading] = useState(true);
   const [moreLoading, setMoreLoading] = useState(false);
   const [issueError, setIssueError] = useState('');
+  const [issueCacheNotice, setIssueCacheNotice] = useState('');
+  const [issueNotice, setIssueNotice] = useState('');
   const [search, setSearch] = useState('');
   const [locations, setLocations] = useState<Record<string, { park: string; turbine: string }>>({});
   const [createOpen, setCreateOpen] = useState(false);
@@ -190,16 +520,68 @@ export function WorkspaceHomePage() {
       if (!workspaceId) return;
       append ? setMoreLoading(true) : setIssueLoading(true);
       setIssueError('');
+      setIssueCacheNotice('');
+      const localOnly =
+        snapshot.status === 'offline' || snapshot.status === 'revoked' || !offlineWorkspace.online;
+      if (localOnly) {
+        if (!offlineWorkspace.store) {
+          setIssueError(
+            'Chamados não estão preparados neste aparelho. Conecte-se para carregar o cache offline.',
+          );
+          setIssueLoading(false);
+          return;
+        }
+        const local = localIssueListEntries(offlineWorkspace.store, statusFilter).filter(
+          (issue) => issue.status !== 'completed',
+        );
+        if (!offlineWorkspace.store.hasReplicaSnapshot('issues'))
+          setIssueCacheNotice(
+            'Este aparelho ainda não tem cache dos chamados. Conecte-se ao workspace para preparar os dados antes de usar offline.',
+          );
+        setIssues(local);
+        setIssueCursor(null);
+        setLocations(localLocations(offlineWorkspace.store));
+        setIssueLoading(false);
+        setMoreLoading(false);
+        return;
+      }
       try {
         const page = await getIssues(workspaceId, {
           limit: 25,
           status: statusFilter === 'all' ? 'active' : statusFilter,
           ...(cursor ? { cursor } : {}),
         });
-        setIssues((previous) => (append ? [...previous, ...page.items] : page.items));
+        if (offlineWorkspace.store) {
+          await offlineWorkspace.store.recordServerIssuePage(
+            page.items,
+            statusFilter === 'all' && page.nextCursor === null,
+          );
+          await Promise.all(
+            page.items.map((issue) =>
+              offlineWorkspace.store?.recordIssueIdentity({
+                issueId: issue.id,
+                creatorUserId: issue.creator.id,
+                creatorName: issue.creator.name,
+                handlerUserId: issue.handler?.id ?? null,
+                handlerName: issue.handler?.name ?? null,
+              }),
+            ),
+          );
+        }
+        const pendingEntries = offlineWorkspace.store
+          ? pendingLocalEntries(offlineWorkspace.store, statusFilter)
+          : [];
+        setIssues((previous) => {
+          const merged = new Map((append ? previous : []).map((item) => [item.id, item]));
+          for (const issue of page.items) merged.set(issue.id, issueListEntry(issue));
+          for (const pending of pendingEntries) merged.set(pending.id, pending);
+          return [...merged.values()].sort(compareIssuesByRecency);
+        });
         setIssueCursor(page.nextCursor);
         const locationsToLoad = new Map(
-          page.items.map((issue) => [`${issue.parkId}:${issue.turbineId}`, issue] as const),
+          [...page.items, ...pendingEntries].map(
+            (issue) => [`${issue.parkId}:${issue.turbineId}`, issue] as const,
+          ),
         );
         const pairs = await Promise.all(
           [...locationsToLoad.values()].map(async (item) => {
@@ -212,16 +594,34 @@ export function WorkspaceHomePage() {
             ] as Array<[string, { park: string; turbine: string }]>;
           }),
         );
-        setLocations((current) => ({ ...current, ...Object.fromEntries(pairs.flat()) }));
+        setLocations({
+          ...(offlineWorkspace.store ? localLocations(offlineWorkspace.store) : {}),
+          ...Object.fromEntries(pairs.flat()),
+        });
       } catch (error) {
-        setIssueError(issueErrorMessage(error, 'carregar os chamados'));
+        if (offlineWorkspace.store?.hasReplicaSnapshot('issues')) {
+          setIssues(
+            localIssueListEntries(offlineWorkspace.store, statusFilter).filter(
+              (issue) => issue.status !== 'completed',
+            ),
+          );
+          setLocations(localLocations(offlineWorkspace.store));
+          setIssueCursor(null);
+        } else setIssueError(issueErrorMessage(error, 'carregar os chamados'));
         if (error instanceof ApiRequestError && [401, 403].includes(error.status)) await refresh();
       } finally {
         setIssueLoading(false);
         setMoreLoading(false);
       }
     },
-    [refresh, statusFilter, workspaceId],
+    [
+      offlineWorkspace.online,
+      offlineWorkspace.store,
+      refresh,
+      snapshot.status,
+      statusFilter,
+      workspaceId,
+    ],
   );
 
   useEffect(() => {
@@ -230,10 +630,50 @@ export function WorkspaceHomePage() {
     void loadIssues();
   }, [loadIssues]);
 
+  useEffect(() => {
+    if (
+      offlineWorkspace.version > 0 &&
+      (snapshot.status !== 'authenticated' || !offlineWorkspace.online)
+    )
+      void loadIssues();
+  }, [loadIssues, offlineWorkspace.online, offlineWorkspace.version, snapshot.status]);
+
+  useEffect(() => {
+    if (!offlineWorkspace.store || offlineWorkspace.version === 0) return;
+    setIssues((current) =>
+      reconcileVisibleIssuesFromJournal(
+        current,
+        offlineWorkspace.store as LocalIssueStore,
+        statusFilter,
+      ),
+    );
+  }, [offlineWorkspace.store, offlineWorkspace.version, statusFilter]);
+
   async function openCreate() {
     setCreateOpen(true);
     setCreateError('');
     setCatalogLoading(true);
+    if ((!offlineWorkspace.online || snapshot.status === 'offline') && !offlineWorkspace.store) {
+      setCatalogLoading(false);
+      setCreateError(
+        'Este workspace ainda não foi preparado neste aparelho. Conecte-se para carregar o catálogo.',
+      );
+      return;
+    }
+    if ((!offlineWorkspace.online || snapshot.status === 'offline') && offlineWorkspace.store) {
+      const all = offlineWorkspace.store
+        .listReplica('parks')
+        .filter((park) => park.deactivatedAt == null) as unknown as Park[];
+      setParks(all);
+      setParkId((current) =>
+        all.some((park) => park.id === current) ? current : (all[0]?.id ?? ''),
+      );
+      setCatalogLoading(false);
+      if (!offlineWorkspace.ready)
+        setCreateError('Este aparelho ainda não terminou a preparação offline.');
+      else if (all.length === 0) setCreateError('Não há parques ativos salvos neste aparelho.');
+      return;
+    }
     try {
       let cursor: string | undefined;
       const all: Park[] = [];
@@ -248,7 +688,13 @@ export function WorkspaceHomePage() {
       );
       if (all.length === 0) setCreateError('Não há parques ativos para registrar um chamado.');
     } catch (error) {
-      setCreateError(issueErrorMessage(error, 'carregar os equipamentos disponíveis'));
+      const cached = offlineWorkspace.store
+        ?.listReplica('parks')
+        .filter((park) => park.deactivatedAt == null) as unknown as Park[] | undefined;
+      if (cached?.length) {
+        setParks(cached);
+        setParkId(cached[0]?.id ?? '');
+      } else setCreateError(issueErrorMessage(error, 'carregar os equipamentos disponíveis'));
     } finally {
       setCatalogLoading(false);
     }
@@ -264,6 +710,18 @@ export function WorkspaceHomePage() {
     setTurbines([]);
     setTurbineId('');
     setCatalogLoading(true);
+    if ((!offlineWorkspace.online || snapshot.status === 'offline') && offlineWorkspace.store) {
+      const all = offlineWorkspace.store
+        .listReplica('turbines')
+        .filter(
+          (turbine) => turbine.parkId === parkId && turbine.deactivatedAt == null,
+        ) as unknown as Turbine[];
+      setTurbines(all);
+      setTurbineId(all[0]?.id ?? '');
+      setCatalogLoading(false);
+      if (all.length === 0) setCreateError('Não há turbinas ativas salvas neste parque.');
+      return;
+    }
     void (async () => {
       try {
         let cursor: string | undefined;
@@ -283,7 +741,17 @@ export function WorkspaceHomePage() {
             setCreateError('Este parque não tem turbinas ativas para novos chamados.');
         }
       } catch (error) {
-        if (active) setCreateError(issueErrorMessage(error, 'carregar as turbinas'));
+        if (active) {
+          const cached = offlineWorkspace.store
+            ?.listReplica('turbines')
+            .filter(
+              (turbine) => turbine.parkId === parkId && turbine.deactivatedAt == null,
+            ) as unknown as Turbine[] | undefined;
+          if (cached?.length) {
+            setTurbines(cached);
+            setTurbineId(cached[0]?.id ?? '');
+          } else setCreateError(issueErrorMessage(error, 'carregar as turbinas'));
+        }
       } finally {
         if (active) setCatalogLoading(false);
       }
@@ -291,7 +759,14 @@ export function WorkspaceHomePage() {
     return () => {
       active = false;
     };
-  }, [createOpen, parkId, workspaceId]);
+  }, [
+    createOpen,
+    offlineWorkspace.online,
+    offlineWorkspace.store,
+    parkId,
+    snapshot.status,
+    workspaceId,
+  ]);
 
   function changeDraft(update: () => void) {
     createCommand.current = null;
@@ -306,20 +781,33 @@ export function WorkspaceHomePage() {
     setCreateBusy(true);
     setCreateError('');
     try {
-      await createIssue(workspaceId, {
+      if (
+        !offlineWorkspace.store ||
+        !offlineWorkspace.canWriteLocally ||
+        ((!offlineWorkspace.online || snapshot.status === 'offline') && !offlineWorkspace.ready)
+      ) {
+        throw new Error('Prepare este workspace online antes de registrar trabalho local.');
+      }
+      await offlineWorkspace.store.saveCreate({
         ...createCommand.current,
         parkId,
         turbineId,
         text: draftText,
       });
+      setIssueNotice(
+        'Chamado salvo neste aparelho. O envio será confirmado quando o servidor responder.',
+      );
+      offlineWorkspace.refreshLocal();
+      offlineWorkspace.retrySync();
       setDraftText('');
       createCommand.current = null;
       setCreateOpen(false);
       setStatusFilter('all');
-      if (statusFilter === 'all') await loadIssues();
+      await loadIssues();
     } catch (error) {
-      setCreateError(issueErrorMessage(error, 'registrar o chamado'));
-      if (error instanceof ApiRequestError && [401, 403].includes(error.status)) await refresh();
+      setCreateError(
+        error instanceof Error ? error.message : issueErrorMessage(error, 'registrar o chamado'),
+      );
     } finally {
       setCreateBusy(false);
     }
@@ -336,20 +824,21 @@ export function WorkspaceHomePage() {
     );
   });
 
-  if (snapshot.status !== 'authenticated') return <LoadingState label="Carregando workspace…" />;
+  if (!workspaceId || !offlineWorkspace.workspaceName)
+    return <LoadingState label="Carregando workspace…" />;
 
   return (
     <WorkspaceSidebarLayout
       activeHref="/app"
       items={navigation}
-      workspaceName={snapshot.context.workspace.name}
+      workspaceName={offlineWorkspace.workspaceName}
     >
       <main className="min-h-dvh bg-background px-4 pt-5 pb-24 text-foreground sm:px-6 md:px-8 md:py-7">
         <div className="mx-auto w-full max-w-6xl space-y-6">
           <AppPageHeader
-            eyebrow={`${snapshot.context.workspace.name} / Chamados`}
+            eyebrow={`${offlineWorkspace.workspaceName} / Chamados`}
             title="Home"
-            subtitle="Chamados pendentes e em andamento. Os mais antigos aparecem primeiro."
+            subtitle="Chamados pendentes e em andamento. Os mais recentes aparecem primeiro."
           />
           <Card className="gap-0 overflow-hidden py-0">
             <CardHeader className="gap-4 border-b border-border/70 px-4 py-4 sm:px-5">
@@ -376,7 +865,14 @@ export function WorkspaceHomePage() {
                     </Button>
                   ))}
                 </fieldset>
-                <Button className="w-full sm:w-auto" onClick={() => void openCreate()}>
+                <Button
+                  className="w-full sm:w-auto"
+                  disabled={
+                    !offlineWorkspace.canWriteLocally ||
+                    (!offlineWorkspace.online && !offlineWorkspace.ready)
+                  }
+                  onClick={() => void openCreate()}
+                >
                   <Plus aria-hidden="true" />
                   Novo chamado
                 </Button>
@@ -400,6 +896,16 @@ export function WorkspaceHomePage() {
               </div>
             </CardHeader>
             <CardContent className="p-0">
+              {issueNotice && (
+                <div className="px-4 pt-4">
+                  <Feedback message={issueNotice} tone="success" />
+                </div>
+              )}
+              {issueCacheNotice && (
+                <div className="px-4 pt-4">
+                  <Feedback message={issueCacheNotice} tone="warning" />
+                </div>
+              )}
               {issueError ? (
                 <div className="space-y-3 p-5">
                   <Feedback message={issueError} tone="error" />
@@ -419,14 +925,20 @@ export function WorkspaceHomePage() {
                       className="mx-auto size-7 text-muted-foreground"
                     />
                     <h2 className="font-semibold">
-                      {search ? 'Nenhum chamado encontrado' : 'Nenhum chamado nesta lista'}
+                      {search
+                        ? 'Nenhum chamado encontrado'
+                        : issueCacheNotice
+                          ? 'Chamados indisponíveis offline'
+                          : 'Nenhum chamado nesta lista'}
                     </h2>
                     <p className="text-sm text-muted-foreground">
                       {search
                         ? 'Tente outro termo ou limpe a pesquisa.'
-                        : 'Os chamados registrados neste workspace aparecerão aqui. Ainda não há dados de exemplo.'}
+                        : issueCacheNotice
+                          ? 'Conecte-se para carregar os chamados e preparar o acesso offline neste aparelho.'
+                          : 'Os chamados registrados neste workspace aparecerão aqui. Ainda não há dados de exemplo.'}
                     </p>
-                    {!search && (
+                    {!search && !issueCacheNotice && (
                       <Button onClick={() => void openCreate()} size="sm">
                         <Plus aria-hidden="true" /> Registrar chamado
                       </Button>
@@ -571,14 +1083,15 @@ function IssueListItem({
   issue,
   location,
 }: {
-  issue: Issue;
+  issue: Issue | IssueListEntry;
   location: { park: string; turbine: string } | undefined;
 }) {
+  const item = 'creator' in issue ? issueListEntry(issue) : issue;
   return (
     <li>
       <Link
         className="flex min-h-24 items-start gap-3 px-4 py-4 transition-colors hover:bg-muted/40 focus-visible:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring sm:px-5"
-        params={{ issueId: issue.id }}
+        params={{ issueId: item.id }}
         to="/chamados/$issueId"
       >
         <span className="grid size-10 shrink-0 place-items-center rounded-full border border-border bg-muted text-muted-foreground">
@@ -591,15 +1104,15 @@ function IssueListItem({
                 ? `Parque ${location.park} · Turbina ${location.turbine}`
                 : 'Equipamento associado'}
             </span>
-            <Badge variant={statusVariant(issue.status)}>{statusLabel(issue.status)}</Badge>
+            <Badge variant={statusVariant(item.status)}>{statusLabel(item.status)}</Badge>
           </span>
           <span className="line-clamp-2 block whitespace-pre-wrap text-sm text-muted-foreground">
-            {issue.text}
+            {item.text}
           </span>
           <span className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
-            <span>{issue.creator.name}</span>
-            <time dateTime={issue.createdAt}>{formatDate(issue.createdAt)}</time>
-            {issue.handler && <span>Atendimento: {issue.handler.name}</span>}
+            <span>{item.creatorLabel}</span>
+            <time dateTime={item.createdAt}>{formatDate(item.createdAt)}</time>
+            {item.handlerLabel && <span>Atendimento: {item.handlerLabel}</span>}
           </span>
         </span>
       </Link>
@@ -699,10 +1212,17 @@ function IssueEventCard({
 
 export function IssueDetailPage() {
   const { snapshot, refresh } = useAuth();
+  const offlineWorkspace = useOfflineWorkspace();
   const params = useParams({ strict: false });
   const issueId = 'issueId' in params ? String(params.issueId) : '';
-  const workspaceId = snapshot.status === 'authenticated' ? snapshot.context.workspace.id : '';
-  const [issue, setIssue] = useState<Issue | null>(null);
+  const workspaceId = offlineWorkspace.workspaceId ?? '';
+  const accountId =
+    snapshot.status === 'authenticated'
+      ? snapshot.me.user.id
+      : snapshot.status === 'offline'
+        ? snapshot.accountId
+        : '';
+  const [issue, setIssue] = useState<IssueDetailEntry | null>(null);
   const [events, setEvents] = useState<IssueEvent[]>([]);
   const [eventCursor, setEventCursor] = useState<string | null>(null);
   const [detailError, setDetailError] = useState('');
@@ -730,6 +1250,18 @@ export function IssueDetailPage() {
 
   const hydrateEventLocations = useCallback(
     async (items: IssueEvent[]) => {
+      if (!offlineWorkspace.online || snapshot.status !== 'authenticated') {
+        const cached = offlineWorkspace.store ? localLocations(offlineWorkspace.store) : {};
+        setEventLocations(
+          Object.fromEntries(
+            Object.entries(cached).map(([key, value]) => [
+              key,
+              `Parque ${value.park} · Turbina ${value.turbine}`,
+            ]),
+          ),
+        );
+        return;
+      }
       const snapshots = items.flatMap((event) => [record(event.before), record(event.after)]);
       const pairs = new Map<string, { parkId: string; turbineId: string }>();
       for (const snapshot of snapshots) {
@@ -756,7 +1288,7 @@ export function IssueDetailPage() {
       );
       setEventLocations((current) => ({ ...current, ...Object.fromEntries(resolved) }));
     },
-    [workspaceId],
+    [offlineWorkspace.online, offlineWorkspace.store, snapshot.status, workspaceId],
   );
 
   const loadDetail = useCallback(async () => {
@@ -766,12 +1298,61 @@ export function IssueDetailPage() {
     setIssue(null);
     setEvents([]);
     setLocation(null);
+    if (
+      snapshot.status === 'offline' ||
+      snapshot.status === 'revoked' ||
+      !offlineWorkspace.online
+    ) {
+      const projection = offlineWorkspace.store?.getIssue(issueId);
+      if (!projection) {
+        setDetailError('Este chamado não está salvo neste aparelho. Conecte-se para carregá-lo.');
+        setDetailLoading(false);
+        return;
+      }
+      setIssue(localIssueDetailEntry(projection, accountId, offlineWorkspace.store ?? undefined));
+      const cachedEvents =
+        offlineWorkspace.store
+          ?.listReplica('issue-events')
+          .filter((row) => row.issueId === issueId)
+          .sort((left, right) => String(right.occurredAt).localeCompare(String(left.occurredAt)))
+          .map((row) => ({
+            id: String(row.id),
+            issueId,
+            workspaceId,
+            actorMembershipId: null,
+            actorLabel: String(row.actorLabel ?? 'Membro do workspace'),
+            type: row.type as IssueEvent['type'],
+            occurredAt: String(row.occurredAt),
+            before: (row.before as Record<string, unknown> | null) ?? null,
+            after: (row.after as Record<string, unknown> | null) ?? null,
+          })) ?? [];
+      setEvents(cachedEvents);
+      setEventCursor(null);
+      const park = offlineWorkspace.store
+        ?.listReplica('parks')
+        .find((row) => row.id === projection.local.parkId);
+      const turbine = offlineWorkspace.store
+        ?.listReplica('turbines')
+        .find((row) => row.id === projection.local.turbineId);
+      if (park && turbine)
+        setLocation({ park: park as unknown as Park, turbine: turbine as unknown as Turbine });
+      await hydrateEventLocations(cachedEvents);
+      setDetailLoading(false);
+      return;
+    }
     try {
       const [item, history] = await Promise.all([
         getIssue(workspaceId, issueId),
         getIssueEvents(workspaceId, issueId, { limit: 25 }),
       ]);
-      setIssue(item);
+      setIssue(issueDetailEntry(item));
+      await offlineWorkspace.store?.recordIssueIdentity({
+        issueId: item.id,
+        creatorUserId: item.creator.id,
+        creatorName: item.creator.name,
+        handlerUserId: item.handler?.id ?? null,
+        handlerName: item.handler?.name ?? null,
+      });
       setEvents(history.items);
       setEventCursor(history.nextCursor);
       await hydrateEventLocations(history.items);
@@ -781,16 +1362,74 @@ export function IssueDetailPage() {
       ]);
       setLocation({ park, turbine });
     } catch (error) {
-      setDetailError(issueErrorMessage(error, 'carregar o chamado'));
+      const projection = offlineWorkspace.store?.getIssue(issueId);
+      if (projection) {
+        setIssue(localIssueDetailEntry(projection, accountId, offlineWorkspace.store ?? undefined));
+        setEvents(
+          (offlineWorkspace.store?.listReplica('issue-events') ?? [])
+            .filter((row) => row.issueId === issueId)
+            .sort(
+              (left, right) =>
+                String(right.occurredAt).localeCompare(String(left.occurredAt)) ||
+                String(right.id).localeCompare(String(left.id)),
+            )
+            .map((row) => ({
+              id: String(row.id),
+              issueId,
+              workspaceId,
+              actorMembershipId: null,
+              actorLabel: String(row.actorLabel ?? 'Membro do workspace'),
+              type: row.type as IssueEvent['type'],
+              occurredAt: String(row.occurredAt),
+              before: (row.before as Record<string, unknown> | null) ?? null,
+              after: (row.after as Record<string, unknown> | null) ?? null,
+            })),
+        );
+        await hydrateEventLocations([]);
+      } else setDetailError(issueErrorMessage(error, 'carregar o chamado'));
       if (error instanceof ApiRequestError && [401, 403].includes(error.status)) await refresh();
     } finally {
       setDetailLoading(false);
     }
-  }, [hydrateEventLocations, issueId, refresh, workspaceId]);
+  }, [
+    accountId,
+    hydrateEventLocations,
+    issueId,
+    offlineWorkspace.online,
+    offlineWorkspace.store,
+    refresh,
+    snapshot.status,
+    workspaceId,
+  ]);
 
   useEffect(() => {
     void loadDetail();
   }, [loadDetail]);
+
+  useEffect(() => {
+    if (!offlineWorkspace.store || offlineWorkspace.version === 0 || !issueId) return;
+    const pendingStatuses = new Set([
+      'pending',
+      'sending',
+      'waiting_auth',
+      'waiting_eligibility',
+      'confirmed_waiting_replica',
+    ]);
+    const hasUnconfirmedCommand = offlineWorkspace.store
+      .listPendingCommands()
+      .some((command) => command.issueId === issueId && pendingStatuses.has(command.status));
+    if (snapshot.status === 'authenticated' && offlineWorkspace.online && !hasUnconfirmedCommand)
+      return;
+    const projection = offlineWorkspace.store.getIssue(issueId);
+    if (projection) setIssue(localIssueDetailEntry(projection, accountId, offlineWorkspace.store));
+  }, [
+    accountId,
+    issueId,
+    offlineWorkspace.online,
+    offlineWorkspace.store,
+    offlineWorkspace.version,
+    snapshot.status,
+  ]);
 
   async function runAction(
     action: 'start' | 'return' | 'release' | 'complete',
@@ -810,56 +1449,56 @@ export function IssueDetailPage() {
     setNotice('');
     let actionCommitted = false;
     try {
+      if (action !== 'release') {
+        const store = offlineWorkspace.store;
+        if (!store || !offlineWorkspace.canWriteLocally)
+          throw new Error('Este workspace ainda não está preparado para alterações locais.');
+        await store.queueMutation({
+          issueId: issue.id,
+          commandId,
+          kind: action,
+          payload: {
+            commandId,
+            expectedRevision: issue.revision,
+            ...(action === 'complete' && completionReport.current
+              ? { report: completionReport.current }
+              : {}),
+          },
+        });
+        const projection = store.getIssue(issue.id);
+        if (projection) setIssue(localIssueDetailEntry(projection, accountId, store));
+        actionCommitted = true;
+        delete actionCommands.current[action];
+        if (action === 'complete') {
+          completionReport.current = null;
+          setCompleteOpen(false);
+          setCompletionDraft('');
+        }
+        setNotice(
+          offlineWorkspace.online && snapshot.status === 'authenticated'
+            ? 'Ação salva neste aparelho. A confirmação do servidor ainda está pendente.'
+            : 'Ação salva neste aparelho; será enviada quando a sessão e a conexão permitirem.',
+        );
+        offlineWorkspace.refreshLocal();
+        offlineWorkspace.retrySync();
+        return true;
+      }
       const command = { commandId, expectedRevision: issue.revision };
-      const updated =
-        action === 'start'
-          ? await startIssue(workspaceId, issue.id, command)
-          : action === 'return'
-            ? await returnIssue(workspaceId, issue.id, command)
-            : action === 'release'
-              ? await releaseIssue(workspaceId, issue.id, command)
-              : await completeIssue(workspaceId, issue.id, {
-                  ...command,
-                  report: completionReport.current ?? undefined,
-                });
-      if (action === 'complete' && updated.status !== 'completed') return false;
+      const updated = await releaseIssue(workspaceId, issue.id, command);
       actionCommitted = true;
       delete actionCommands.current[action];
-      if (action === 'complete') {
-        completionReport.current = null;
-        setCompleteOpen(false);
-        setCompletionDraft('');
-      }
-      setIssue(updated);
-      setNotice(
-        action === 'start'
-          ? 'Atendimento iniciado.'
-          : action === 'return'
-            ? 'Chamado devolvido para a fila.'
-            : action === 'release'
-              ? 'Atendimento liberado.'
-              : 'Chamado concluído.',
-      );
+      setIssue(issueDetailEntry(updated));
+      setNotice('Atendimento liberado.');
       const history = await getIssueEvents(workspaceId, issue.id, { limit: 25 });
       setEvents(history.items);
       setEventCursor(history.nextCursor);
       await hydrateEventLocations(history.items);
       return true;
     } catch (error) {
-      if (action === 'complete' && actionCommitted)
-        setDetailError(
-          'Chamado concluído, mas não foi possível atualizar o histórico. Atualize esta página.',
-        );
-      else if (action === 'complete')
-        setCompletionError(issueErrorMessage(error, 'concluir o chamado'));
-      else setDetailError(issueErrorMessage(error, 'executar esta ação'));
+      setDetailError(issueErrorMessage(error, 'liberar o atendimento'));
       if (error instanceof ApiRequestError && [401, 403].includes(error.status)) await refresh();
       if (error instanceof ApiRequestError && error.status === 409 && !actionCommitted) {
         delete actionCommands.current[action];
-        if (action === 'complete') {
-          completionReport.current = null;
-          setCompleteOpen(false);
-        }
         await loadDetail();
       }
     } finally {
@@ -870,6 +1509,36 @@ export function IssueDetailPage() {
 
   async function submitCompletion(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    const pendingCompletion = offlineWorkspace.store
+      ?.listPendingCommands()
+      .find(
+        (command) =>
+          command.issueId === issueId &&
+          command.kind === 'complete' &&
+          command.status === 'pending' &&
+          command.attemptedAt === null &&
+          command.frozenPayload === null,
+      );
+    if (pendingCompletion && offlineWorkspace.store) {
+      try {
+        await offlineWorkspace.store.updatePendingCompletionReport(
+          pendingCompletion.id,
+          completionDraft,
+        );
+        const projection = offlineWorkspace.store.getIssue(issueId);
+        if (projection)
+          setIssue(localIssueDetailEntry(projection, accountId, offlineWorkspace.store));
+        setNotice('Relato de conclusão atualizado neste aparelho.');
+        setCompleteOpen(false);
+        offlineWorkspace.refreshLocal();
+        offlineWorkspace.retrySync();
+      } catch (error) {
+        setCompletionError(
+          error instanceof Error ? error.message : 'Não foi possível atualizar o relato.',
+        );
+      }
+      return;
+    }
     const succeeded = await runAction('complete', completionDraft);
     if (succeeded) {
       setCompleteOpen(false);
@@ -885,18 +1554,38 @@ export function IssueDetailPage() {
     setEditBusy(true);
     setEditError('');
     try {
-      const updated = await updateIssue(workspaceId, issue.id, {
-        commandId: editCommand.current,
-        expectedRevision: issue.revision,
-        text: editText,
-      });
-      setIssue(updated);
+      const store = offlineWorkspace.store;
+      if (!store || !offlineWorkspace.canWriteLocally)
+        throw new Error('Este workspace ainda não está preparado para alterações locais.');
+      const conflicted = store
+        .listPendingCommands()
+        .find(
+          (command) =>
+            command.issueId === issue.id &&
+            command.kind === 'update' &&
+            command.status === 'conflict',
+        );
+      if (conflicted) {
+        await store.recreateUpdateAfterConflict({
+          conflictedCommandId: conflicted.id,
+          commandId: editCommand.current,
+          text: editText,
+        });
+      } else {
+        await store.saveUpdate({
+          issueId: issue.id,
+          commandId: editCommand.current,
+          expectedRevision: issue.revision,
+          text: editText,
+        });
+      }
+      const projection = store.getIssue(issue.id);
+      if (projection) setIssue(localIssueDetailEntry(projection, accountId, store));
       editCommand.current = null;
       setEditOpen(false);
-      setNotice('Chamado atualizado.');
-      const history = await getIssueEvents(workspaceId, issue.id, { limit: 25 });
-      setEvents(history.items);
-      await hydrateEventLocations(history.items);
+      setNotice('Alteração salva neste aparelho. A confirmação do servidor ainda está pendente.');
+      offlineWorkspace.refreshLocal();
+      offlineWorkspace.retrySync();
     } catch (error) {
       setEditError(issueErrorMessage(error, 'salvar as alterações'));
       if (error instanceof ApiRequestError && error.status === 409) {
@@ -921,17 +1610,37 @@ export function IssueDetailPage() {
     }
   }
 
-  if (snapshot.status !== 'authenticated') return <LoadingState label="Conferindo sua sessão…" />;
-  const isAdmin = snapshot.context.role === 'admin';
-  const isCreator = issue?.creator.id === snapshot.me.user.id;
-  const isHandler = issue?.handler?.id === snapshot.me.user.id;
+  if (
+    snapshot.status !== 'authenticated' &&
+    snapshot.status !== 'offline' &&
+    snapshot.status !== 'revoked'
+  )
+    return <LoadingState label="Conferindo sua sessão…" />;
+  const isAdmin =
+    snapshot.status === 'authenticated' &&
+    snapshot.context.role === 'admin' &&
+    offlineWorkspace.online;
+  const isCreator = Boolean(issue?.locallyCreated || (accountId && issue?.creatorId === accountId));
+  const isHandler = Boolean(accountId && issue?.handlerId === accountId);
+  const workspaceName = offlineWorkspace.workspaceName ?? 'Workspace';
+  const currentLocalCommands =
+    offlineWorkspace.store?.listPendingCommands().filter((item) => item.issueId === issueId) ?? [];
+  const hasUnconfirmedChanges = currentLocalCommands.some((item) => item.status !== 'confirmed');
+  const editableCompletion = currentLocalCommands.find(
+    (command) =>
+      command.kind === 'complete' &&
+      command.status === 'pending' &&
+      command.attemptedAt === null &&
+      command.frozenPayload === null,
+  );
+  const conflictReview =
+    currentLocalCommands
+      .filter((command) => command.kind === 'update' && command.status === 'conflict')
+      .map((command) => offlineWorkspace.store?.getConflictReview(command.id) ?? null)
+      .find((review) => review !== null) ?? null;
 
   return (
-    <WorkspaceSidebarLayout
-      activeHref="/app"
-      items={navigation}
-      workspaceName={snapshot.context.workspace.name}
-    >
+    <WorkspaceSidebarLayout activeHref="/app" items={navigation} workspaceName={workspaceName}>
       <main className="min-h-dvh bg-background px-4 pt-5 pb-24 text-foreground sm:px-6 md:px-8 md:py-7">
         <div className="mx-auto w-full max-w-5xl space-y-6">
           <div className="flex items-center gap-3">
@@ -941,14 +1650,55 @@ export function IssueDetailPage() {
               </Link>
             </Button>
             <div className="min-w-0 flex-1">
-              <AppPageHeader
-                eyebrow={`${snapshot.context.workspace.name} / Chamados`}
-                title="Detalhe do chamado"
-              />
+              <AppPageHeader eyebrow={`${workspaceName} / Chamados`} title="Detalhe do chamado" />
             </div>
           </div>
           {notice && <Feedback message={notice} tone="success" />}
           {detailError && <Feedback message={detailError} tone="error" />}
+          {conflictReview && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">Conflito de edição</CardTitle>
+                <CardDescription>
+                  A versão remota permanece vigente. Revise a base, sua edição e o texto recebido
+                  antes de criar uma nova alteração.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="grid gap-4 sm:grid-cols-3">
+                <div>
+                  <p className="text-xs font-medium text-muted-foreground">Versão base</p>
+                  <p className="mt-1 whitespace-pre-wrap text-sm">
+                    {conflictReview.base?.text ?? 'Sem versão base local'}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-xs font-medium text-muted-foreground">Sua edição</p>
+                  <p className="mt-1 whitespace-pre-wrap text-sm">{conflictReview.local.text}</p>
+                </div>
+                <div>
+                  <p className="text-xs font-medium text-muted-foreground">Versão remota atual</p>
+                  <p className="mt-1 whitespace-pre-wrap text-sm">{conflictReview.remote.text}</p>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    Revisão {conflictReview.remote.revision}
+                  </p>
+                </div>
+                {isCreator && (
+                  <div className="sm:col-span-3">
+                    <Button
+                      onClick={() => {
+                        setEditText(conflictReview.local.text);
+                        setEditError('');
+                        setEditOpen(true);
+                      }}
+                      variant="outline"
+                    >
+                      Revisar e criar nova edição
+                    </Button>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
           {detailLoading ? (
             <Card className="p-8">
               <LoadingState label="Carregando chamado e histórico…" />
@@ -962,6 +1712,9 @@ export function IssueDetailPage() {
                       <Badge variant={statusVariant(issue.status)}>
                         {statusLabel(issue.status)}
                       </Badge>
+                      {hasUnconfirmedChanges && (
+                        <Badge variant="outline">Ainda não confirmado</Badge>
+                      )}
                       <span className="text-sm text-muted-foreground">
                         {location
                           ? `Parque ${location.park.code} · Turbina ${location.turbine.code}`
@@ -992,9 +1745,9 @@ export function IssueDetailPage() {
                     </div>
                   )}
                   <CardDescription className="flex flex-wrap gap-x-5 gap-y-1">
-                    <span>Registrado por {issue.creator.name}</span>
+                    <span>Registrado por {issue.creatorLabel}</span>
                     <time dateTime={issue.createdAt}>{formatDate(issue.createdAt)}</time>
-                    {issue.handler && <span>Em atendimento por {issue.handler.name}</span>}
+                    {issue.handlerLabel && <span>Em atendimento por {issue.handlerLabel}</span>}
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="flex flex-wrap gap-2 border-t border-border/70 pt-4">
@@ -1003,6 +1756,7 @@ export function IssueDetailPage() {
                       disabled={
                         Boolean(busyAction) ||
                         (isCreator &&
+                          !issue.locallyCreated &&
                           clockNow < new Date(issue.createdAt).getTime() + 60 * 60 * 1000)
                       }
                       onClick={() => void runAction('start')}
@@ -1018,6 +1772,22 @@ export function IssueDetailPage() {
                         hora da criação.
                       </p>
                     )}
+                  {editableCompletion && (
+                    <Button
+                      onClick={() => {
+                        const payload = editableCompletion.payload as { report?: unknown };
+                        setCompletionDraft(
+                          typeof payload.report === 'string' ? payload.report : '',
+                        );
+                        setCompletionError('');
+                        setCompleteOpen(true);
+                      }}
+                      size="sm"
+                      variant="outline"
+                    >
+                      Editar relato ainda não enviado
+                    </Button>
+                  )}
                   {issue.status === 'in_progress' && isHandler && (
                     <Button
                       disabled={Boolean(busyAction)}
@@ -1050,7 +1820,7 @@ export function IssueDetailPage() {
                   )}
                   {issue.status === 'in_progress' && !isHandler && !isAdmin && (
                     <p className="self-center text-sm text-muted-foreground">
-                      O chamado está em atendimento por {issue.handler?.name ?? 'outro membro'}.
+                      O chamado está em atendimento por {issue.handlerLabel ?? 'outro membro'}.
                     </p>
                   )}
                 </CardContent>
@@ -1194,40 +1964,101 @@ export function IssueDetailPage() {
 
 export function IssueHistoryPage() {
   const { snapshot, refresh } = useAuth();
-  const workspaceId = snapshot.status === 'authenticated' ? snapshot.context.workspace.id : '';
-  const [completed, setCompleted] = useState<Issue[]>([]);
+  const offlineWorkspace = useOfflineWorkspace();
+  const workspaceId = offlineWorkspace.workspaceId ?? '';
+  const workspaceName = offlineWorkspace.workspaceName ?? 'Workspace';
+  const historyLocations = offlineWorkspace.store ? localLocations(offlineWorkspace.store) : {};
+  const [completed, setCompleted] = useState<Array<Issue | IssueListEntry>>([]);
   const [historyError, setHistoryError] = useState('');
   const [historyLoading, setHistoryLoading] = useState(true);
+  // Re-read local completion entries whenever the journal changes, including after a sync ACK.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: The journal version intentionally refreshes offline history.
   useEffect(() => {
     if (!workspaceId) return;
+    if (offlineWorkspace.online && snapshot.status === 'authenticated') return;
+    setHistoryLoading(false);
+    setHistoryError('');
+    setCompleted(offlineWorkspace.store ? locallyCompletedEntries(offlineWorkspace.store) : []);
+    if (!offlineWorkspace.store?.isReplicaReady())
+      setHistoryError('Histórico local indisponível. Conecte-se para preparar o cache.');
+  }, [
+    offlineWorkspace.online,
+    offlineWorkspace.store,
+    offlineWorkspace.version,
+    snapshot.status,
+    workspaceId,
+  ]);
+
+  useEffect(() => {
+    if (!workspaceId || !offlineWorkspace.online || snapshot.status !== 'authenticated') return;
     let active = true;
-    void getAllIssues(workspaceId, 'completed')
-      .then((items) => {
-        if (active) setCompleted(items);
-      })
-      .catch(async (error) => {
+    const store = offlineWorkspace.store;
+    setHistoryLoading(true);
+    setHistoryError('');
+    void (async () => {
+      try {
+        const items = await getAllIssues(workspaceId, 'completed');
+        let cacheError = false;
+        if (store) {
+          try {
+            await store.recordServerIssuePage(items);
+            await Promise.all(
+              items.map((issue) =>
+                store.recordIssueIdentity({
+                  issueId: issue.id,
+                  creatorUserId: issue.creator.id,
+                  creatorName: issue.creator.name,
+                  handlerUserId: issue.handler?.id ?? null,
+                  handlerName: issue.handler?.name ?? null,
+                }),
+              ),
+            );
+          } catch {
+            cacheError = true;
+          }
+        }
+        if (active) {
+          const merged = new Map<string, Issue | IssueListEntry>(
+            items.map((item) => [item.id, item]),
+          );
+          if (store)
+            for (const item of locallyCompletedEntries(store))
+              if (!merged.has(item.id)) merged.set(item.id, item);
+          setCompleted([...merged.values()].sort(compareIssuesByRecency));
+          if (cacheError)
+            setHistoryError(
+              'Histórico carregado, mas não foi possível salvar uma cópia neste aparelho.',
+            );
+        }
+      } catch (error) {
         if (!active) return;
-        setHistoryError(issueErrorMessage(error, 'carregar os chamados concluídos'));
+        setCompleted(store ? locallyCompletedEntries(store) : []);
+        setHistoryError(
+          store?.isReplicaReady()
+            ? 'Servidor indisponível; exibindo o histórico salvo neste aparelho.'
+            : issueErrorMessage(error, 'carregar os chamados concluídos'),
+        );
         if (error instanceof ApiRequestError && [401, 403].includes(error.status)) await refresh();
-      })
-      .finally(() => {
-        if (active) setHistoryLoading(false);
-      });
+      }
+    })().finally(() => {
+      if (active) setHistoryLoading(false);
+    });
     return () => {
       active = false;
     };
-  }, [refresh, workspaceId]);
-  if (snapshot.status !== 'authenticated') return <LoadingState label="Conferindo sua sessão…" />;
+  }, [offlineWorkspace.online, offlineWorkspace.store, refresh, snapshot.status, workspaceId]);
+  if (snapshot.status !== 'authenticated' && snapshot.status !== 'offline')
+    return <LoadingState label="Conferindo sua sessão…" />;
   return (
     <WorkspaceSidebarLayout
       activeHref="/historico"
       items={navigation}
-      workspaceName={snapshot.context.workspace.name}
+      workspaceName={workspaceName}
     >
       <main className="min-h-dvh bg-background px-4 pt-5 pb-24 text-foreground sm:px-6 md:px-8 md:py-7">
         <div className="mx-auto w-full max-w-6xl space-y-6">
           <AppPageHeader
-            eyebrow={`${snapshot.context.workspace.name} / Auditoria`}
+            eyebrow={`${workspaceName} / Auditoria`}
             title="Histórico"
             subtitle="Conferência e recuperação de chamados concluídos. Os mais recentes aparecem primeiro."
           />
@@ -1247,7 +2078,11 @@ export function IssueHistoryPage() {
               ) : (
                 <ul className="divide-y divide-border/70">
                   {completed.map((issue) => (
-                    <IssueListItem key={issue.id} issue={issue} location={undefined} />
+                    <IssueListItem
+                      key={issue.id}
+                      issue={issue}
+                      location={historyLocations[`${issue.parkId}:${issue.turbineId}`]}
+                    />
                   ))}
                 </ul>
               )}
@@ -1266,6 +2101,7 @@ export function IssueHistoryPage() {
 
 export function AccountSettingsPage() {
   const { snapshot, refresh } = useAuth();
+  const offlineWorkspace = useOfflineWorkspace();
   const workspaceId = snapshot.status === 'authenticated' ? snapshot.context.workspace.id : '';
   const [ownedOpen, setOwnedOpen] = useState<number | null>(null);
   const [handledInProgress, setHandledInProgress] = useState<number | null>(null);
@@ -1307,6 +2143,47 @@ export function AccountSettingsPage() {
     };
   }, [refresh, snapshot, workspaceId]);
 
+  if (snapshot.status === 'offline' || snapshot.status === 'revoked') {
+    const workspaceName = offlineWorkspace.workspaceName ?? 'Workspace';
+    const revoked = snapshot.status === 'revoked';
+    return (
+      <WorkspaceSidebarLayout activeHref="/conta" items={navigation} workspaceName={workspaceName}>
+        <main className="min-h-dvh bg-background px-4 pt-5 pb-24 text-foreground sm:px-6 md:px-8 md:py-7">
+          <div className="mx-auto w-full max-w-6xl space-y-6">
+            <AppPageHeader
+              eyebrow={`${workspaceName} / Preferências`}
+              title="Conta e configurações"
+            />
+            <Card>
+              <CardHeader>
+                <CardTitle>Conta neste aparelho</CardTitle>
+                <CardDescription>
+                  {revoked
+                    ? 'O acesso a este workspace foi revogado. Os comandos locais permanecem preservados para exportação.'
+                    : 'A sessão precisa ser renovada para consultar sua conta e enviar alterações.'}
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="flex flex-wrap gap-2">
+                <ThemeToggle />
+                <SignOutButton />
+              </CardContent>
+            </Card>
+            {offlineWorkspace.pendingCommands.length > 0 && (
+              <Feedback
+                message={`${offlineWorkspace.pendingCommands.length} alteração(ões) local(is) continuam preservadas nesta conta.`}
+                tone="info"
+              />
+            )}
+          </div>
+          <HomeNavigation
+            activeHref="/conta"
+            className="fixed inset-x-0 bottom-0 md:hidden"
+            items={navigation}
+          />
+        </main>
+      </WorkspaceSidebarLayout>
+    );
+  }
   if (snapshot.status !== 'authenticated') return <LoadingState label="Conferindo sua sessão…" />;
   const { me, context } = snapshot;
   return (

@@ -8,8 +8,9 @@ import {
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import '@fontsource-variable/inter';
-import { AppRoot } from './app-root';
+import { AppRoot, SessionCheckFallback } from './app-root';
 import { AuthProvider } from './auth/auth-context';
+import { OfflineWorkspaceProvider } from './offline/offline-workspace-context';
 import './styles.css';
 import { ThemeProvider } from './theme/theme-context';
 
@@ -17,7 +18,9 @@ function RootLayout() {
   return (
     <ThemeProvider>
       <AuthProvider>
-        <AppRoot />
+        <OfflineWorkspaceProvider>
+          <AppRoot />
+        </OfflineWorkspaceProvider>
       </AuthProvider>
     </ThemeProvider>
   );
@@ -127,6 +130,7 @@ const router = createRouter({
     invitationAcceptRoute,
     legacyInvitationAcceptRoute,
   ]),
+  defaultNotFoundComponent: SessionCheckFallback,
 });
 declare module '@tanstack/react-router' {
   interface Register {

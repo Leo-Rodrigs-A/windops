@@ -7,6 +7,11 @@ import {
   startIssue,
   updateIssue,
 } from '../lib/issues-api';
+import {
+  currentAccountGeneration,
+  isCurrentAccountGeneration,
+  registerOfflineResource,
+} from './local-access';
 import type { LocalIssueCommand, LocalIssueStore, SyncedIssueRow } from './local-issue-store';
 
 export type CommandSenderStatus = {
@@ -126,6 +131,7 @@ export class LocalCommandSender {
     pendingCount: 0,
     lastError: null,
   };
+  private unregisterResource: (() => void) | undefined;
 
   constructor(
     private readonly store: LocalIssueStore,
@@ -152,6 +158,7 @@ export class LocalCommandSender {
     if (this.active) return;
     this.active = true;
     this.stopped = false;
+    this.unregisterResource = registerOfflineResource(() => this.stop());
     if (typeof window !== 'undefined') {
       window.addEventListener('online', this.onWake);
       window.addEventListener('focus', this.onWake);
@@ -171,6 +178,8 @@ export class LocalCommandSender {
     if (this.timer !== undefined) this.clearTimer(this.timer);
     this.timer = undefined;
     this.setState('idle', null);
+    this.unregisterResource?.();
+    this.unregisterResource = undefined;
   }
 
   flush(): Promise<void> {
@@ -197,6 +206,7 @@ export class LocalCommandSender {
   };
 
   private async flushOnce() {
+    const accountGeneration = currentAccountGeneration();
     await this.store.recoverInterruptedSends();
     const { ordered: candidates, cycle } = orderByDependency(
       this.store.listPendingCommands().filter((command) => retryableStatuses.has(command.status)),
@@ -221,7 +231,7 @@ export class LocalCommandSender {
         await this.handlePreflightError(error, candidates);
         return;
       }
-      if (this.stopped) return;
+      if (this.stopped || !isCurrentAccountGeneration(accountGeneration)) return;
 
       this.backoffAttempt = 0;
       this.setState('sending', null);
@@ -308,6 +318,7 @@ export class LocalCommandSender {
             frozen,
             payload,
           );
+          if (this.stopped || !isCurrentAccountGeneration(accountGeneration)) break;
           await this.store.recordCommandAck(command.id, issue);
         } catch (error) {
           await this.handleCommandError(command.id, error);
