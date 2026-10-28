@@ -2,7 +2,7 @@
 
 ## Status
 
-Parcialmente antecipada em 26/10/2026 pela I09; reabertura, arquivos/restauração e relato offline continuam planejados.
+Parcialmente implementada: conclusão online na I09 e relato offline na slice 05. Reabertura, arquivo/reativação e restauração planejados na [slice 06](../06-ciclo-vida-issues/README.md).
 
 ## Objetivo e escopo
 
@@ -20,7 +20,7 @@ Criador espera 1h desde criação; reabrir limpa relato sem apagar log; restaura
 
 Limite de 1h, relógio incoerente, voltar sem salvar, relato opcional, edição após sync negada, restauração auditada, todas as permissões de arquivamento.
 
-A [slice 04](../04-registro-atendimento/README.md) entregou eventos/consultas e conclusão online com relato opcional. A regra atual exige uma hora para o autor iniciar atendimento, usando relógio do banco. A [slice 05](../05-offline-sincronizacao/README.md) planeja persistência da conclusão offline e edição do relato local antes da primeira tentativa de envio; S01 deve resolver a semântica temporal de criação offline sem alterar silenciosamente a regra. Reabertura, arquivo/reativação e restauração de relatos continuam futuras.
+A [slice 04](../04-registro-atendimento/README.md) entregou eventos/consultas e conclusão online. O autor espera uma hora desde created_at do servidor para iniciar atendimento. A [slice 05](../05-offline-sincronizacao/README.md) entregou conclusão offline durável e edição do relato antes da primeira tentativa de envio, com validação browser/desktop. Criação offline recebe created_at ao ser aceita pelo servidor. A [slice 06](../06-ciclo-vida-issues/README.md) detalha o restante; implementação ainda não iniciada.
 
 ## Referências e atualização
 

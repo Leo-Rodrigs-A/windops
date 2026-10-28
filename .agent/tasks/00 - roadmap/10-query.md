@@ -6,7 +6,7 @@ Planejada
 
 ## Objetivo e escopo
 
-Listas abertas, concluídas e arquivadas, filtros P/T, paginação e cache. Antigas acima/novas abaixo conforme interpretação registrada.
+Listas abertas, concluídas e arquivadas, filtros P/T, paginação e cache. Mais recentes primeiro, conforme decisão posterior registrada na memória.
 
 ## Dependências
 

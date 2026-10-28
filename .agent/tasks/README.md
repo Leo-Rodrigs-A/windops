@@ -8,6 +8,10 @@ Cada nova slice fica em uma pasta `NN-nome/`, com um `README.md` que define resu
 
 ## Slice atual
 
+Próxima execução: [06 — Ciclo de vida das issues](06-ciclo-vida-issues/README.md), planejada em 28/10/2026. Começar por L01; seis tasks abertas. Planejamento não conclui implementação.
+
+- [ ] [06 — Ciclo de vida das issues](06-ciclo-vida-issues/README.md): reabertura, arquivo/reativação, restauração de relatos e integração segura com réplica/fila.
+
 Slice 05 concluída em 28/10/2026 para o escopo browser/desktop, com validação integrada PostgreSQL/Electric e failpoints automatizados. O proprietário transferiu validação Android/iPhone e HTTPS em aparelho para produção; nenhum suporte móvel é declarado. A S09 não exigiu `pnpm check` aprovado (ficou sem saída por 31s); equivalentes diretos e integrações passaram. Ver [Slice 05](05-offline-sincronizacao/README.md) e evidências S09.
 
 - [x] [01 — Fundação](01-fundacao/README.md): F01–F08 concluídas em 25/10/2026, com validação local e Android físico.
@@ -52,3 +56,5 @@ Verificação documental da slice 04 em 26/10/2026: 23 documentos e 103 links lo
 7. Após concluir uma task ou slice, sugerir no resumo uma mensagem de commit curta no padrão Conventional Commits (`tipo(escopo): descrição`), coerente com as mudanças entregues e com a descrição em português. Manter em inglês apenas nomenclaturas técnicas que façam sentido preservar.
 
 Mudanças de produto descobertas no design devem ser conciliadas com o proprietário e registradas na memória antes de alterar regras de negócio. Referências `.pen` continuam externas ao Git.
+
+Planejamento da slice 06 em 28/10/2026: seis tasks abertas, dependências e critérios de aceite registrados. Verificação documental: 11 documentos e 50 links locais conferidos; `git diff --check` passou. Somente documentação alterada; `pnpm check` e testes da aplicação não executados.
