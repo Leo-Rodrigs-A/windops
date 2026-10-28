@@ -26,7 +26,7 @@ L01–L05. Ler arquitetura, memória e decisões de L01 antes de implementar.
 
 - [ ] Executar pnpm check; investigar travamento recorrente do launcher e registrar diagnóstico. Se indisponível, executar componentes diretos com comandos/resultados explícitos, sem declarar check aprovado.
 - [ ] Executar integrações auth/workspaces/parks/issues e PostgreSQL/Electric, migrations/upgrade/restore e permissões conforme mudanças; usar bancos descartáveis.
-- [ ] Cobrir concluir→reabrir→restaurar relato sem concluir, arquivar→reativar, bloqueio de Concluída, equipamento inativo, revogação e corridas.
+- [ ] Cobrir concluir→reabrir, arquivar→reativar, bloqueio de Concluída, equipamento inativo, revogação e corridas.
 - [ ] Exercitar nova interação entre duas sessões: edição offline pendente versus arquivo remoto, restart, retry com resposta perdida e reconciliação sem duplicar eventos.
 - [ ] Regressar espera de uma hora pelo relógio do banco e edição de relato apenas offline antes do envio; não repetir toda bateria S06–S09 já aceita sem risco novo.
 - [ ] Atualizar evidências, índice, arquitetura, memória e roadmap somente após validação; Android/iPhone/HTTPS e evicção real continuam na produção, sem declarar suporte móvel.

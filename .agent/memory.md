@@ -65,8 +65,8 @@ Preferência permanente para commits: sugerir mensagens em português; nomenclat
 - Qualquer cargo cria issues; cada usuário edita somente as próprias, enquanto abertas. Campos editáveis: texto, parque, turbina. Toda mudança registra antes/depois e autor. Admin não recebe exceção geral para editar conteúdo alheio.
 - Tocar Concluir abre tela semelhante ao detalhe, relato opcional; só confirma estado ao salvar nessa tela. Voltar mantém Em andamento.
 - Conclusão criada offline continua acessível localmente; autor da conclusão pode editar o relato somente enquanto offline e ainda não sincronizado. Após envio, bloqueado ao técnico.
-- Só admin reabre: volta Pendente, sem atendimento ativo, relato atual vazio, histórico anterior preservado.
-- Todos com acesso à issue veem logs. Somente admin restaura relato anterior por botão, online, com confirmação explícita de substituição. Não altera status e gera novo evento; não restaura texto/localização pelo histórico no piloto.
+- Só admin reabre: volta Pendente, sem atendimento ativo, relato atual vazio, histórico anterior preservado. Reabertura e reativação exigem parque e turbina ativos.
+- Todos com acesso à issue veem logs; os eventos são imutáveis. Não há ação de restaurar relato anterior.
 - Criador desativa somente suas Pendentes. Admin desativa Pendentes/Em andamento, inclusive alheias; ninguém desativa Concluídas.
 - Desativadas ficam em Arquivadas; somente admin reativa, sempre Pendente sem atendimento ativo. Preservar logs; não exclusão física.
 
@@ -249,4 +249,4 @@ S09 concluída em 28/10/2026 para browser/desktop. Failpoints automatizados cobr
 
 ## Próxima slice planejada — 28/10/2026
 
-[Slice 06 — Ciclo de vida das issues](tasks/06-ciclo-vida-issues/README.md) preparada após análise da base e encerramento da S09. L01–L06 permanecem planejadas: contratos/invariantes, persistência/auditoria, comandos, consultas/réplica, interface e validação. Prioridade é completar lifecycle antes de notificações. Proposta de escopo das novas ações: online; não equivale a decisão anterior do proprietário sobre suporte offline. L01 resolve elegibilidade de restauração e equipamento inativo antes da implementação. Constraint atual de relato nulo em Pendente precisa ser conciliada com restauração sem mudança de status. Nenhuma regra alterada, fonte modificada ou migration aplicada neste planejamento. Validações móveis continuam na produção.
+[Slice 06 — Ciclo de vida das issues](tasks/06-ciclo-vida-issues/README.md) preparada após análise da base e encerramento da S09. L01–L06 permanecem planejadas: contratos/invariantes, persistência/auditoria, comandos, consultas/réplica, interface e validação. Prioridade é completar lifecycle antes de notificações. Proposta de escopo das novas ações: online; não equivale a decisão anterior do proprietário sobre suporte offline. L01 concluiu a matriz em 28/10: novas ações online; criador arquiva própria issue Pendente; admin arquiva Pendente/Em andamento e reabre/reativa conforme estado; reabertura/reativação exigem equipamento ativo. Restauração de relato removida do escopo por decisão do proprietário. L02 é a próxima. Validações móveis continuam na produção.

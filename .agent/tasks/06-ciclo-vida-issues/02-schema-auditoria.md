@@ -25,7 +25,7 @@ L01. Ler arquitetura, memória e decisões de L01 antes de implementar.
 ## Plano
 
 - [ ] Criar migration incremental para arquivo/metadados, constraints de relato/atendimento, índices e novos tipos de evento; atualizar schema e documentação do banco.
-- [ ] Preservar eventos e referências históricas append-only; restauração referencia evento da mesma issue/workspace por serviço público de audit.
+- [ ] Preservar eventos e referências históricas append-only; novos eventos de lifecycle registram snapshots antes/depois sem alterar eventos anteriores.
 - [ ] Atualizar espelhos sanitizados e triggers Electric sem publicar identidade privada; definir compatibilidade com clientes antigos e recibos existentes.
 - [ ] Validar instalação vazia, upgrade com issues/eventos/recibos preexistentes, reaplicação, grants e restore em banco descartável; não popular dev com fixtures.
 

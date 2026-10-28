@@ -26,7 +26,7 @@ L03 e L04. Ler arquitetura, memória e decisões de L01 antes de implementar.
 
 - [ ] Reconfirmar documento Pencil pretendido pelo MCP Windows antes de usá-lo; inspecionar referências disponíveis sem editar designs. Se faltar referência, obter composição autorizada antes do layout final.
 - [ ] Integrar Arquivadas, detalhe e logs com filtros/paginação e ações por cargo/estado; reutilizar componentes Shadcn e padrões aprovados.
-- [ ] Confirmar reabertura, arquivo, reativação e substituição do relato; mostrar origem e conteúdo do relato restaurável, sem edição livre de snapshot histórico.
+- [ ] Confirmar reabertura, arquivo e reativação; informar quando a localização arquivada impede reabertura/reativação.
 - [ ] Explicar exigência de conexão das novas ações; impedir duplo envio e reconciliar timeout usando mesmo commandId; apresentar conflito sem perder texto.
 - [ ] Verificar temas, teclado, foco após diálogo, leitor de tela e viewports desktop/mobile; preservar conclusão offline e Cloud existentes.
 

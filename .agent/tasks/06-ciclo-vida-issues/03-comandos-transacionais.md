@@ -24,11 +24,11 @@ L01 e L02. Ler arquitetura, memória e decisões de L01 antes de implementar.
 
 ## Plano
 
-- [ ] Implementar rotas e serviços para reabrir, arquivar, reativar e restaurar relato com sessão completa e membership revalidada dentro da transação.
+- [ ] Implementar rotas e serviços para reabrir, arquivar e reativar com sessão completa e membership revalidada dentro da transação.
 - [ ] Gravar mudança, incremento de revisão, evento antes/depois e recibo de comando na mesma transação; replay reautoriza e payload divergente é rejeitado.
 - [ ] Serializar com edição, atendimento, conclusão, revogação e lifecycle de parque/turbina seguindo a ordem de locks existente; conferir a issue após locks.
 - [ ] Rejeitar mutações operacionais em arquivadas, inclusive comandos offline antigos; preservar conteúdo local para resolução/exportação.
-- [ ] Restaurar somente relato do evento autorizado, com confirmação na UI futura; não restaurar texto/localização, não mudar status nem apagar histórico.
+- [ ] Garantir que reabrir limpa o relato atual conforme regra existente e preserva eventos anteriores para consulta/auditoria.
 
 ## Contratos e dados afetados
 
