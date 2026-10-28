@@ -74,6 +74,64 @@ describe('armazenamento local de issues e outbox', () => {
     });
   });
 
+  it('preserva pendência e arquivo após restart e rejeita resposta antiga', async () => {
+    const scope = { ...partition, workspaceId: crypto.randomUUID() };
+    const store = await open(scope);
+    const remote = {
+      id: issueId,
+      workspaceId: scope.workspaceId,
+      parkId,
+      turbineId,
+      creatorMembershipId: '70000000-0000-4000-8000-000000000001',
+      creator: {
+        id: partition.accountId,
+        email: 'tecnico@example.test',
+        name: 'Técnico',
+      },
+      handlerMembershipId: null,
+      handler: null,
+      text: 'Versão confirmada pela API',
+      completionReport: null,
+      archivedAt: null,
+      status: 'pending',
+      createdAt: '2026-10-27T12:00:00.000Z',
+      updatedAt: '2026-10-27T12:05:00.000Z',
+      revision: 2,
+    } as const;
+
+    await store.recordServerIssue(remote);
+    const commandId = crypto.randomUUID();
+    await store.queueMutation({
+      issueId,
+      commandId,
+      kind: 'start',
+      payload: { commandId, expectedRevision: 2 },
+    });
+    await store.recordServerIssue({
+      ...remote,
+      revision: 3,
+      archivedAt: '2026-10-28T12:00:00.000Z',
+    });
+    await store.recordServerIssue(remote);
+    expect(store.getIssue(issueId)).toMatchObject({ serverActive: false, serverRevision: 3 });
+    expect(store.getCommand(commandId)?.status).toBe('conflict');
+    store.close();
+    const reopened = await open(scope);
+    expect(reopened.getIssue(issueId)?.serverIssue?.archivedAt).toBeTruthy();
+    expect(reopened.getCommand(commandId)).toBeDefined();
+    await expect(
+      reopened.queueMutation({
+        issueId,
+        commandId: crypto.randomUUID(),
+        kind: 'start',
+        payload: { commandId: crypto.randomUUID(), expectedRevision: 3 },
+      }),
+    ).rejects.toThrow('arquivado');
+    await reopened.recordServerIssue({ ...remote, revision: 4 });
+    expect(reopened.getIssue(issueId)?.serverActive).toBe(true);
+    expect(reopened.getCommand(commandId)).toBeDefined();
+  });
+
   it('grava no IndexedDB a versão atual do chamado recebida pela API', async () => {
     const scope = { ...partition, workspaceId: crypto.randomUUID() };
     const store = await open(scope);

@@ -538,10 +538,10 @@ export function createIssuesService(
       let cursor: { createdAt: Date; id: string } | null = null;
       if (query.cursor) {
         const result = await pool.query<{ createdAt: Date; id: string }>(
-          `SELECT CASE WHEN $3::text = 'completed' THEN updated_at ELSE created_at END AS "createdAt", id
+          `SELECT CASE WHEN $3::text = 'archived' THEN archived_at WHEN $3 = 'completed' THEN updated_at ELSE created_at END AS "createdAt", id
            FROM public.issues
            WHERE workspace_id = $1 AND id = $2
-             AND ($3::text IS NULL OR ($3 = 'active' AND status IN ('pending', 'in_progress')) OR status = $3)
+             AND (($3::text = 'archived' AND archived_at IS NOT NULL) OR (archived_at IS NULL AND ($3::text IS NULL OR ($3 = 'active' AND status IN ('pending', 'in_progress')) OR status = $3)))
              AND ($4::uuid IS NULL OR park_id = $4)
              AND ($5::uuid IS NULL OR turbine_id = $5)
            LIMIT 1`,
@@ -560,11 +560,11 @@ export function createIssuesService(
         `SELECT ${issueColumns}
          FROM public.issues i
          WHERE i.workspace_id = $1
-           AND ($2::text IS NULL OR ($2 = 'active' AND i.status IN ('pending', 'in_progress')) OR i.status = $2)
+           AND (($2::text = 'archived' AND i.archived_at IS NOT NULL) OR (i.archived_at IS NULL AND ($2::text IS NULL OR ($2 = 'active' AND i.status IN ('pending', 'in_progress')) OR i.status = $2)))
            AND ($3::uuid IS NULL OR i.park_id = $3)
            AND ($4::uuid IS NULL OR i.turbine_id = $4)
-           AND ($5::timestamptz IS NULL OR ((CASE WHEN $2 = 'completed' THEN i.updated_at ELSE i.created_at END), i.id) < ($5, $6::uuid))
-         ORDER BY (CASE WHEN $2 = 'completed' THEN i.updated_at ELSE i.created_at END) DESC, i.id DESC
+           AND ($5::timestamptz IS NULL OR ((CASE WHEN $2 = 'archived' THEN i.archived_at WHEN $2 = 'completed' THEN i.updated_at ELSE i.created_at END), i.id) < ($5, $6::uuid))
+         ORDER BY (CASE WHEN $2 = 'archived' THEN i.archived_at WHEN $2 = 'completed' THEN i.updated_at ELSE i.created_at END) DESC, i.id DESC
          LIMIT $7`,
         [
           workspaceId,
@@ -648,7 +648,7 @@ export function createIssuesService(
       const open = await executor.query(
         `SELECT EXISTS (
            SELECT 1 FROM public.issues
-           WHERE ${condition} AND status IN ('pending', 'in_progress')
+           WHERE ${condition} AND archived_at IS NULL AND status IN ('pending', 'in_progress')
          ) AS present`,
         values,
       );

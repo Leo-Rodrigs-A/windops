@@ -1247,6 +1247,18 @@ try {
   });
   assert.equal(archivedByCreator.statusCode, 200, archivedByCreator.body);
   assert.ok(archivedByCreator.json().archivedAt);
+  const archivedPage = await app.inject({
+    url: `${root}/issues?status=archived&parkId=${parkIds.active}&limit=1`,
+    headers: headers(ids.tech),
+  });
+  assert.equal(archivedPage.statusCode, 200, archivedPage.body);
+  assert.equal(archivedPage.json().items[0].id, ownerWaitIssueId);
+  const withoutArchive = await app.inject({
+    url: `${root}/issues?status=active&limit=100`,
+    headers: headers(ids.tech),
+  });
+  assert.ok(withoutArchive.json().items.every((issue) => issue.id !== ownerWaitIssueId));
+
   const reactivated = await app.inject({
     method: 'POST',
     url: `${root}/issues/${ownerWaitIssueId}/reactivate`,

@@ -61,6 +61,7 @@ export type SyncedIssueRow = {
   turbineId: string;
   text: string;
   completionReport: string | null;
+  archivedAt?: string | null;
   status: Issue['status'];
   createdAt: string;
   updatedAt: string;
@@ -160,6 +161,7 @@ function sameSyncedIssue(left: SyncedIssueRow | null, right: SyncedIssueRow) {
       left.text === right.text &&
       left.completionReport === right.completionReport &&
       left.status === right.status &&
+      (left.archivedAt ?? null) === (right.archivedAt ?? null) &&
       left.createdAt === right.createdAt &&
       left.updatedAt === right.updatedAt &&
       left.revision === right.revision,
@@ -283,6 +285,8 @@ export class LocalIssueStore {
   }) {
     const current = this.getIssue(input.issueId);
     if (!current) throw new Error('O chamado não existe nesta partição local.');
+    if (current.serverIssue?.archivedAt)
+      throw new Error('O chamado está arquivado. Reative-o online antes de editar.');
     const payload = updateIssueSchema.parse({
       commandId: input.commandId,
       expectedRevision: input.expectedRevision ?? current.serverRevision ?? 1,
@@ -410,6 +414,8 @@ export class LocalIssueStore {
   }) {
     const current = this.getIssue(input.issueId);
     if (!current) throw new Error('O chamado não existe nesta partição local.');
+    if (current.serverIssue?.archivedAt)
+      throw new Error('O chamado está arquivado. Reative-o online antes de editar.');
     const payload = commandSchemas[input.kind].parse(input.payload);
     const retry = this.retryFor(input.commandId, input.issueId, input.kind, payload);
     if (retry) return retry;
@@ -585,6 +591,7 @@ export class LocalIssueStore {
         turbineId: issue.turbineId,
         text: issue.text,
         completionReport: issue.completionReport,
+        archivedAt: issue.archivedAt,
         status: issue.status,
         createdAt: issue.createdAt,
         updatedAt: issue.updatedAt,
@@ -849,7 +856,7 @@ export class LocalIssueStore {
               status: remote.status,
             },
             serverRevision: remote.revision,
-            serverActive: true,
+            serverActive: !remote.archivedAt && remote.status !== 'completed',
             createdAt: remote.createdAt,
             localRevision: 0,
             updatedAt: remote.updatedAt,
@@ -857,7 +864,14 @@ export class LocalIssueStore {
         },
       ];
     }
-    if ((current.serverRevision ?? 0) > remote.revision) return [];
+    if (Math.max(current.serverRevision ?? 0, current.serverIssue?.revision ?? 0) > remote.revision)
+      return [];
+    if (
+      current.serverActive === false &&
+      remote.revision <= (current.serverRevision ?? 0) &&
+      !remote.archivedAt
+    )
+      return [];
     if ((current.serverRevision ?? 0) === remote.revision && current.serverActive) {
       const issueCommands = this.listPendingCommands().filter((command) => command.issueId === id);
       if (sameSyncedIssue(current.serverIssue, remote)) return [];
@@ -868,7 +882,7 @@ export class LocalIssueStore {
           value: {
             ...current,
             serverIssue: remote,
-            serverActive: true,
+            serverActive: !remote.archivedAt && remote.status !== 'completed',
             createdAt: current.createdAt ?? remote.createdAt,
             ...(issueCommands.length === 0
               ? {
@@ -925,7 +939,7 @@ export class LocalIssueStore {
         ...current,
         serverIssue: remote,
         serverRevision: remote.revision,
-        serverActive: true,
+        serverActive: !remote.archivedAt && remote.status !== 'completed',
         createdAt: current.createdAt ?? remote.createdAt,
         ...(unresolved.length === 0
           ? {

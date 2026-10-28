@@ -222,7 +222,13 @@ export const turbinesPageSchema = z
   .strict();
 
 export const issueStatusSchema = z.enum(['pending', 'in_progress', 'completed']);
-export const issueListStatusSchema = z.enum(['pending', 'in_progress', 'completed', 'active']);
+export const issueListStatusSchema = z.enum([
+  'pending',
+  'in_progress',
+  'completed',
+  'active',
+  'archived',
+]);
 export const issueEventTypeSchema = z.enum([
   'created',
   'edited',
