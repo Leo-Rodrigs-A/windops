@@ -22,4 +22,5 @@ export default defineConfig({
   plugins: [react(), tailwind(), offlineShell()],
   resolve: { alias: { '@': fileURLToPath(new URL('./src', import.meta.url)) } },
   server: { port: 5173, strictPort: true, proxy: { '/api': 'http://127.0.0.1:3000' } },
+  preview: { port: 5173, strictPort: true },
 });
