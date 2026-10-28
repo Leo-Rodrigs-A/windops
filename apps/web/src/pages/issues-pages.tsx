@@ -1148,6 +1148,7 @@ export function ArchivedIssuesPage() {
   const [busyId, setBusyId] = useState('');
   const [notice, setNotice] = useState('');
   const [reactivateTarget, setReactivateTarget] = useState<Issue | null>(null);
+  const reactivateTrigger = useRef<HTMLButtonElement | null>(null);
   const reactivateCommands = useRef<Record<string, string>>({});
   const isAdmin =
     snapshot.status === 'authenticated' && snapshot.context.role === 'admin' && offline.online;
@@ -1185,6 +1186,16 @@ export function ArchivedIssuesPage() {
       item.parkId.toLowerCase().includes(search.trim().toLowerCase()) ||
       item.turbineId.toLowerCase().includes(search.trim().toLowerCase()),
   );
+  function closeReactivateDialog(focusSearch = false) {
+    setReactivateTarget(null);
+    window.requestAnimationFrame(() => {
+      if (!focusSearch && reactivateTrigger.current?.isConnected) {
+        reactivateTrigger.current.focus();
+      } else {
+        document.getElementById('archived-search')?.focus();
+      }
+    });
+  }
   async function reactivate(issue: Issue): Promise<boolean> {
     const commandId = reactivateCommands.current[issue.id] ?? crypto.randomUUID();
     reactivateCommands.current[issue.id] = commandId;
@@ -1277,7 +1288,10 @@ export function ArchivedIssuesPage() {
                             size="sm"
                             variant="outline"
                             disabled={Boolean(busyId)}
-                            onClick={() => setReactivateTarget(issue)}
+                            onClick={(event) => {
+                              reactivateTrigger.current = event.currentTarget;
+                              setReactivateTarget(issue);
+                            }}
                           >
                             {busyId === issue.id ? 'Reativando…' : 'Reativar'}
                           </Button>
@@ -1306,7 +1320,7 @@ export function ArchivedIssuesPage() {
       <Dialog
         open={reactivateTarget !== null}
         onOpenChange={(open) => {
-          if (!open && !busyId) setReactivateTarget(null);
+          if (!open && !busyId) closeReactivateDialog();
         }}
       >
         <DialogContent>
@@ -1320,7 +1334,7 @@ export function ArchivedIssuesPage() {
           <DialogFooter>
             <Button
               disabled={Boolean(busyId)}
-              onClick={() => setReactivateTarget(null)}
+              onClick={() => closeReactivateDialog()}
               type="button"
               variant="outline"
             >
@@ -1331,7 +1345,7 @@ export function ArchivedIssuesPage() {
               onClick={() => {
                 if (reactivateTarget) {
                   void reactivate(reactivateTarget).then((succeeded) => {
-                    if (succeeded) setReactivateTarget(null);
+                    if (succeeded) closeReactivateDialog(true);
                   });
                 }
               }}

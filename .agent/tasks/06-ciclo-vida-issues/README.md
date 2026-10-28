@@ -36,7 +36,7 @@ Executar L01→L02→L03→L04→L05→L06. Questões de produto da L01 bloqueia
 - [x] [L02 — Persistência e auditoria](02-schema-auditoria.md) — depende de L01.
 - [x] [L03 — Comandos de ciclo de vida](03-comandos-transacionais.md) — depende de L01 e L02.
 - [x] [L04 — Consultas e reconciliação](04-consultas-replica.md) — depende de L02 e L03.
-- [ ] [L05 — Interfaces e confirmações](05-interface.md) — código implementado; conferência visual/acessibilidade pendente.
+- [ ] [L05 — Interfaces e confirmações](05-interface.md) — implementação e fluxo admin conferidos; validações de timeout/cache e leitor de tela pendentes.
 - [ ] [L06 — Validação integrada e encerramento](06-validacao-integrada.md) — depende de L01–L05.
 
 ## Aceite da slice
@@ -51,7 +51,7 @@ Executar L01→L02→L03→L04→L05→L06. Questões de produto da L01 bloqueia
 
 28/10/2026 — L04 concluída com validação automatizada e integração PostgreSQL. O proprietário transferiu o percurso manual com Electric e recuperação de conflito para a interface da L05, pois a execução pelo Scalar é lenta.
 
-28/10/2026 — L05: adicionada a tela Arquivados com pesquisa e paginação, ações de reativação/reabertura/arquivo com confirmação, mensagens de conexão e integração pelo cliente API. `pnpm check` passou (lint, typecheck, 54 testes e builds). Conferido WindOps.pen: há referências de lista mobile e componentes, sem tela Arquivados dedicada; o documento não foi alterado. No browser autenticado foram conferidos os estados vazios desktop/mobile e navegação por teclado; a navegação inferior mobile ausente e o rótulo em inglês foram corrigidos. O modal de reativação/foco pós-diálogo não pôde ser verificado: a conta não tem chamados arquivados nem permissão administrativa; leitor de tela também está pendente. Os percursos manuais de Electric e conflito permanecem para L06.
+28/10/2026 — L05: adicionada a tela Arquivados com pesquisa e paginação, ações de reativação/reabertura/arquivo com confirmação, mensagens de conexão e integração pelo cliente API. `pnpm check` passou (lint, typecheck, 54 testes e builds). Conferido WindOps.pen: há referências de lista mobile e componentes, sem tela Arquivados dedicada; o documento não foi alterado. No browser admin foram conferidos tema claro/escuro, estados vazios desktop/mobile, foco inicial, ciclo de Tab, cancelamento/Escape, restauração de foco e árvore de acessibilidade. Foi corrigida a restauração de foco, além da navegação inferior mobile ausente e do rótulo inglês. A issue de teste foi reativada e conferida em Pendentes, onde permanece. A simulação offline validou a mensagem e a ocultação da ação, mas sem cortar a rede real. Timeout/retry, sem cache, pendência local, leitor de tela e preservação de conclusão offline/Cloud continuam pendentes na L05; Electric e conflito real continuam na L06.
 
 28/10/2026 — L03 concluída: comandos transacionais, autorização, idempotência e locks validados na integração PostgreSQL; `pnpm test:issues-integration` e `pnpm check` passaram. Ver [L03](03-comandos-transacionais.md).
 

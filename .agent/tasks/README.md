@@ -8,7 +8,7 @@ Cada nova slice fica em uma pasta `NN-nome/`, com um `README.md` que define resu
 
 ## Slice atual
 
-Próxima execução: [06 — Ciclo de vida das issues](06-ciclo-vida-issues/README.md), em andamento desde 28/10/2026. L01–L04 concluídas; L05 implementada, com revisão de diálogo/leitor de tela pendente antes do fechamento. Duas tasks abertas.
+Próxima execução: [06 — Ciclo de vida das issues](06-ciclo-vida-issues/README.md), em andamento desde 28/10/2026. L01–L04 concluídas; L05 implementada, com validações de retry/cache e leitor de tela pendentes antes do fechamento. Duas tasks abertas.
 
 - [ ] [06 — Ciclo de vida das issues](06-ciclo-vida-issues/README.md): reabertura, arquivo/reativação e integração segura com réplica/fila.
 
