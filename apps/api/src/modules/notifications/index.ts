@@ -1,3 +1,4 @@
+export { registerNotificationRoutes } from './routes.js';
 export {
   createNotificationsService,
   type NotificationEvent,

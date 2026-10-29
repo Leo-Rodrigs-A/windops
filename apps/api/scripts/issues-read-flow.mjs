@@ -7,6 +7,7 @@ import { Pool } from 'pg';
 import { buildApp } from '../src/app.ts';
 import { createAuditService } from '../src/modules/audit/index.ts';
 import { createIssuesService } from '../src/modules/issues/index.ts';
+import { createNotificationsService } from '../src/modules/notifications/index.ts';
 import { createParksCatalogService } from '../src/modules/parks/index.ts';
 import { createSyncService } from '../src/modules/sync/index.ts';
 import { createWorkspaceAuthorizationService } from '../src/modules/workspaces/index.ts';
@@ -276,11 +277,13 @@ try {
     audit: createAuditService(),
     sync,
   });
+  const notifications = createNotificationsService(pool);
   app = buildApp({
     ready: async () => {},
     workspaceAuthorization: authorization,
     parksCatalog: parks,
     issues,
+    notifications,
     docs: true,
   });
   await app.ready();
@@ -478,6 +481,35 @@ try {
     [ids.workspaceA, createdIssueId, ids.tech.id],
   );
   assert.deepEqual(createdNoticeCounts.rows[0], { notices: 2, actor_notices: 0, deliveries: 1 });
+  await expectError(await app.inject(`${root}/notifications`), 401, 'AUTHENTICATION_REQUIRED');
+  const adminNotices = await app.inject({
+    url: `${root}/notifications?limit=1`,
+    headers: headers(ids.admin),
+  });
+  assert.equal(adminNotices.statusCode, 200, adminNotices.body);
+  assert.equal(adminNotices.json().items[0].issueId, createdIssueId);
+  assert.equal(adminNotices.json().items[0].type, 'created');
+  assert.equal(adminNotices.json().unreadCount, 1);
+  const adminNoticeId = adminNotices.json().items[0].id;
+  const readNotice = await app.inject({
+    method: 'POST',
+    url: `${root}/notifications/${adminNoticeId}/read`,
+    headers: headers(ids.admin),
+  });
+  assert.equal(readNotice.statusCode, 200, readNotice.body);
+  assert.ok(readNotice.json().readAt);
+  const readAgain = await app.inject({
+    method: 'POST',
+    url: `${root}/notifications/${adminNoticeId}/read`,
+    headers: headers(ids.admin),
+  });
+  assert.deepEqual(readAgain.json(), readNotice.json());
+  const wrongRecipient = await app.inject({
+    method: 'POST',
+    url: `${root}/notifications/${adminNoticeId}/read`,
+    headers: headers(ids.tech),
+  });
+  assert.equal(wrongRecipient.statusCode, 404);
   const createdReplay = await app.inject({
     method: 'POST',
     url: `${root}/issues`,
@@ -574,6 +606,25 @@ try {
   assert.equal(updated.statusCode, 200, updated.body);
   assert.equal(updated.json().revision, 2);
   assert.equal(updated.json().text, 'Texto revisado');
+  const notificationPageOne = await app.inject({
+    url: `${root}/notifications?limit=1`,
+    headers: headers(ids.admin),
+  });
+  assert.equal(notificationPageOne.statusCode, 200, notificationPageOne.body);
+  assert.equal(notificationPageOne.json().items[0].type, 'edited');
+  assert.equal(notificationPageOne.json().unreadCount, 1);
+  const notificationPageTwo = await app.inject({
+    url: `${root}/notifications?limit=1&cursor=${notificationPageOne.json().nextCursor}`,
+    headers: headers(ids.admin),
+  });
+  assert.equal(notificationPageTwo.statusCode, 200, notificationPageTwo.body);
+  assert.equal(notificationPageTwo.json().items[0].type, 'created');
+  assert.notEqual(notificationPageTwo.json().items[0].id, notificationPageOne.json().items[0].id);
+  const foreignCursor = await app.inject({
+    url: `/api/workspaces/${ids.workspaceB}/notifications?cursor=${notificationPageOne.json().items[0].id}`,
+    headers: headers(ids.other),
+  });
+  assert.equal(foreignCursor.statusCode, 400);
   const updatedReplay = await app.inject({
     method: 'PATCH',
     url: `${root}/issues/${createdIssueId}`,
@@ -679,7 +730,7 @@ try {
      FROM public.notifications WHERE issue_id = $1 AND type = 'created' AND suppressed_at IS NOT NULL`,
     [createdIssueId],
   );
-  assert.deepEqual(suppressedCreate.rows[0], { notices: 2, cancelled: 1 });
+  assert.deepEqual(suppressedCreate.rows[0], { notices: 1, cancelled: 1 });
 
   const concurrentEditIssueId = randomUUID();
   const concurrentCreate = await app.inject({

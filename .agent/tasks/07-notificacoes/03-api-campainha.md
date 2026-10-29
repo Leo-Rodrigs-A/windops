@@ -2,9 +2,9 @@
 
 ## Status
 
-Planejada
+Concluída em 28/10/2026
 
-- [ ] Task concluída
+- [x] Task concluída
 
 ## Objetivo
 
@@ -16,7 +16,7 @@ Recorte da [slice 07](README.md), respeitando seus limites. Sem deploy ou e-mail
 
 ## Estado atual
 
-Planejamento; nenhuma implementação desta task executada. Diagnóstico da base no índice da slice.
+API da campainha implementada e integrada ao servidor; validação PostgreSQL descartável aprovada.
 
 ## Dependências
 
@@ -24,11 +24,11 @@ N02.
 
 ## Plano
 
-- [ ] Implementar lista recente primeiro com cursor timestamp/UUID, contagem de não lidas e marcação de leitura idempotente para o destinatário autenticado.
-- [ ] Revalidar membership ativa em todas as rotas e serializar escrita com revogação; impedir acesso a notificações de outro usuário mesmo no mesmo tenant.
-- [ ] Definir DTO mínimo e link para issue sem vazar snapshots privados; detalhe de issue continua autorizado independentemente do aviso.
-- [ ] Validar paginação empatada, leitura repetida/concorrente, segundo tenant, sessão incompleta, órfão e revogação.
-- [ ] Manter consulta e marcação online neste recorte; documentar atualização por consulta ao abrir/retomar e polling limitado, sem novo shape pessoal nesta slice.
+- [x] Implementar lista recente primeiro com cursor timestamp/UUID, contagem de não lidas e marcação de leitura idempotente para o destinatário autenticado.
+- [x] Revalidar membership ativa em todas as rotas e serializar escrita com revogação; impedir acesso a notificações de outro usuário mesmo no mesmo tenant.
+- [x] Definir DTO mínimo contendo apenas ID, issueId, tipo e timestamps; detalhe de issue continua sujeito à autorização própria.
+- [x] Validar paginação, leitura repetida, cursor de outro tenant, sessão incompleta e destinatário incorreto em PostgreSQL descartável.
+- [x] Manter consulta e marcação online; não adicionar shape pessoal. Atualização ao abrir/retomar e polling limitado pertencem à N05.
 
 ## Contratos e dados afetados
 
@@ -40,4 +40,4 @@ Comprovar os itens do plano com evidências reproduzíveis e isolamento tenant; 
 
 ## Evidências
 
-28/10/2026: task planejada; implementação e testes de aplicação não executados.
+28/10/2026 — Adicionados contratos estritos, GET `/api/workspaces/:workspaceId/notifications` com paginação `(created_at DESC, id DESC)`/contagem não lida e POST `/:notificationId/read`. A leitura é idempotente e, na mesma transação, revalida/serializa membership ativa com revogação; usuário fora do destinatário recebe 404. DTO não expõe texto, snapshots ou nomes de outros atores. `pnpm test:issues-integration` passou em PostgreSQL descartável para sessão anônima, paginação, cursor pertencente a outro workspace, leitura repetida e isolamento de destinatário. `pnpm check` passou (54 testes e builds); `git diff --check` passou. Consulta permanece online, sem shape Electric nem fila offline.

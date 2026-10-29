@@ -28,7 +28,7 @@ Slices 01–06 registradas como concluídas para seus respectivos escopos. Inspe
 
 - [x] [N01 — Contratos e política de entrega](01-contratos-politica.md) — Slices 05/06.
 - [x] [N02 — Persistência e outbox transacional](02-persistencia-outbox.md) — N01.
-- [ ] [N03 — API da campainha](03-api-campainha.md) — N02.
+- [x] [N03 — API da campainha](03-api-campainha.md) — N02.
 - [ ] [N04 — Subscrições e worker de push](04-worker-subscriptions.md) — N01–N03.
 - [ ] [N05 — Campainha e integração PWA](05-interface-pwa.md) — N03/N04; referência visual confirmada.
 - [ ] [N06 — Validação integrada e encerramento](06-validacao-integrada.md) — N01–N05.
@@ -46,3 +46,5 @@ Slices 01–06 registradas como concluídas para seus respectivos escopos. Inspe
 28/10/2026: planejamento baseado em roadmap, memória, arquitetura, schema documentado e inspeção de notifications, adaptador push, audit, sender e Bell. Nenhuma fonte, migration ou infraestrutura alterada; testes de aplicação não executados.
 
 28/10/2026 — N02 concluída: migration 0012, emissão transacional de notificações, intenção push e cancelamento após conclusão implementados; integração issues, instalação vazia, upgrade, grants descartáveis, restore, Drizzle e `pnpm check` passaram. Banco dev persistente não foi migrado. Ver [N02](02-persistencia-outbox.md).
+
+28/10/2026 — N03 concluída: API online da campainha com DTO mínimo, paginação/cursor estável, contagem não lida e leitura idempotente autorizada. Integração PostgreSQL descartável e `pnpm check` passaram; sem shape Electric ou suporte de leitura offline. Ver [N03](03-api-campainha.md).

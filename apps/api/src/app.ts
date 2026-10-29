@@ -10,6 +10,10 @@ import {
 } from 'fastify-type-provider-zod';
 import { type IdentityProvider, registerIdentityRoutes } from './modules/identity/index.js';
 import { type IssuesService, registerIssuesRoutes } from './modules/issues/index.js';
+import {
+  type NotificationsService,
+  registerNotificationRoutes,
+} from './modules/notifications/index.js';
 import { type ParksCatalogService, registerParksRoutes } from './modules/parks/index.js';
 import type { SyncShapeProxy } from './modules/sync/index.js';
 import { registerSyncRoutes } from './modules/sync/routes.js';
@@ -26,6 +30,7 @@ export function buildApp(options: {
   workspaceAuthorization?: WorkspaceAuthorizationService;
   parksCatalog?: ParksCatalogService;
   issues?: IssuesService;
+  notifications?: NotificationsService;
   syncProxy?: SyncShapeProxy;
   authOrigin?: string;
 }) {
@@ -103,6 +108,8 @@ export function buildApp(options: {
       );
     if (options.workspaceAuthorization && options.issues)
       registerIssuesRoutes(app, options.workspaceAuthorization, options.issues);
+    if (options.workspaceAuthorization && options.notifications)
+      registerNotificationRoutes(app, options.workspaceAuthorization, options.notifications);
     if (options.docs) app.register(scalar, { routePrefix: '/api/docs' });
   });
   return app;

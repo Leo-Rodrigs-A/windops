@@ -2,6 +2,7 @@ import { buildApp } from './app.js';
 import { createAuditService } from './modules/audit/index.js';
 import { createIdentityProvider, createIdentityService } from './modules/identity/index.js';
 import { createIssuesService } from './modules/issues/index.js';
+import { createNotificationsService } from './modules/notifications/index.js';
 import { createParksCatalogService } from './modules/parks/index.js';
 import { createSyncService, createSyncShapeProxy } from './modules/sync/index.js';
 import { createWorkspaceAuthorizationService } from './modules/workspaces/index.js';
@@ -41,6 +42,7 @@ const workspaceAuthorization = createWorkspaceAuthorizationService(
   env.APP_ORIGIN,
 );
 const sync = createSyncService();
+const notifications = createNotificationsService(pool);
 const parksCatalog = createParksCatalogService(pool, workspaceAuthorization, sync);
 const app = buildApp({
   logger: true,
@@ -55,6 +57,7 @@ const app = buildApp({
     audit: createAuditService(),
     sync,
   }),
+  notifications,
   syncProxy: createSyncShapeProxy({
     authorization: workspaceAuthorization,
     electricUrl: env.ELECTRIC_URL,

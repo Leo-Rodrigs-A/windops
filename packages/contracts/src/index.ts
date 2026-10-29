@@ -277,6 +277,32 @@ export const issueEventSchema = z
 export const issueEventPageSchema = z
   .object({ items: z.array(issueEventSchema), nextCursor: z.uuid().nullable() })
   .strict();
+export const notificationTypeSchema = issueEventTypeSchema;
+export const notificationSchema = z
+  .object({
+    id: z.uuid(),
+    issueId: z.uuid(),
+    type: notificationTypeSchema,
+    createdAt: z.iso.datetime(),
+    readAt: z.iso.datetime().nullable(),
+  })
+  .strict();
+export const notificationsQuerySchema = z
+  .object({
+    limit: z.coerce.number().int().min(1).max(100).default(25),
+    cursor: z.uuid().optional(),
+  })
+  .strict();
+export const notificationsPageSchema = z
+  .object({
+    items: z.array(notificationSchema),
+    nextCursor: z.uuid().nullable(),
+    unreadCount: z.number().int().nonnegative(),
+  })
+  .strict();
+export type Notification = z.infer<typeof notificationSchema>;
+export type NotificationsQuery = z.infer<typeof notificationsQuerySchema>;
+export type NotificationsPage = z.infer<typeof notificationsPageSchema>;
 export const issuesQuerySchema = z
   .object({
     limit: z.coerce.number().int().min(1).max(100).default(25),
