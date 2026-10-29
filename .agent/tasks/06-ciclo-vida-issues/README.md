@@ -53,9 +53,12 @@ Executar L01→L02→L03→L04→L05→L06. Questões de produto da L01 bloqueia
 
 28/10/2026 — L05: adicionada a tela Arquivados com pesquisa e paginação, ações de reativação/reabertura/arquivo com confirmação, mensagens de conexão e integração pelo cliente API. `pnpm check` passou (lint, typecheck, 54 testes e builds). Conferido WindOps.pen: há referências de lista mobile e componentes, sem tela Arquivados dedicada; o documento não foi alterado. No browser admin foram conferidos tema claro/escuro, estados vazios desktop/mobile, foco inicial, ciclo de Tab, cancelamento/Escape, restauração de foco e árvore de acessibilidade. Foi corrigida a restauração de foco, além da navegação inferior mobile ausente e do rótulo inglês. A issue de teste foi reativada e conferida em Pendentes, onde permanece. A simulação offline validou a mensagem e a ocultação da ação, mas sem cortar a rede real. O usuário reportou que os percursos manuais finais (timeout/retry, cache, pendência local, leitor de tela e preservação de conclusão offline/Cloud) estão funcionando. A validação de Electric e conflito real continua na L06.
 
+28/10/2026 — O proprietário confirmou que todas as validações que ainda estavam pendentes na L05 foram exercitadas no front e estão funcionando; não restam pendências manuais na L05.
+
 28/10/2026 — L03 concluída: comandos transacionais, autorização, idempotência e locks validados na integração PostgreSQL; `pnpm test:issues-integration` e `pnpm check` passaram. Ver [L03](03-comandos-transacionais.md).
 
 28/10/2026 — L06 concluída: `pnpm check` e integrações auth/workspaces/parks/issues passaram; ciclo completo, equipamento inativo, revogação, espera de uma hora, conflitos e corridas verificados em PostgreSQL descartável. Testes offline cobrem restart/reconciliação e replay de resposta perdida sem duplicar evento; proprietário confirmou o percurso funcional no front. Containers PostgreSQL/Electric/Mailpit saudáveis. Sem mudança de fonte/schema/infra. Limites de dispositivos móveis, HTTPS em aparelho e quota/evicção física permanecem na produção. Ver [L06](06-validacao-integrada.md).
+
 
 28/10/2026 — L02: migration 0011, espelho Electric e validação descartável de instalação/upgrade/restart/grants aprovados. 53 testes e `pnpm check` passaram. Ver [L02](02-schema-auditoria.md).
 

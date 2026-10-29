@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import { type FormEvent, type ReactNode, useCallback, useEffect, useRef, useState } from 'react';
 import { useAuth } from '../auth/auth-context';
+import { PushSettings } from '../components/push-settings';
 import { SignOutButton } from '../components/sign-out-button';
 import { ThemeToggle } from '../components/theme-toggle';
 import { Badge } from '../components/ui/badge';
@@ -2513,6 +2514,10 @@ export function AccountSettingsPage() {
                 <SignOutButton />
               </CardContent>
             </Card>
+            <PushSettings
+              key={`${snapshot.accountId}:${snapshot.workspaceId}`}
+              workspaceId={snapshot.workspaceId}
+            />
             {offlineWorkspace.pendingCommands.length > 0 && (
               <Feedback
                 message={`${offlineWorkspace.pendingCommands.length} alteração(ões) local(is) continuam preservadas nesta conta.`}
@@ -2617,6 +2622,10 @@ export function AccountSettingsPage() {
               </CardContent>
             </Card>
           </section>
+          <PushSettings
+            key={`${me.user.id}:${context.workspace.id}`}
+            workspaceId={context.workspace.id}
+          />
           {context.role === 'admin' && (
             <Card className="flex flex-row flex-wrap items-center justify-between gap-4 px-5 py-4">
               <div>

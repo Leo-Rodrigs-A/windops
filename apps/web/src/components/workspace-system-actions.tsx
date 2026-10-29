@@ -1,7 +1,8 @@
-import { Bell, Cloud, CloudOff, RefreshCw } from 'lucide-react';
+import { Cloud, CloudOff, RefreshCw } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { useAuth } from '../auth/auth-context';
 import { useOfflineWorkspace } from '../offline/offline-workspace-context';
+import { NotificationBell } from './notification-bell';
 import { Button } from './ui/button';
 import {
   Dialog,
@@ -94,6 +95,12 @@ export function WorkspaceSystemActions() {
   const [open, setOpen] = useState(false);
   const [exportError, setExportError] = useState('');
   const accountOnline = snapshot.status === 'authenticated';
+  const notificationScope =
+    snapshot.status === 'authenticated'
+      ? { accountId: snapshot.me.user.id, workspaceId: snapshot.context.workspace.id }
+      : snapshot.status === 'offline' || snapshot.status === 'revoked'
+        ? { accountId: snapshot.accountId, workspaceId: snapshot.workspaceId }
+        : null;
   const replicaCaughtUp = collections.every(
     ([collection]) => replicaStatus?.caughtUp[collection] === true,
   );
@@ -164,16 +171,13 @@ export function WorkspaceSystemActions() {
 
   return (
     <div className="flex items-center gap-1">
-      <Button
-        aria-label="Notificações — integração ainda não disponível"
-        className="text-muted-foreground"
-        disabled
-        size="icon"
-        title="As notificações serão agrupadas aqui quando a integração estiver disponível."
-        variant="ghost"
-      >
-        <Bell aria-hidden="true" className="size-5" />
-      </Button>
+      {notificationScope && (
+        <NotificationBell
+          key={`${snapshot.status}:${notificationScope.accountId}:${notificationScope.workspaceId}`}
+          online={accountOnline && online}
+          workspaceId={notificationScope.workspaceId}
+        />
+      )}
       <Button
         aria-label={`Sincronização: ${state.text}`}
         className={state.text === 'Sincronizado' ? 'text-emerald-500' : 'text-muted-foreground'}

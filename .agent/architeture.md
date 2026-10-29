@@ -73,7 +73,7 @@ PWA guarda app shell e dados para reabertura offline. Não prometer envio com ap
 
 Resend é SaaS, chamado pelo servidor com API key e remetente de domínio verificado. Sem servidor Resend na VPS. Desenvolvimento usa SMTP/Mailpit. Somente convites, códigos e recuperação de senha inicialmente; eventos de issue não geram e-mail. Plano gratuito requer limites de envio, tentativas, cooldown e erro recuperável.
 
-Web Push usa VAPID; chave privada exclusiva do backend. Implementar subscrições, autorização, remoção de endpoints expirados e deduplicação por evento na [etapa 09 do roadmap](<tasks/00 - roadmap/09-notifications.md>). Um push por criação, sem agrupar; demais eventos somente campainha. Banco transacional terá outbox de entregas processada por worker do mesmo monólito, sem Redis inicialmente. Adaptador atual apenas transporta mensagens; não implementa esses fluxos.
+Web Push usa VAPID; chave privada exclusiva do backend. N02–N04 implementam subscrições autorizadas, remoção de endpoints expirados, deduplicação, outbox transacional e worker do mesmo monólito, sem Redis. N05 conecta a campainha, a configuração explícita de push e os eventos do service worker; interface/PWA e entrega real foram validadas pelo proprietário. N06 concluiu a validação integrada em bancos descartáveis; instalação Android/iPhone, HTTPS de produção e quota/evicção permanecem no roadmap 11, sem declaração de suporte móvel. Um push por criação, sem agrupar; demais eventos somente campainha. A etapa 09 do roadmap registra evidências e limitações.
 
 ## Infraestrutura
 

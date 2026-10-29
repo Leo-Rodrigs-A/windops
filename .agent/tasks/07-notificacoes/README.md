@@ -2,9 +2,9 @@
 
 ## Status
 
-Planejada em 28/10/2026.
+- Concluída em 28/10/2026 para o escopo validado.
 
-- [ ] Slice concluída
+- [x] Slice concluída
 
 ## Resultado esperado
 
@@ -12,7 +12,7 @@ Membros recebem avisos individuais dos eventos de issues e podem marcá-los como
 
 ## Análise da base
 
-Slices 01–06 registradas como concluídas para seus respectivos escopos. Inspeção: `notifications/index.ts` está vazio; `platform/push.ts` apenas envia via web-push; Bell está desativada; audit recebe a transação de issues e persiste eventos. Há journal e sender offline, mas envio por comando, sem fronteira de lote. Esta slice implementa a [etapa 09](<../00 - roadmap/09-notifications.md>), dependente do lifecycle entregue.
+Slices 01–06 registradas como concluídas para seus respectivos escopos. Inspeção inicial: `notifications/index.ts` estava vazio; `platform/push.ts` apenas enviava via web-push; Bell estava desativada; audit recebe a transação de issues e persiste eventos. N02–N04 implementaram backend/outbox/worker, N05 concluiu a interface PWA e entrega real, e N06 concluiu a validação integrada da [etapa 09](<../00 - roadmap/09-notifications.md>).
 
 ## Dependências e limites
 
@@ -30,16 +30,16 @@ Slices 01–06 registradas como concluídas para seus respectivos escopos. Inspe
 - [x] [N02 — Persistência e outbox transacional](02-persistencia-outbox.md) — N01.
 - [x] [N03 — API da campainha](03-api-campainha.md) — N02.
 - [x] [N04 — Subscrições e worker de push](04-worker-subscriptions.md) — N01–N03.
-- [ ] [N05 — Campainha e integração PWA](05-interface-pwa.md) — N03/N04; referência visual confirmada.
-- [ ] [N06 — Validação integrada e encerramento](06-validacao-integrada.md) — N01–N05.
+- [x] [N05 — Campainha e integração PWA](05-interface-pwa.md) — N03/N04; interface/PWA e push real validados pelo proprietário.
+- [x] [N06 — Validação integrada e encerramento](06-validacao-integrada.md) — N01–N05; checks, integrações e push real concluídos.
 
 ## Aceite da slice
 
-- [ ] Evento e intenção de notificar são atômicos; retry não duplica avisos no banco.
-- [ ] Destinatários, canais e regra de lote respeitam a matriz N01.
-- [ ] Leitura e subscrições isoladas por usuário/tenant; revogação tratada.
-- [ ] Worker recupera falhas/restart e descarta endpoints expirados.
-- [ ] Campainha e push real validados no front; limites externos documentados.
+- [x] Evento e intenção de notificar são atômicos; retry não duplica avisos no banco.
+- [x] Destinatários, canais e regra de lote respeitam a matriz N01.
+- [x] Leitura e subscrições isoladas por usuário/tenant; revogação tratada.
+- [x] Worker recupera falhas/restart e descarta endpoints expirados.
+- [x] Campainha e push real validados no front; limites externos documentados.
 
 ## Evidências
 
@@ -50,3 +50,7 @@ Slices 01–06 registradas como concluídas para seus respectivos escopos. Inspe
 28/10/2026 — N03 concluída: API online da campainha com DTO mínimo, paginação/cursor estável, contagem não lida e leitura idempotente autorizada. Integração PostgreSQL descartável e `pnpm check` passaram; sem shape Electric ou suporte de leitura offline. Ver [N03](03-api-campainha.md).
 
 28/10/2026 — N04 concluída: VAPID server-only, inscrição por dispositivo, worker concorrente com lease/retry/recovery e revogação foram implementados e validados com transporte controlado em PostgreSQL descartável. `pnpm check`, empty install, restore e Drizzle passaram. Push real não foi enviado; confirmação externa perdida ainda pode gerar duplicata. Logout/desinscrição será ligado à interface na N05. Ver [N04](04-worker-subscriptions.md).
+
+28/10/2026 — N05 concluída: o proprietário confirmou a validação funcional completa no front, incluindo interface/PWA, acessibilidade, temas, viewports, atualização/offline, partição e clique. Em Preview HTTPS temporário, a API aceitou a inscrição (`PUT 200`) e o proprietário confirmou a exibição de push real. Ver [N05](05-interface-pwa.md).
+
+28/10/2026 — N06 concluída: `pnpm check`; integrações auth/workspaces/parks/issues; instalação vazia, restart, grants, upgrade e restore passaram. A matriz de notificações confirmou isolamento por tenant, autor e membership revogada, leitura individual, múltiplos dispositivos, supressão antes do claim, retry e recuperação de worker. Falha simulada após aceite externo confirmou o limite at-least-once sem duplicar intenções no banco. Limites móveis/de produção permanecem no roadmap 11. Ver [N06](06-validacao-integrada.md).

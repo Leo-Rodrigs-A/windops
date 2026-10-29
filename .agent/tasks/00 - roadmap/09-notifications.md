@@ -2,7 +2,7 @@
 
 ## Status
 
-Planejada na [slice 07](../07-notificacoes/README.md), com N01–N06. Implementação ainda não iniciada.
+Entregue para o escopo funcional validado em browser/PWA na [slice 07](../07-notificacoes/README.md), com N01–N06 concluídas. Instalação Android/iPhone, HTTPS de produção e quota/evicção permanecem no roadmap 11; suporte móvel não foi declarado.
 
 ## Objetivo e escopo
 

@@ -537,11 +537,21 @@ try {
          WHERE workspace_id = $1 AND issue_id = $2 AND type = 'created') AS notices,
        (SELECT count(*)::int FROM public.notifications
          WHERE workspace_id = $1 AND issue_id = $2 AND recipient_user_id = $3) AS actor_notices,
+       (SELECT count(*)::int FROM public.notifications
+         WHERE workspace_id = $1 AND issue_id = $2 AND recipient_user_id = $4) AS revoked_notices,
+       (SELECT count(*)::int FROM public.notifications
+         WHERE workspace_id = $5 AND issue_id = $2) AS cross_tenant_notices,
        (SELECT count(*)::int FROM public.notification_deliveries
          WHERE workspace_id = $1 AND issue_id = $2) AS deliveries`,
-    [ids.workspaceA, createdIssueId, ids.tech.id],
+    [ids.workspaceA, createdIssueId, ids.tech.id, ids.revoked.id, ids.workspaceB],
   );
-  assert.deepEqual(createdNoticeCounts.rows[0], { notices: 2, actor_notices: 0, deliveries: 2 });
+  assert.deepEqual(createdNoticeCounts.rows[0], {
+    notices: 2,
+    actor_notices: 0,
+    revoked_notices: 0,
+    cross_tenant_notices: 0,
+    deliveries: 2,
+  });
   await expectError(await app.inject(`${root}/notifications`), 401, 'AUTHENTICATION_REQUIRED');
   const adminNotices = await app.inject({
     url: `${root}/notifications?limit=1`,
@@ -2134,6 +2144,61 @@ try {
   );
   assert.deepEqual(recovered.rows[0], { status: 'sent', attempts: 4 });
   assert.equal(retryProviderAccepts, 2);
+
+  await pool.query(
+    `UPDATE public.notification_deliveries SET status = 'pending', sent_at = NULL,
+       available_at = clock_timestamp()
+     WHERE id = $1`,
+    [retryId],
+  );
+  let acceptedBeforeLostResponse = 0;
+  const lostResponseWorker = createNotificationWorker(
+    pool,
+    {
+      async send() {
+        acceptedBeforeLostResponse += 1;
+        if (acceptedBeforeLostResponse === 1)
+          throw new Error('Push provider accepted the message but its response was lost');
+      },
+    },
+    { batchSize: 1 },
+  );
+  await lostResponseWorker.runOnce();
+  const pendingAfterLostResponse = await pool.query(
+    `SELECT status, attempts FROM public.notification_deliveries WHERE id = $1`,
+    [retryId],
+  );
+  assert.deepEqual(pendingAfterLostResponse.rows[0], { status: 'pending', attempts: 5 });
+  await pool.query(
+    `UPDATE public.notification_deliveries SET available_at = clock_timestamp() WHERE id = $1`,
+    [retryId],
+  );
+  const lostResponseRetryWorker = createNotificationWorker(
+    pool,
+    {
+      async send() {
+        acceptedBeforeLostResponse += 1;
+      },
+    },
+    { batchSize: 1 },
+  );
+  await lostResponseRetryWorker.runOnce();
+  const sentAfterLostResponse = await pool.query(
+    `SELECT status, attempts FROM public.notification_deliveries WHERE id = $1`,
+    [retryId],
+  );
+  assert.deepEqual(sentAfterLostResponse.rows[0], { status: 'sent', attempts: 6 });
+  assert.equal(acceptedBeforeLostResponse, 2);
+  const stableIntents = await pool.query(
+    `SELECT
+       (SELECT count(*)::int FROM public.notifications WHERE issue_id = $1) AS notices,
+       (SELECT count(*)::int FROM public.notification_deliveries WHERE issue_id = $1) AS deliveries`,
+    [workerIssueId],
+  );
+  assert.deepEqual(stableIntents.rows[0], { notices: 1, deliveries: 2 });
+  console.log(
+    'Push worker verified: concurrent devices, lease recovery, transient retry, and at-least-once retry after provider acceptance with a lost response.',
+  );
 
   assert.ok(app.swagger().paths['/api/workspaces/{workspaceId}/issues']);
   assert.ok(app.swagger().paths['/api/workspaces/{workspaceId}/issues/{issueId}/events']);

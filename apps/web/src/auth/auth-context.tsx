@@ -19,6 +19,7 @@ import {
   getWorkspaceContext,
 } from '../lib/auth-api';
 import { hasPendingInvitation } from '../lib/invitation-token';
+import { clearPushOnSignOut } from '../lib/push-subscriptions';
 import {
   blockRevokedWorkspace,
   disconnectLocalAccount,
@@ -171,6 +172,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
         throw error;
       }
+      const previous = snapshotRef.current;
+      const previousAccountId =
+        previous.status === 'authenticated'
+          ? previous.me.user.id
+          : previous.status === 'offline' || previous.status === 'revoked'
+            ? previous.accountId
+            : null;
+      const previousWorkspaceId =
+        previous.status === 'authenticated'
+          ? previous.context.workspace.id
+          : previous.status === 'offline' || previous.status === 'revoked'
+            ? previous.workspaceId
+            : null;
+      if (
+        requestId === refreshSequence.current &&
+        previousAccountId &&
+        previousWorkspaceId &&
+        (previousAccountId !== me.user.id || previousWorkspaceId !== workspace.id)
+      )
+        await clearPushOnSignOut(previousWorkspaceId);
       rememberLocalAccess({
         accountId: me.user.id,
         workspaceId: workspace.id,
@@ -302,6 +323,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const signOut = useCallback(async () => {
     const current = snapshotRef.current;
     const offline = current.status === 'offline' || current.status === 'revoked';
+    const workspaceId =
+      current.status === 'authenticated'
+        ? current.context.workspace.id
+        : offline
+          ? current.workspaceId
+          : undefined;
+    if (workspaceId) await clearPushOnSignOut(workspaceId);
     const accountId =
       current.status === 'authenticated'
         ? current.me.user.id
