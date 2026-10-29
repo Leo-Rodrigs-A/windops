@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
-import { randomUUID } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 import { config } from 'dotenv';
 import { Pool } from 'pg';
@@ -423,6 +423,19 @@ try {
 
   const createdIssueId = randomUUID();
   const createCommandId = randomUUID();
+  const adminPushEndpoint = `https://push.example.test/${randomUUID()}`;
+  await pool.query(
+    `INSERT INTO public.push_subscriptions
+       (id, workspace_id, user_id, endpoint, endpoint_hash, p256dh, auth_secret)
+     VALUES ($1, $2, $3, $4, $5, 'public-key', 'auth-secret')`,
+    [
+      randomUUID(),
+      ids.workspaceA,
+      ids.admin.id,
+      adminPushEndpoint,
+      createHash('sha256').update(adminPushEndpoint).digest(),
+    ],
+  );
   const createBody = {
     commandId: createCommandId,
     issueId: createdIssueId,
@@ -454,6 +467,17 @@ try {
   assert.equal(created.statusCode, 201, created.body);
   assert.equal(created.json().creator.id, ids.tech.id);
   assert.equal(created.json().revision, 1);
+  const createdNoticeCounts = await pool.query(
+    `SELECT
+       (SELECT count(*)::int FROM public.notifications
+         WHERE workspace_id = $1 AND issue_id = $2 AND type = 'created') AS notices,
+       (SELECT count(*)::int FROM public.notifications
+         WHERE workspace_id = $1 AND issue_id = $2 AND recipient_user_id = $3) AS actor_notices,
+       (SELECT count(*)::int FROM public.notification_deliveries
+         WHERE workspace_id = $1 AND issue_id = $2) AS deliveries`,
+    [ids.workspaceA, createdIssueId, ids.tech.id],
+  );
+  assert.deepEqual(createdNoticeCounts.rows[0], { notices: 2, actor_notices: 0, deliveries: 1 });
   const createdReplay = await app.inject({
     method: 'POST',
     url: `${root}/issues`,
@@ -583,6 +607,11 @@ try {
     sync_snapshots_sanitized: true,
     receipts: 2,
   });
+  const replayNoticeCount = await pool.query(
+    `SELECT count(*)::int AS count FROM public.notifications WHERE issue_id = $1`,
+    [createdIssueId],
+  );
+  assert.equal(replayNoticeCount.rows[0].count, 4);
   await expectError(
     await app.inject({
       method: 'PATCH',
@@ -628,6 +657,29 @@ try {
     400,
     'VALIDATION_ERROR',
   );
+
+  const startForCompletion = await app.inject({
+    method: 'POST',
+    url: `${root}/issues/${createdIssueId}/start`,
+    headers: headers(ids.admin),
+    payload: { commandId: randomUUID(), expectedRevision: 2 },
+  });
+  assert.equal(startForCompletion.statusCode, 200, startForCompletion.body);
+  const completeForNotification = await app.inject({
+    method: 'POST',
+    url: `${root}/issues/${createdIssueId}/complete`,
+    headers: headers(ids.admin),
+    payload: { commandId: randomUUID(), expectedRevision: 3 },
+  });
+  assert.equal(completeForNotification.statusCode, 200, completeForNotification.body);
+  const suppressedCreate = await pool.query(
+    `SELECT count(*)::int AS notices,
+       (SELECT count(*)::int FROM public.notification_deliveries
+         WHERE issue_id = $1 AND status = 'cancelled' AND cancelled_at IS NOT NULL) AS cancelled
+     FROM public.notifications WHERE issue_id = $1 AND type = 'created' AND suppressed_at IS NOT NULL`,
+    [createdIssueId],
+  );
+  assert.deepEqual(suppressedCreate.rows[0], { notices: 2, cancelled: 1 });
 
   const concurrentEditIssueId = randomUUID();
   const concurrentCreate = await app.inject({

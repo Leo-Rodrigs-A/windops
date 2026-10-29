@@ -1,5 +1,6 @@
 import type { IssueEventType } from '@windops/contracts';
 import type { PoolClient } from 'pg';
+import { createNotificationsService, type NotificationsService } from '../notifications/index.js';
 
 export interface AppendIssueEventInput {
   id: string;
@@ -37,7 +38,9 @@ function publicSnapshot(snapshot: Record<string, unknown> | null) {
   );
 }
 
-export function createAuditService(): AuditService {
+export function createAuditService(
+  notifications: NotificationsService = createNotificationsService(),
+): AuditService {
   return {
     async appendIssueEvent(client, input) {
       await client.query(
@@ -83,6 +86,7 @@ export function createAuditService(): AuditService {
             input.location.turbineId,
           ],
         );
+      await notifications.recordIssueEvent(client, input);
     },
   };
 }

@@ -1,2 +1,5 @@
-// Public module entrypoint. Business behavior belongs to its documented slice.
-export {};
+export {
+  createNotificationsService,
+  type NotificationEvent,
+  type NotificationsService,
+} from './service.js';
