@@ -7,7 +7,10 @@ import { Pool } from 'pg';
 import { buildApp } from '../src/app.ts';
 import { createAuditService } from '../src/modules/audit/index.ts';
 import { createIssuesService } from '../src/modules/issues/index.ts';
-import { createNotificationsService } from '../src/modules/notifications/index.ts';
+import {
+  createNotificationsService,
+  createNotificationWorker,
+} from '../src/modules/notifications/index.ts';
 import { createParksCatalogService } from '../src/modules/parks/index.ts';
 import { createSyncService } from '../src/modules/sync/index.ts';
 import { createWorkspaceAuthorizationService } from '../src/modules/workspaces/index.ts';
@@ -277,7 +280,7 @@ try {
     audit: createAuditService(),
     sync,
   });
-  const notifications = createNotificationsService(pool);
+  const notifications = createNotificationsService(pool, 'A'.repeat(87));
   app = buildApp({
     ready: async () => {},
     workspaceAuthorization: authorization,
@@ -310,6 +313,63 @@ try {
     403,
     'WORKSPACE_ACCESS_DENIED',
   );
+  const pushStatus = await app.inject({
+    url: `${root}/notifications/push/status`,
+    headers: headers(ids.admin),
+  });
+  assert.deepEqual(pushStatus.json(), { enabled: true, publicKey: 'A'.repeat(87) });
+  const deviceId = randomUUID();
+  const pushBody = {
+    deviceId,
+    endpoint: `https://fcm.googleapis.com/fcm/send/${randomUUID()}`,
+    keys: { p256dh: 'public-key', auth: 'auth-secret' },
+  };
+  const subscribed = await app.inject({
+    method: 'PUT',
+    url: `${root}/notifications/push-subscriptions`,
+    headers: headers(ids.admin),
+    payload: pushBody,
+  });
+  assert.equal(subscribed.statusCode, 200, subscribed.body);
+  const repeatedSubscription = await app.inject({
+    method: 'PUT',
+    url: `${root}/notifications/push-subscriptions`,
+    headers: headers(ids.admin),
+    payload: pushBody,
+  });
+  assert.deepEqual(repeatedSubscription.json(), subscribed.json());
+  const subscriptionCount = await pool.query(
+    `SELECT count(*)::int AS count FROM public.push_subscriptions
+     WHERE workspace_id = $1 AND user_id = $2 AND device_id = $3 AND revoked_at IS NULL`,
+    [ids.workspaceA, ids.admin.id, deviceId],
+  );
+  assert.equal(subscriptionCount.rows[0].count, 1);
+  const unsubscribed = await app.inject({
+    method: 'DELETE',
+    url: `${root}/notifications/push-subscriptions/${deviceId}`,
+    headers: headers(ids.admin),
+  });
+  assert.equal(unsubscribed.statusCode, 204, unsubscribed.body);
+  const unsubscribedAgain = await app.inject({
+    method: 'DELETE',
+    url: `${root}/notifications/push-subscriptions/${deviceId}`,
+    headers: headers(ids.admin),
+  });
+  assert.equal(unsubscribedAgain.statusCode, 204);
+  const resubscribed = await app.inject({
+    method: 'PUT',
+    url: `${root}/notifications/push-subscriptions`,
+    headers: headers(ids.admin),
+    payload: pushBody,
+  });
+  assert.equal(resubscribed.statusCode, 200, resubscribed.body);
+  const rejectedEndpoint = await app.inject({
+    method: 'PUT',
+    url: `${root}/notifications/push-subscriptions`,
+    headers: headers(ids.admin),
+    payload: { ...pushBody, deviceId: randomUUID(), endpoint: 'https://127.0.0.1:443/internal' },
+  });
+  assert.equal(rejectedEndpoint.statusCode, 400);
 
   for (const user of [ids.admin, ids.tech]) {
     const page = await app.inject({ url: `${root}/issues?limit=2`, headers: headers(user) });
@@ -429,12 +489,13 @@ try {
   const adminPushEndpoint = `https://push.example.test/${randomUUID()}`;
   await pool.query(
     `INSERT INTO public.push_subscriptions
-       (id, workspace_id, user_id, endpoint, endpoint_hash, p256dh, auth_secret)
-     VALUES ($1, $2, $3, $4, $5, 'public-key', 'auth-secret')`,
+       (id, workspace_id, user_id, device_id, endpoint, endpoint_hash, p256dh, auth_secret)
+     VALUES ($1, $2, $3, $4, $5, $6, 'public-key', 'auth-secret')`,
     [
       randomUUID(),
       ids.workspaceA,
       ids.admin.id,
+      randomUUID(),
       adminPushEndpoint,
       createHash('sha256').update(adminPushEndpoint).digest(),
     ],
@@ -480,7 +541,7 @@ try {
          WHERE workspace_id = $1 AND issue_id = $2) AS deliveries`,
     [ids.workspaceA, createdIssueId, ids.tech.id],
   );
-  assert.deepEqual(createdNoticeCounts.rows[0], { notices: 2, actor_notices: 0, deliveries: 1 });
+  assert.deepEqual(createdNoticeCounts.rows[0], { notices: 2, actor_notices: 0, deliveries: 2 });
   await expectError(await app.inject(`${root}/notifications`), 401, 'AUTHENTICATION_REQUIRED');
   const adminNotices = await app.inject({
     url: `${root}/notifications?limit=1`,
@@ -730,7 +791,7 @@ try {
      FROM public.notifications WHERE issue_id = $1 AND type = 'created' AND suppressed_at IS NOT NULL`,
     [createdIssueId],
   );
-  assert.deepEqual(suppressedCreate.rows[0], { notices: 1, cancelled: 1 });
+  assert.deepEqual(suppressedCreate.rows[0], { notices: 1, cancelled: 2 });
 
   const concurrentEditIssueId = randomUUID();
   const concurrentCreate = await app.inject({
@@ -1938,6 +1999,141 @@ try {
   } finally {
     client.release();
   }
+
+  const workerIssueId = randomUUID();
+  const workerActorId = randomUUID();
+  const workerActor = {
+    id: workerActorId,
+    name: 'Worker actor',
+    email: `worker-actor-${process.pid}@example.invalid`,
+  };
+  knownUsers.set(workerActorId, workerActor);
+  await pool.query(
+    `INSERT INTO public.auth_users(id, name, email, email_verified) VALUES ($1, $2, $3, true)`,
+    [workerActorId, workerActor.name, workerActor.email],
+  );
+  await pool.query(
+    `INSERT INTO public.workspace_members(workspace_id, user_id, role) VALUES ($1, $2, 'technician')`,
+    [ids.workspaceA, workerActorId],
+  );
+  const pushRecipientId = randomUUID();
+  await pool.query(
+    `INSERT INTO public.auth_users(id, name, email, email_verified) VALUES ($1, 'Push recipient', $2, true)`,
+    [pushRecipientId, `push-recipient-${process.pid}@example.invalid`],
+  );
+  await pool.query(
+    `INSERT INTO public.workspace_members(workspace_id, user_id, role) VALUES ($1, $2, 'technician')`,
+    [ids.workspaceA, pushRecipientId],
+  );
+  for (let index = 0; index < 2; index += 1) {
+    const endpoint = `https://push.mock.example/${randomUUID()}`;
+    await pool.query(
+      `INSERT INTO public.push_subscriptions
+         (id, workspace_id, user_id, device_id, endpoint, endpoint_hash, p256dh, auth_secret)
+       VALUES ($1, $2, $3, $4, $5, $6, 'public-key', 'auth-secret')`,
+      [
+        randomUUID(),
+        ids.workspaceA,
+        pushRecipientId,
+        randomUUID(),
+        endpoint,
+        createHash('sha256').update(endpoint).digest(),
+      ],
+    );
+  }
+  const workerIssue = await app.inject({
+    method: 'POST',
+    url: `${root}/issues`,
+    headers: headers(workerActor),
+    payload: {
+      issueId: workerIssueId,
+      commandId: randomUUID(),
+      parkId: parkIds.active,
+      turbineId: turbineIds.active,
+      text: 'Worker push fixture',
+    },
+  });
+  assert.equal(workerIssue.statusCode, 201, workerIssue.body);
+  const sentEndpoints = [];
+  const mockSender = {
+    async send(subscription) {
+      sentEndpoints.push(subscription.endpoint);
+      await new Promise((resolve) => setTimeout(resolve, 20));
+    },
+  };
+  const workerA = createNotificationWorker(pool, mockSender, { batchSize: 1 });
+  const workerB = createNotificationWorker(pool, mockSender, { batchSize: 1 });
+  await Promise.all([workerA.runOnce(), workerB.runOnce()]);
+  const parallelDeliveries = await pool.query(
+    `SELECT status, attempts FROM public.notification_deliveries WHERE issue_id = $1 ORDER BY id`,
+    [workerIssueId],
+  );
+  assert.equal(parallelDeliveries.rows.length, 2);
+  assert.ok(
+    parallelDeliveries.rows.every(({ status, attempts }) => status === 'sent' && attempts === 1),
+  );
+  assert.equal(new Set(sentEndpoints).size, 2);
+
+  const expiredLease = await pool.query(
+    `UPDATE public.notification_deliveries
+     SET status = 'claimed', sent_at = NULL, claimed_at = clock_timestamp(),
+         lease_until = clock_timestamp() - interval '1 second'
+     WHERE id = (SELECT id FROM public.notification_deliveries WHERE issue_id = $1 ORDER BY id LIMIT 1)
+     RETURNING id`,
+    [workerIssueId],
+  );
+  const leaseWorker = createNotificationWorker(pool, mockSender, { batchSize: 1 });
+  await leaseWorker.runOnce();
+  const leaseRecovered = await pool.query(
+    `SELECT status, attempts FROM public.notification_deliveries WHERE id = $1`,
+    [expiredLease.rows[0].id],
+  );
+  assert.deepEqual(leaseRecovered.rows[0], { status: 'sent', attempts: 2 });
+
+  const retryDelivery = await pool.query(
+    `UPDATE public.notification_deliveries SET status = 'pending', sent_at = NULL, available_at = clock_timestamp()
+     WHERE id = (SELECT id FROM public.notification_deliveries WHERE issue_id = $1 ORDER BY id LIMIT 1)
+     RETURNING id`,
+    [workerIssueId],
+  );
+  const retryId = retryDelivery.rows[0].id;
+  let retryProviderAccepts = 0;
+  const failingWorker = createNotificationWorker(
+    pool,
+    {
+      async send() {
+        retryProviderAccepts += 1;
+        throw Object.assign(new Error('provider unavailable'), { statusCode: 503 });
+      },
+    },
+    { batchSize: 1 },
+  );
+  await failingWorker.runOnce();
+  const retryState = await pool.query(
+    `SELECT status, attempts FROM public.notification_deliveries WHERE id = $1`,
+    [retryId],
+  );
+  assert.deepEqual(retryState.rows[0], { status: 'pending', attempts: 3 });
+  await pool.query(
+    `UPDATE public.notification_deliveries SET available_at = clock_timestamp() WHERE id = $1`,
+    [retryId],
+  );
+  const restartedWorker = createNotificationWorker(
+    pool,
+    {
+      async send() {
+        retryProviderAccepts += 1;
+      },
+    },
+    { batchSize: 1 },
+  );
+  await restartedWorker.runOnce();
+  const recovered = await pool.query(
+    `SELECT status, attempts FROM public.notification_deliveries WHERE id = $1`,
+    [retryId],
+  );
+  assert.deepEqual(recovered.rows[0], { status: 'sent', attempts: 4 });
+  assert.equal(retryProviderAccepts, 2);
 
   assert.ok(app.swagger().paths['/api/workspaces/{workspaceId}/issues']);
   assert.ok(app.swagger().paths['/api/workspaces/{workspaceId}/issues/{issueId}/events']);

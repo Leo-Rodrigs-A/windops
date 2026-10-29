@@ -1,5 +1,11 @@
+import { createHash, randomUUID } from 'node:crypto';
 import type { IncomingHttpHeaders } from 'node:http';
-import type { Notification, NotificationsPage, NotificationsQuery } from '@windops/contracts';
+import type {
+  Notification,
+  NotificationsPage,
+  NotificationsQuery,
+  PushSubscriptionInput,
+} from '@windops/contracts';
 import type { Pool, PoolClient } from 'pg';
 import type { WorkspaceAuthorizationService } from '../workspaces/index.js';
 
@@ -36,10 +42,49 @@ export interface NotificationsService {
     | { status: 'ok'; value: Notification }
     | { status: 'unauthenticated' | 'forbidden' | 'not_found' }
   >;
+  pushStatus(): { enabled: boolean; publicKey: string | null };
+  subscribe(
+    headers: IncomingHttpHeaders,
+    authorization: WorkspaceAuthorizationService,
+    workspaceId: string,
+    input: PushSubscriptionInput,
+  ): Promise<{ status: 'ok' | 'unauthenticated' | 'forbidden' | 'invalid_endpoint' }>;
+  unsubscribe(
+    headers: IncomingHttpHeaders,
+    authorization: WorkspaceAuthorizationService,
+    workspaceId: string,
+    deviceId: string,
+  ): Promise<{ status: 'ok' | 'unauthenticated' | 'forbidden' }>;
 }
 
-export function createNotificationsService(pool?: Pool): NotificationsService {
+function allowedPushEndpoint(value: string) {
+  try {
+    const url = new URL(value);
+    const host = url.hostname.toLowerCase();
+    return (
+      url.protocol === 'https:' &&
+      (url.port === '' || url.port === '443') &&
+      !url.username &&
+      !url.password &&
+      (host === 'fcm.googleapis.com' ||
+        host === 'push.services.mozilla.com' ||
+        host === 'updates.push.services.mozilla.com' ||
+        host === 'web.push.apple.com' ||
+        host.endsWith('.push.apple.com'))
+    );
+  } catch {
+    return false;
+  }
+}
+
+export function createNotificationsService(pool?: Pool, publicKey?: string): NotificationsService {
   return {
+    pushStatus() {
+      return {
+        enabled: Boolean(pool && publicKey),
+        publicKey: pool && publicKey ? publicKey : null,
+      };
+    },
     async recordIssueEvent(client, event) {
       if (event.type === 'completed') {
         await client.query(
@@ -175,6 +220,111 @@ export function createNotificationsService(pool?: Pool): NotificationsService {
             readAt: row.readAt?.toISOString() ?? null,
           },
         };
+      } catch (error) {
+        await client.query('ROLLBACK').catch(() => undefined);
+        throw error;
+      } finally {
+        client.release();
+      }
+    },
+    async subscribe(headers, authorization, workspaceId, input) {
+      if (!allowedPushEndpoint(input.endpoint)) return { status: 'invalid_endpoint' };
+      if (!pool) throw new Error('Push subscriptions require a database pool.');
+      const client = await pool.connect();
+      try {
+        await client.query('BEGIN');
+        const permission = await authorization.authorizeWorkspaceInTransaction(
+          client,
+          headers,
+          workspaceId,
+        );
+        if (permission.status !== 'ok') {
+          await client.query('ROLLBACK');
+          return permission;
+        }
+        const userId = permission.value.user.id;
+        const endpointHash = createHash('sha256').update(input.endpoint).digest();
+        const existing = await client.query<{ id: string; endpointHash: Buffer }>(
+          `SELECT id, endpoint_hash AS "endpointHash" FROM public.push_subscriptions
+           WHERE workspace_id = $1 AND user_id = $2 AND device_id = $3 AND revoked_at IS NULL
+           FOR UPDATE`,
+          [workspaceId, userId, input.deviceId],
+        );
+        if (existing.rows[0]?.endpointHash.equals(endpointHash)) {
+          await client.query(
+            `UPDATE public.push_subscriptions SET p256dh = $2, auth_secret = $3, updated_at = clock_timestamp()
+             WHERE id = $1`,
+            [existing.rows[0].id, input.keys.p256dh, input.keys.auth],
+          );
+        } else {
+          await client.query(
+            `UPDATE public.push_subscriptions SET revoked_at = clock_timestamp(), updated_at = clock_timestamp()
+             WHERE workspace_id = $1 AND user_id = $2 AND device_id = $3 AND revoked_at IS NULL`,
+            [workspaceId, userId, input.deviceId],
+          );
+          await client.query(
+            `UPDATE public.notification_deliveries SET status = 'cancelled', cancelled_at = clock_timestamp()
+             WHERE status = 'pending' AND subscription_id IN (
+               SELECT id FROM public.push_subscriptions
+               WHERE workspace_id = $1 AND user_id = $2 AND device_id = $3 AND revoked_at IS NOT NULL
+             )`,
+            [workspaceId, userId, input.deviceId],
+          );
+          await client.query(
+            `INSERT INTO public.push_subscriptions
+               (id, workspace_id, user_id, device_id, endpoint, endpoint_hash, p256dh, auth_secret)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+            [
+              randomUUID(),
+              workspaceId,
+              userId,
+              input.deviceId,
+              input.endpoint,
+              endpointHash,
+              input.keys.p256dh,
+              input.keys.auth,
+            ],
+          );
+        }
+        await client.query('COMMIT');
+        return { status: 'ok' };
+      } catch (error) {
+        await client.query('ROLLBACK').catch(() => undefined);
+        throw error;
+      } finally {
+        client.release();
+      }
+    },
+    async unsubscribe(headers, authorization, workspaceId, deviceId) {
+      if (!pool) throw new Error('Push subscriptions require a database pool.');
+      const client = await pool.connect();
+      try {
+        await client.query('BEGIN');
+        const permission = await authorization.authorizeWorkspaceInTransaction(
+          client,
+          headers,
+          workspaceId,
+        );
+        if (permission.status !== 'ok') {
+          await client.query('ROLLBACK');
+          return permission;
+        }
+        await client.query(
+          `UPDATE public.push_subscriptions SET revoked_at = COALESCE(revoked_at, clock_timestamp()), updated_at = clock_timestamp()
+           WHERE workspace_id = $1 AND user_id = $2 AND device_id = $3`,
+          [workspaceId, permission.value.user.id, deviceId],
+        );
+        await client.query(
+          `UPDATE public.notification_deliveries SET status = 'cancelled', cancelled_at = clock_timestamp()
+           WHERE workspace_id = $1 AND recipient_user_id = $2 AND status = 'pending'
+             AND subscription_id IN (
+               SELECT id FROM public.push_subscriptions
+               WHERE workspace_id = $1 AND user_id = $2 AND device_id = $3
+             )`,
+          [workspaceId, permission.value.user.id, deviceId],
+        );
+        await client.query('COMMIT');
+        return { status: 'ok' };
       } catch (error) {
         await client.query('ROLLBACK').catch(() => undefined);
         throw error;

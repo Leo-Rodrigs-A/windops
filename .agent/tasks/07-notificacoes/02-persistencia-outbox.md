@@ -16,7 +16,7 @@ Recorte da [slice 07](README.md), respeitando seus limites. Sem deploy ou e-mail
 
 ## Estado atual
 
-Migration 0012, journal, serviço público e emissão transacional integrados. Instalação vazia/upgrade e integração de issues passaram em banco descartável. O banco de desenvolvimento persistente não foi migrado.
+Migration 0012, journal, serviço público e emissão transacional integrados. Instalação vazia/upgrade e integração de issues passaram em banco descartável e o banco de desenvolvimento persistente recebeu a migration.
 
 ## Dependências
 
@@ -41,3 +41,5 @@ Comprovar os itens do plano com evidências reproduzíveis e isolamento tenant; 
 ## Evidências
 
 28/10/2026 — Migration `0012_notifications_outbox` adiciona `notifications`, `push_subscriptions` e `notification_deliveries`, FKs tenant, unicidades, estados, leases e índices. Serviço público registra avisos por membro ativo, exclui o ator e enfileira uma entrega por subscrição ativa na mesma transação da auditoria. Conclusão suprime avisos internos de criação ainda não lidos e cancela entregas push ainda pendentes; logs append-only permanecem intactos. Replay de recibo não volta a emitir eventos. A integração `pnpm test:issues-integration` passou em PostgreSQL descartável, inclusive isolamento por ator, retries e cancelamento. `pnpm db:empty-check` passou instalação vazia, repetição, upgrade desde 0004, restart, grants de runtime e allowlist Electric; `pnpm db:restore-check` confirmou restore com 12 migrations. `drizzle-kit check` e `pnpm check` passaram (54 testes e builds). `pnpm db:permissions` isolado não passou porque o banco dev persistente está na migration 0011; não foi atualizado. Sem worker/claim real nesta task — será implementado na N04; updates condicionais em `pending` serializam cancelamento com claim futuro. Nenhuma tabela de notificações/outbox é publicada no Electric.
+
+Atualização após a N04 — 28/10/2026: por solicitação do proprietário, `pnpm db:migrate` aplicou `0012_notifications_outbox` no PostgreSQL dev persistente. `pnpm db:permissions` passou: runtime DML, migration DDL e allowlist de replicação verificados. Nenhum registro de negócio foi populado pela migration.

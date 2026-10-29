@@ -2,13 +2,17 @@ import { buildApp } from './app.js';
 import { createAuditService } from './modules/audit/index.js';
 import { createIdentityProvider, createIdentityService } from './modules/identity/index.js';
 import { createIssuesService } from './modules/issues/index.js';
-import { createNotificationsService } from './modules/notifications/index.js';
+import {
+  createNotificationsService,
+  createNotificationWorker,
+} from './modules/notifications/index.js';
 import { createParksCatalogService } from './modules/parks/index.js';
 import { createSyncService, createSyncShapeProxy } from './modules/sync/index.js';
 import { createWorkspaceAuthorizationService } from './modules/workspaces/index.js';
 import { loadEnvironment } from './platform/config.js';
 import { createDatabase } from './platform/database/client.js';
 import { createEmailSender } from './platform/email.js';
+import { createPushSender } from './platform/push.js';
 
 const env = loadEnvironment();
 const { pool } = createDatabase(env.DATABASE_URL);
@@ -42,7 +46,19 @@ const workspaceAuthorization = createWorkspaceAuthorizationService(
   env.APP_ORIGIN,
 );
 const sync = createSyncService();
-const notifications = createNotificationsService(pool);
+const vapidConfigured = Boolean(env.VAPID_SUBJECT && env.VAPID_PUBLIC_KEY && env.VAPID_PRIVATE_KEY);
+const notifications = createNotificationsService(pool, env.VAPID_PUBLIC_KEY);
+const notificationWorker = vapidConfigured
+  ? createNotificationWorker(
+      pool,
+      createPushSender({
+        subject: env.VAPID_SUBJECT as string,
+        publicKey: env.VAPID_PUBLIC_KEY as string,
+        privateKey: env.VAPID_PRIVATE_KEY as string,
+      }),
+      { onError: (errorCode) => app?.log.warn({ errorCode }, 'Push delivery attempt failed') },
+    )
+  : undefined;
 const parksCatalog = createParksCatalogService(pool, workspaceAuthorization, sync);
 const app = buildApp({
   logger: true,
@@ -72,7 +88,9 @@ const app = buildApp({
     if (response.status !== 200) throw new Error('Electric unavailable');
   },
 });
+app.addHook('onReady', async () => notificationWorker?.start());
 app.addHook('onClose', async () => {
+  await notificationWorker?.stop();
   await pool.end();
 });
 for (const signal of ['SIGTERM', 'SIGINT'])

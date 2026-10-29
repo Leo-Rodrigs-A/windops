@@ -300,6 +300,20 @@ export const notificationsPageSchema = z
     unreadCount: z.number().int().nonnegative(),
   })
   .strict();
+export const pushStatusSchema = z
+  .object({ enabled: z.boolean(), publicKey: z.string().nullable() })
+  .strict();
+export const pushSubscriptionInputSchema = z
+  .object({
+    deviceId: z.uuid(),
+    endpoint: z.url().max(2048),
+    keys: z
+      .object({ p256dh: z.string().min(1).max(256), auth: z.string().min(1).max(256) })
+      .strict(),
+  })
+  .strict();
+export const pushSubscriptionResultSchema = z.object({ status: z.literal('subscribed') }).strict();
+export type PushSubscriptionInput = z.infer<typeof pushSubscriptionInputSchema>;
 export type Notification = z.infer<typeof notificationSchema>;
 export type NotificationsQuery = z.infer<typeof notificationsQuerySchema>;
 export type NotificationsPage = z.infer<typeof notificationsPageSchema>;

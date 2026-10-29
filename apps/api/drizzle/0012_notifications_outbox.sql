@@ -21,6 +21,7 @@ CREATE TABLE public.push_subscriptions (
   id uuid PRIMARY KEY,
   workspace_id uuid NOT NULL REFERENCES public.workspaces(id) ON DELETE RESTRICT,
   user_id uuid NOT NULL REFERENCES public.auth_users(id) ON DELETE RESTRICT,
+  device_id uuid NOT NULL,
   endpoint text NOT NULL CHECK (length(endpoint) BETWEEN 1 AND 2048),
   endpoint_hash bytea NOT NULL CHECK (octet_length(endpoint_hash) = 32),
   p256dh text NOT NULL CHECK (length(p256dh) BETWEEN 1 AND 256),
@@ -28,10 +29,11 @@ CREATE TABLE public.push_subscriptions (
   created_at timestamptz NOT NULL DEFAULT clock_timestamp(),
   updated_at timestamptz NOT NULL DEFAULT clock_timestamp(),
   revoked_at timestamptz,
-  UNIQUE (workspace_id, user_id, endpoint_hash),
   FOREIGN KEY (workspace_id, user_id) REFERENCES public.workspace_members(workspace_id, user_id) ON DELETE RESTRICT
 );
 CREATE INDEX push_subscriptions_active_user_idx ON public.push_subscriptions(workspace_id, user_id) WHERE revoked_at IS NULL;
+CREATE UNIQUE INDEX push_subscriptions_active_device_unique ON public.push_subscriptions(workspace_id, user_id, device_id) WHERE revoked_at IS NULL;
+CREATE UNIQUE INDEX push_subscriptions_active_endpoint_unique ON public.push_subscriptions(workspace_id, user_id, endpoint_hash) WHERE revoked_at IS NULL;
 
 CREATE TABLE public.notification_deliveries (
   id uuid PRIMARY KEY,

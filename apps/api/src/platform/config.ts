@@ -27,6 +27,31 @@ const schema = z
     VAPID_PRIVATE_KEY: z.string().optional(),
   })
   .superRefine((env, ctx) => {
+    const vapidValues = [env.VAPID_SUBJECT, env.VAPID_PUBLIC_KEY, env.VAPID_PRIVATE_KEY];
+    if (vapidValues.some(Boolean) && !vapidValues.every(Boolean))
+      ctx.addIssue({
+        code: 'custom',
+        path: ['VAPID_PUBLIC_KEY'],
+        message: 'VAPID subject and both keys must be configured together',
+      });
+    if (env.VAPID_SUBJECT && !/^(mailto:.+|https:\/\/.+)$/.test(env.VAPID_SUBJECT))
+      ctx.addIssue({
+        code: 'custom',
+        path: ['VAPID_SUBJECT'],
+        message: 'VAPID subject must be mailto or HTTPS',
+      });
+    if (env.VAPID_PUBLIC_KEY && !/^[A-Za-z0-9_-]{80,100}$/.test(env.VAPID_PUBLIC_KEY))
+      ctx.addIssue({
+        code: 'custom',
+        path: ['VAPID_PUBLIC_KEY'],
+        message: 'Invalid VAPID public key',
+      });
+    if (env.VAPID_PRIVATE_KEY && !/^[A-Za-z0-9_-]{40,60}$/.test(env.VAPID_PRIVATE_KEY))
+      ctx.addIssue({
+        code: 'custom',
+        path: ['VAPID_PRIVATE_KEY'],
+        message: 'Invalid VAPID private key',
+      });
     if (env.EMAIL_TRANSPORT === 'smtp' && !env.SMTP_URL)
       ctx.addIssue({ code: 'custom', path: ['SMTP_URL'], message: 'SMTP URL required' });
     if (env.EMAIL_TRANSPORT === 'resend' && !env.RESEND_API_KEY)
