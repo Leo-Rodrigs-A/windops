@@ -67,6 +67,8 @@ Cache obrigatório: issues Pendentes/Em andamento, histórico dessas issues e ca
 
 Conflitos: primeiro início de atendimento válido confirmado no servidor prevalece; segundo é sinalizado. Preservar texto local. Criador resolve conflitos de conteúdo; administrador intervém nos conflitos de status. Membro removido não envia novos comandos; pendências ficam exportáveis no aparelho.
 
+Próxima evolução planejada: [slice 08 — Filtros e histórico de consulta](tasks/08-consultas-historico/README.md). Reutilizar filtros/cursor da API, paginar Histórico sob demanda e alinhar seleção/ordenação local com cada lista. A inspeção encontrou inferência de conclusão pelo marcador de saída do shape e retenção que não abrange diretamente todas as projeções recebidas pela API; Q01–Q05 devem corrigir e validar esses percursos, sem alterar o escopo dos shapes nem descartar pendências. Arquivados continuam online; cache de concluídas é parcial. Esse plano ainda não representa comportamento implementado.
+
 PWA guarda app shell e dados para reabertura offline. Não prometer envio com app fechado no iPhone; envio garantido ao abrir/retomar com conexão. Background sync é melhoria onde suportado. Atualizações de service worker não podem perder a outbox.
 
 ## Adaptadores

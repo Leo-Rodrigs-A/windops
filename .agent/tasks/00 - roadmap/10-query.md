@@ -2,11 +2,15 @@
 
 ## Status
 
-Planejada
+Parcial; execução restante planejada na [slice 08 — Filtros e histórico de consulta](../08-consultas-historico/README.md), com Q01–Q05 abertas em 28/10/2026.
+
+Slices 04–06 já entregaram API com filtros P/T/status e cursor, Home e Arquivados paginados, cache de concluídas e proteção de pendências na réplica. Inspeção da slice 08 identificou lacunas: seletores P/T na interface, Histórico que ainda baixa todas as páginas, ordenação local diferente da API, inferência de conclusão a partir de saída do shape e retenção das projeções gravadas diretamente pela API. Evidências anteriores são contexto; o aceite desta etapa ainda está aberto.
 
 ## Objetivo e escopo
 
 Listas abertas, concluídas e arquivadas, filtros P/T, paginação e cache. Mais recentes primeiro, conforme decisão posterior registrada na memória.
+
+A slice 08 mantém Arquivados online e Histórico offline parcial, sem ampliar os shapes para todo o histórico. Reutiliza cursor UUID com recuperação quando invalidado; busca global e filtros por data não fazem parte desta entrega. Nenhuma migration PostgreSQL está prevista sem necessidade demonstrada.
 
 ## Dependências
 

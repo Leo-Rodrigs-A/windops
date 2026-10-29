@@ -22,4 +22,6 @@ A [slice 01 — Fundação](../01-fundacao/README.md) consolida a base da etapa 
 
 O status detalhado fica nas tasks executáveis; estas etapas registram a cobertura agregada e suas pendências. Nenhuma etapa é concluída apenas porque um plano foi escrito.
 
-Slices 01–06 concluídas no escopo documentado. A slice 05 entregou operação offline browser/desktop; a slice 06 completou o ciclo de vida das issues. As etapas 09–11 e validações de dispositivos/produção continuam futuras; veja os respectivos arquivos para limites e evidências.
+Slices 01–07 concluídas no escopo documentado. A slice 05 entregou operação offline browser/desktop; a slice 06 completou o ciclo de vida das issues; a slice 07 entregou campainha/Web Push com validação real confirmada pelo proprietário e integração concluída na N06.
+
+Próxima execução: [slice 08 — Filtros e histórico de consulta](../08-consultas-historico/README.md), planejada em 28/10/2026 para as lacunas da etapa 10. A etapa 11 e as validações de dispositivos/produção permanecem futuras; veja os respectivos arquivos para limites e evidências. Nenhuma task Q01–Q05 está concluída pelo planejamento.

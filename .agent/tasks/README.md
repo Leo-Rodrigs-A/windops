@@ -8,9 +8,11 @@ Cada nova slice fica em uma pasta `NN-nome/`, com um `README.md` que define resu
 
 ## Slice atual
 
-- [ ] [07 — Campainha e Web Push](07-notificacoes/README.md): política, outbox transacional, campainha, worker e validação.
+- [ ] [08 — Filtros e histórico de consulta](08-consultas-historico/README.md): filtros P/T nas três listas, paginação por demanda, projeção e retenção segura de histórico.
 
-Slice atual: [06 — Ciclo de vida das issues](06-ciclo-vida-issues/README.md), concluída em 28/10/2026 (L01–L06). Próxima execução: [07 — Campainha e Web Push](07-notificacoes/README.md), planejada com N01–N06. Iniciar pela N01.
+Próxima execução: [08 — Filtros e histórico de consulta](08-consultas-historico/README.md), planejada em 28/10/2026 com Q01–Q05. Iniciar pela [Q01](08-consultas-historico/01-regras-consulta.md). Planejamento não conclui implementação.
+
+- [x] [07 — Campainha e Web Push](07-notificacoes/README.md): N01–N06 concluídas em 28/10/2026; outbox, campainha, worker, interface/PWA, push real confirmado pelo proprietário e validação integrada. Android/iPhone instalados e produção permanecem no roadmap 11.
 
 - [x] [06 — Ciclo de vida das issues](06-ciclo-vida-issues/README.md): reabertura, arquivo/reativação e integração segura com réplica/fila.
 
@@ -60,3 +62,5 @@ Verificação documental da slice 04 em 26/10/2026: 23 documentos e 103 links lo
 Mudanças de produto descobertas no design devem ser conciliadas com o proprietário e registradas na memória antes de alterar regras de negócio. Referências `.pen` continuam externas ao Git.
 
 Planejamento da slice 06 em 28/10/2026: seis tasks abertas, dependências e critérios de aceite registrados. Verificação documental: 11 documentos e 50 links locais conferidos; `git diff --check` passou. Somente documentação alterada; `pnpm check` e testes da aplicação não executados.
+
+Planejamento da slice 08 em 28/10/2026: cinco tasks Q01–Q05 abertas, base existente e lacunas identificadas por inspeção de API, páginas e journal. A etapa 10 reaproveita filtros/cursores existentes e trata paginação do Histórico, ordem por lista, classificação após saída do shape e retenção de projeções recebidas pela API. Verificação documental: links locais, seções obrigatórias, dependências e checkboxes conferidos; `git diff --check` passou. Somente documentação alterada; `pnpm check` e testes da aplicação não executados.
