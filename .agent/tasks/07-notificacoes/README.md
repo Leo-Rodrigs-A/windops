@@ -18,7 +18,7 @@ Slices 01–06 registradas como concluídas para seus respectivos escopos. Inspe
 
 - Ler [arquitetura](../../architeture.md), [memória](../../memory.md) e [convenção](../README.md). Preservar serviços públicos do monólito e autorização tenant.
 - Excluir ator; avisos individuais sem agrupamento; nenhum e-mail de evento. Não gerar retroativamente avisos para todo o histórico.
-- Criação/conclusão recebidas juntas suprimem criação e geram somente aviso interno de conclusão, preservando logs. N01 deve resolver fronteira de lote e compatibilidade com espera de uma hora; não inferir lote de relógio local ou relaxar permissões.
+- Se uma conclusão válida for confirmada antes de o worker reivindicar o push pendente da criação, cancelar o push e suprimir o aviso interno de criação; preservar ambos os eventos e criar o aviso interno de conclusão. N01 definiu o limite de corrida e manteve a espera de uma hora; não inferir conclusão futura.
 - Campainha online nesta slice, atualizada ao abrir/retomar e por polling limitado. Sem replicar dados pessoais de push pelo Electric, sem novo comando durável offline de leitura.
 - Garantia de deduplicação no banco; entrega externa após resposta perdida requer política explícita, sem promessa de exatamente uma exibição.
 - Sem filtros avançados, exclusão de conta, deploy ou provisionamento de produção. Validação móvel continua no roadmap 11; push real desktop faz parte do aceite desta slice.

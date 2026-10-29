@@ -2,9 +2,9 @@
 
 ## Status
 
-Planejada
+Concluída em 28/10/2026
 
-- [ ] Task concluída
+- [x] Task concluída
 
 ## Objetivo
 
@@ -12,11 +12,11 @@ Definir destinatários, canais e semântica de sincronização antes de persisti
 
 ## Escopo e exclusões
 
-Recorte da [slice 07](README.md), respeitando seus limites. Sem deploy ou e-mails de eventos.
+Recorte da [slice 07](README.md). Sem deploy ou e-mails de eventos.
 
 ## Estado atual
 
-Planejamento; nenhuma implementação desta task executada. Diagnóstico da base no índice da slice.
+Política definida; implementação pertence às tasks N02–N06. O sender atual continua individual e ordenado por dependências.
 
 ## Dependências
 
@@ -24,22 +24,22 @@ Slices 05/06.
 
 ## Plano
 
-- [ ] Mapear todos os eventos realmente emitidos: criação gera campainha e push; demais eventos somente campainha; excluir ator e membros sem acesso. Não reintroduzir restauração de relato removida na L01.
-- [ ] Definir destinatários no instante do evento e revalidar acesso na consulta/entrega; explicitar comportamento após revogação, reentrada e novos membros.
-- [ ] Especificar contratos estritos de lista, contagem, leitura idempotente, subscrição e remoção, com cursor estável e identidade derivada da sessão.
-- [ ] Resolver o significado de criação/conclusão recebidas juntas: sender atual envia requisições individuais. Definir protocolo verificável de lote/finalização, interrupção e retry; uma janela de tempo sozinha não comprova lote.
-- [ ] Compatibilizar lote com a espera de uma hora desde created_at no servidor: não aceitar conclusão inválida nem suprimir criação por uma intenção não confirmada. Registrar casos viáveis e pedir decisão do proprietário se o requisito exigir mudar a regra temporal.
-- [ ] Documentar limite da garantia: unicidade de intenção/entrega local não garante exatamente uma apresentação externa se o provedor aceitar e a confirmação se perder. Definir política explícita de retry e identificação estável.
-- [ ] Atualizar contratos e decisões em memória/database; decisões de produto pendentes bloqueiam somente implementação dependente.
+- [x] Mapear eventos/canais: criação gera campainha e intenção de push; demais eventos somente campainha; excluir ator da ação e destinatários sem acesso. Restauração de relato não existe.
+- [x] Definir público como membros ativos no instante da transição, exceto ator; consulta/entrega revalidam autorização. Revogação impede leitura e novos envios; reentrada não recupera avisos que não foram gerados; novos membros não recebem retroativamente.
+- [x] Definir contratos futuros de lista por destinatário, contagem não lida, leitura idempotente, cursor `(created_at DESC, id DESC)` e subscrição/remover dispositivo. Identidade vem da sessão; workspace é autorizado no servidor.
+- [x] Resolver criação e conclusão offline: não é necessário lote nem transação longa. Quando a conclusão válida é confirmada antes de o worker reivindicar o push de criação, cancelar essa entrega pendente. A campainha mantém o evento de criação e registra a conclusão; a criação não gera push. Se o push já foi reivindicado ou aceito pelo serviço externo, não tentar desfazê-lo e seguir com a campainha de conclusão.
+- [x] Preservar a espera atual: criação offline recebe `created_at` ao ser aceita pelo servidor e o criador só pode iniciar após uma hora medida pelo relógio do banco. Conclusão inválida fica rejeitada/aguardando elegibilidade; ela não cancela o push. Se esse intervalo fizer o worker enviar primeiro, aplica-se o caso de push já enviado. Não antecipar a regra para suprimir push.
+- [x] Definir que o cancelamento só vale enquanto a entrega estiver pendente e não reivindicada. A reivindicação é o ponto de corrida; unicidade no banco evita duplicar intenção, mas push externo pode aparecer mais de uma vez se o provedor aceitar e a confirmação se perder. Usar `eventId` estável no payload e retry limitado, sem prometer exatamente uma exibição.
+- [x] Atualizar memória e contrato de entrega; schema será detalhado em N02.
 
 ## Contratos e dados afetados
 
-Matriz evento/canal/destinatário e contratos; nenhuma mudança implícita na regra de uma hora.
+Matriz evento/canal/destinatário registrada em memória e neste contrato. N02 deve prever estado cancelável antes do claim e claim atômico que serializa com conclusão; nenhuma fronteira de lote é necessária. Sem mudança de schema nesta task.
 
 ## Testes e aceite
 
-Comprovar os itens do plano com evidências reproduzíveis e isolamento tenant; pnpm check para mudanças de fonte, integrações/container conforme alteração. Registrar validação indisponível sem marcar aceite como concluído.
+Task documental. Conferir consistência com a regra de uma hora, serviço de audit e sender; registrar que testes de aplicação não são necessários nesta task.
 
 ## Evidências
 
-28/10/2026: task planejada; implementação e testes de aplicação não executados.
+28/10/2026 — Política concluída após verificar `command-sender`, regra de elegibilidade, timestamps de criação offline, serviço de audit e contratos/schema de recibos. A conclusão offline pode invalidar o push de criação enquanto ele ainda não foi reivindicado pelo worker; eventos e avisos internos permanecem íntegros. A regra da hora é mantida: criação recém-aceita no servidor não pode ser concluída pelo criador antes do prazo, então não se presume que os dois comandos sempre chegarão juntos. A corrida com envio externo não oferece garantia de exatamente uma exibição. Sem alteração de fonte, schema ou testes de aplicação.

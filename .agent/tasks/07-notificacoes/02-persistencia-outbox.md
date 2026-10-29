@@ -27,7 +27,7 @@ N01.
 - [ ] Modelar notifications por destinatário/evento, push_subscriptions e notification_deliveries com integridade tenant, unicidade, índices, estados, tentativas, lease e próximo retry.
 - [ ] Expor serviço público de notifications que recebe a transação; integrar emissão em issues/audit sem imports de schema/repositório de outro módulo.
 - [ ] Gravar evento, notificação/intenção e recibo na mesma transação; rollback não deixa entrega e replay não repete destinatários. Não gerar notificações retroativas na migração.
-- [ ] Aplicar protocolo de lote decidido em N01 e preservar todos os logs mesmo quando avisos forem suprimidos.
+- [ ] Permitir cancelar push e aviso interno de criação enquanto ainda não foram publicados/reivindicados; preservar ambos os logs e serializar cancelamento com o claim do worker.
 - [ ] Validar instalação vazia, upgrade preservando dados, reaplicação, restore, constraints e grants em bancos descartáveis; não publicar subscrições/outbox no Electric.
 
 ## Contratos e dados afetados
