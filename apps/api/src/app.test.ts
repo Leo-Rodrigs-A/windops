@@ -1,7 +1,34 @@
 import { randomUUID } from 'node:crypto';
+import { Writable } from 'node:stream';
 import { expect, it } from 'vitest';
 import { buildApp } from './app.js';
 import type { WorkspaceAuthorizationService } from './modules/workspaces/index.js';
+
+it('redacts query strings from automatic request logs while preserving the routed URL', async () => {
+  let output = '';
+  const stream = new Writable({
+    write(chunk, _encoding, callback) {
+      output += chunk.toString();
+      callback();
+    },
+  });
+  const app = buildApp({ ready: async () => {}, logger: { stream } });
+  try {
+    const response = await app.inject(
+      '/api/auth/callback/google?code=R01_SYNTHETIC_CODE&state=R01_SYNTHETIC_STATE#R01_FRAGMENT',
+    );
+    await new Promise((resolve) => setImmediate(resolve));
+    expect(response.statusCode).toBe(404);
+    expect(output).toContain('/api/auth/callback/google');
+    expect(output).toContain(response.json().error.requestId);
+    expect(output).not.toContain('R01_SYNTHETIC_CODE');
+    expect(output).not.toContain('R01_SYNTHETIC_STATE');
+    expect(output).not.toContain('R01_FRAGMENT');
+  } finally {
+    await app.close();
+    stream.end();
+  }
+});
 
 it('separates liveness and readiness without leaking secrets', async () => {
   const app = buildApp({

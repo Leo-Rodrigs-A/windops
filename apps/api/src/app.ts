@@ -1,3 +1,4 @@
+import type { Writable } from 'node:stream';
 import swagger from '@fastify/swagger';
 import scalar from '@scalar/fastify-api-reference';
 import { errorSchema, healthSchema } from '@windops/contracts';
@@ -23,7 +24,7 @@ import {
 } from './modules/workspaces/index.js';
 export function buildApp(options: {
   ready: () => Promise<void>;
-  logger?: boolean;
+  logger?: boolean | { stream?: Writable };
   docs?: boolean;
   trustProxy?: boolean;
   identity?: IdentityProvider;
@@ -37,7 +38,21 @@ export function buildApp(options: {
   const app = Fastify({
     logger: options.logger
       ? {
+          ...(typeof options.logger === 'object' && options.logger.stream
+            ? { stream: options.logger.stream }
+            : {}),
           redact: ['req.headers.authorization', 'req.headers.cookie', 'res.headers.set-cookie'],
+          serializers: {
+            req(request) {
+              const rawUrl = typeof request.url === 'string' ? request.url : '/';
+              const path = rawUrl.split(/[?#]/, 1)[0] || '/';
+              return {
+                method: request.method,
+                url: path,
+                hostname: request.hostname,
+              };
+            },
+          },
           level: 'info',
         }
       : false,
