@@ -2,9 +2,9 @@
 
 ## Status
 
-Em andamento; Q01–Q04 concluídas em 30/10/2026. Q05 é a próxima execução.
+Concluída em 30/10/2026; Q01–Q05 entregues e aceitos para browser/desktop em Chrome e Edge.
 
-- [ ] Slice concluída
+- [x] Slice concluída
 
 ## Resultado esperado
 
@@ -45,17 +45,17 @@ Pontos de entrada: `apps/web/src/pages/issues-pages.tsx`, `apps/web/src/offline/
 - [x] [Q02 — Consultas paginadas e autorização](02-api-consultas.md) — Q01.
 - [x] [Q03 — Projeção e cache local de histórico](03-cache-projecao.md) — Q01/Q02.
 - [x] [Q04 — Filtros e paginação nas interfaces](04-interface-consultas.md) — Q02/Q03.
-- [ ] [Q05 — Validação integrada e encerramento](05-validacao-integrada.md) — Q01–Q04.
+- [x] [Q05 — Validação integrada e encerramento](05-validacao-integrada.md) — Q01–Q04.
 
 ## Aceite da slice
 
-- [ ] Parque/turbina e estado selecionam o mesmo conjunto na API e na projeção local, respeitando a disponibilidade de cada lista.
-- [ ] Páginas mantêm ordem determinística, sem duplicatas; filtros, cursor invalidado e respostas tardias têm recuperação compreensível.
-- [ ] Histórico carrega sob demanda; conclusão local permanece visível após restart, ACK e saída do shape, sem duplicação.
-- [ ] Arquivo/saída de shape não transforma automaticamente uma issue em Concluída; reabertura/reativação atualizam as listas.
-- [ ] Retenção cobre histórico vindo da API e da réplica sem perder fila, texto, referências ou dados de conflito.
-- [ ] Cache vazio, parcial, desatualizado e falha de persistência são distinguíveis; consultas não vazam entre contas/workspaces.
-- [ ] Checks, integrações e percurso de front registrados; limitações móveis continuam explícitas na etapa 11.
+- [x] Parque/turbina e estado selecionam o mesmo conjunto na API e na projeção local, respeitando a disponibilidade de cada lista.
+- [x] Páginas mantêm ordem determinística, sem duplicatas; filtros, cursor invalidado e respostas tardias têm recuperação compreensível.
+- [x] Histórico carrega sob demanda; conclusão local permanece visível após restart, ACK e saída do shape, sem duplicação.
+- [x] Arquivo/saída de shape não transforma automaticamente uma issue em Concluída; reabertura/reativação atualizam as listas.
+- [x] Retenção cobre histórico vindo da API e da réplica sem perder fila, texto, referências ou dados de conflito.
+- [x] Cache vazio, parcial, desatualizado e falha de persistência são distinguíveis; consultas não vazam entre contas/workspaces.
+- [x] Checks, integrações e percurso de front registrados; limitações móveis continuam explícitas na etapa 11.
 
 ## Evidências
 
@@ -63,3 +63,14 @@ Pontos de entrada: `apps/web/src/pages/issues-pages.tsx`, `apps/web/src/offline/
 
 
 Q05 — 30/10/2026: validação automatizada executada (`pnpm check`, 57 testes/builds, e integração de issues com fixture isolada de 128 registros). Aceite integrado permanece aberto: navegador MCP Pencil indisponível por aplicativo desconectado; front autenticado, perda de rede entre páginas e saída/retorno real Electric ainda precisam de ensaio. Sem alterações de fonte, schema ou infraestrutura. Ver evidências em Q05; slice 08 e roadmap 10 não concluídos.
+
+
+## Encerramento — 30/10/2026
+
+Q05 e slice 08 concluídas no escopo browser/desktop. O proprietário confirmou o fluxo completo em Chrome e Edge, com contas administrador e técnico: permissões, interface e cache previamente aprovados; agora também início/conclusão offline, F5, reinício do navegador, reconexão/sincronização, alterações remotas e atualização do PWA com pendências, conforme roteiro fornecido. Não houve nova observação direta pelo agente nem captura de tráfego Electric; o aceite funcional da sincronização real é confirmação do proprietário.
+
+Evidência automatizada complementar: último pnpm check aprovado com 60 testes, lint/boundaries, typecheck e builds; integração PostgreSQL de issues aprovada com 128 fixtures, filtros, paginação, autorização/isolamento entre tenants, revogação, lifecycle e idempotência. Poda, quota simulada, commit falho, conflito, restart e retry/ACK foram cobertos pelas suítes executadas. Não atribuir o ensaio cross-tenant automatizado a uma inspeção manual de dois workspaces.
+
+Correções entregues durante Q05: isolamento do cache pelo build ativo, proteção contra worker de Preview no Vite, manifesto offline coberto por teste e mensagens corretas para ações de atendimento. Dinossauro no ensaio final foi resolvido ao desmarcar Bypass for network; não constitui defeito comprovado do handler.
+
+As pendências de navegador registradas acima são históricas e ficam superadas por este aceite. Android/iPhone físicos, quota/evicção real e HTTPS/infraestrutura de produção permanecem na etapa 11. Nenhuma nova fonte/schema/infra alterada neste encerramento documental; não houve repetição de testes da aplicação. Próxima execução: R01 da slice 09.

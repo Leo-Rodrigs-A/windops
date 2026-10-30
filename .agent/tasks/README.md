@@ -6,11 +6,15 @@
 
 Cada nova slice fica em uma pasta `NN-nome/`, com um `README.md` que define resultado, limites, dependências e ordem de execução. Cada task ganha seu próprio arquivo `NN-nome.md`, criado quando houver contexto suficiente para detalhar a implementação. Criar apenas as tasks da slice em preparação; não decompor todo o roadmap antecipadamente.
 
-## Slice atual
+## Próxima slice preparada
 
-- [ ] [08 — Filtros e histórico de consulta](08-consultas-historico/README.md): filtros P/T nas três listas, paginação por demanda, projeção e retenção segura de histórico.
+- [ ] [09 — Revisão técnica e confiabilidade](09-revisao-confiabilidade/README.md): auditoria, refactors graduais e revisão funcional. Q05 concluída; iniciar pela R01. Apenas R01/R02 detalhadas nesta preparação.
 
-Próxima execução: [08 — Filtros e histórico de consulta](08-consultas-historico/README.md). Q01–Q04 concluídas em 30/10/2026; continuar pela [Q05](08-consultas-historico/05-validacao-integrada.md). Planejamento não conclui implementação.
+## Última slice concluída
+
+- [x] [08 — Filtros e histórico de consulta](08-consultas-historico/README.md): filtros P/T nas três listas, paginação por demanda, projeção e retenção segura de histórico.
+
+Próxima execução: [R01 — Auditoria reproduzível e baseline](09-revisao-confiabilidade/01-auditoria-baseline.md). Q05 e slice 08 concluídas; aceite funcional Chrome/Edge com administrador/técnico registrado na task.
 
 - [x] [07 — Campainha e Web Push](07-notificacoes/README.md): N01–N06 concluídas em 28/10/2026; outbox, campainha, worker, interface/PWA, push real confirmado pelo proprietário e validação integrada. Android/iPhone instalados e produção permanecem no roadmap 11.
 

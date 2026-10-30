@@ -1927,8 +1927,18 @@ export function IssueDetailPage() {
     try {
       if (action !== 'release') {
         const store = offlineWorkspace.store;
-        if (!store || !offlineWorkspace.canWriteLocally)
-          throw new Error('Este workspace ainda não está preparado para alterações locais.');
+        if (!store || !offlineWorkspace.canWriteLocally) {
+          setDetailError(
+            'Este workspace ainda não está preparado para alterações locais. Confira o estado na Cloud.',
+          );
+          return false;
+        }
+        if (!store.getIssue(issue.id)) {
+          setDetailError(
+            'Este chamado ainda não está salvo neste aparelho. Abra-o online e aguarde a sincronização antes de tentar novamente offline.',
+          );
+          return false;
+        }
         await store.queueMutation({
           issueId: issue.id,
           commandId,
@@ -1971,7 +1981,17 @@ export function IssueDetailPage() {
       await hydrateEventLocations(history.items);
       return true;
     } catch (error) {
-      setDetailError(issueErrorMessage(error, 'liberar o atendimento'));
+      const actionLabel = {
+        start: 'iniciar o atendimento',
+        return: 'devolver o atendimento',
+        release: 'liberar o atendimento',
+        complete: 'concluir o chamado',
+      }[action];
+      setDetailError(
+        action !== 'release' && !actionCommitted
+          ? `Não foi possível salvar a ação neste aparelho para ${actionLabel}. Confira o armazenamento e o estado na Cloud antes de tentar novamente.`
+          : issueErrorMessage(error, actionLabel),
+      );
       if (error instanceof ApiRequestError && [401, 403].includes(error.status)) await refresh();
       if (error instanceof ApiRequestError && error.status === 409 && !actionCommitted) {
         delete actionCommands.current[action];

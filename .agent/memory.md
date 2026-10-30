@@ -298,3 +298,31 @@ Q05 — 30/10/2026: validação automatizada executada (`pnpm check`, 57 testes/
 
 
 Correção durante Q05: erro de hooks reportado no Vite com hashes distintos. React/React DOM instalados em 19.3.1, hooks do ThemeProvider corretos. Hipótese: worker de Preview compartilhando origem e cacheando módulos dev. Bootstrap dev agora remove o registro do worker Wind Ops antes de importar React, sem apagar IndexedDB; registro PWA restrito a produção e cache restrito aos assets do build. Dedupe React/React DOM e meta mobile-web-app-capable adicionados. pnpm check passou (57 testes/builds); confirmação no navegador do proprietário ainda pendente, inclusive HMR.
+
+
+## Slice 09 planejada — 30/10/2026
+
+A pedido do proprietário, criada a [revisão técnica e confiabilidade](tasks/09-revisao-confiabilidade/README.md), guiada pela análise SOLID externa e inspeção parcial do código atual. R01/R02 detalhadas; R03–R08 serão detalhadas progressivamente. Prioriza baseline, documentação/composição, transações, segregação de workspaces, domínio/SQL de issues, frontend por feature, store offline e aceite integrado. Não impõe repository genérico nem substitui composição explícita. Preserva locks, tenant, atomicidade, contratos e compatibilidade do journal. Q05 continua aberta e bloqueia refactors; R01 pode levantar achados. Planejamento não implementa nem certifica o app. Produção/aparelhos permanecem na etapa 11.
+
+
+## Q05 — Falha de recarga offline e feedback de atendimento
+
+Proprietário confirmou permissões, interface e cache como funcionais, além do worker ativo (passo 1). No passo 2, F5 offline deixou tela branca; iniciar atendimento offline também falhou com texto incorreto sobre liberar atendimento. Esses percursos permanecem abertos.
+
+Inspeção identificou busca global em CacheStorage: HTML antigo poderia ser devolvido ao worker atual. Correção restringe HTML/assets ao cache VERSION, sem apagar caches antigos ou IndexedDB. Teste executa o worker gerado por build em ambiente simulado com cache antigo e atual, valida HTML da versão ativa e exclusão de API/módulos Vite. Não comprova a causa específica no navegador do proprietário, cujo Console ainda não foi recebido.
+
+Ações agora distinguem armazenamento local indisponível/chamado ausente e usam a ação correta no erro, sem alegar que iniciar atendimento offline foi corrigido. Falha de persistência não é tratada como sucesso. pnpm check passou com 59 testes, typecheck, lint e builds. Novo build gerado; requer ativação do novo worker online e repetição do percurso pelo proprietário. Nenhum dado operacional ou journal apagado.
+
+
+Q05 — Confirmação do proprietário: o dinossauro na recarga offline era causado pela opção “Bypass for network” do DevTools. Após desmarcá-la, relatou resolução. Worker controlava a aba e havia HTML nos caches. Registrar esse caso como configuração do ensaio, não como defeito comprovado do handler. Isso não confirma gravação/início/conclusão offline, restart do navegador, reconexão/ACK nem atualização com pendências; esses percursos continuam aguardando resultados.
+
+
+## Encerramento — 30/10/2026
+
+Q05 e slice 08 concluídas no escopo browser/desktop. O proprietário confirmou o fluxo completo em Chrome e Edge, com contas administrador e técnico: permissões, interface e cache previamente aprovados; agora também início/conclusão offline, F5, reinício do navegador, reconexão/sincronização, alterações remotas e atualização do PWA com pendências, conforme roteiro fornecido. Não houve nova observação direta pelo agente nem captura de tráfego Electric; o aceite funcional da sincronização real é confirmação do proprietário.
+
+Evidência automatizada complementar: último pnpm check aprovado com 60 testes, lint/boundaries, typecheck e builds; integração PostgreSQL de issues aprovada com 128 fixtures, filtros, paginação, autorização/isolamento entre tenants, revogação, lifecycle e idempotência. Poda, quota simulada, commit falho, conflito, restart e retry/ACK foram cobertos pelas suítes executadas. Não atribuir o ensaio cross-tenant automatizado a uma inspeção manual de dois workspaces.
+
+Correções entregues durante Q05: isolamento do cache pelo build ativo, proteção contra worker de Preview no Vite, manifesto offline coberto por teste e mensagens corretas para ações de atendimento. Dinossauro no ensaio final foi resolvido ao desmarcar Bypass for network; não constitui defeito comprovado do handler.
+
+As pendências de navegador registradas acima são históricas e ficam superadas por este aceite. Android/iPhone físicos, quota/evicção real e HTTPS/infraestrutura de produção permanecem na etapa 11. Nenhuma nova fonte/schema/infra alterada neste encerramento documental; não houve repetição de testes da aplicação. Próxima execução: R01 da slice 09.
