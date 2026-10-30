@@ -15,7 +15,6 @@ function offlineShell(): Plugin {
       const source = `const VERSION = ${version};
 const SHELL = '/index.html';
 const ASSETS = ${JSON.stringify(['/', '/index.html', '/manifest.webmanifest', '/windops-pwa.svg', '/windops-192.png', '/windops-512.png', '/apple-touch-icon.png', '/windops-mark.svg', '/windops-mark-dark.svg', '/windops-mark-light.svg', ...assets])};
-const STATIC_DESTINATIONS = new Set(['script','style','font','image']);
 const ISSUE_PATH = /^\\/chamados\\/[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 function safeIssueUrl(value) {
   try {
@@ -27,7 +26,7 @@ function safeIssueUrl(value) {
 self.addEventListener('install', event => event.waitUntil(caches.open(VERSION).then(cache => cache.addAll(ASSETS))));
 self.addEventListener('activate', event => event.waitUntil(self.clients.claim()));
 self.addEventListener('message', event => { if (event.data === 'SKIP_WAITING') self.skipWaiting(); });
-self.addEventListener('fetch', event => { const request = event.request; const url = new URL(request.url); if (request.method !== 'GET' || url.origin !== self.location.origin || url.pathname.startsWith('/api/') || url.pathname.startsWith('/auth/') || url.pathname.startsWith('/.well-known/')) return; if (request.mode === 'navigate') { event.respondWith((async () => { try { return await fetch(request); } catch { return (await caches.match(SHELL)) || Response.error(); } })()); return; } if (ASSETS.includes(url.pathname) || STATIC_DESTINATIONS.has(request.destination)) event.respondWith((async () => { const cached = await caches.match(request); if (cached) return cached; const response = await fetch(request); if (response.ok && response.type === 'basic') { const cache = await caches.open(VERSION); await cache.put(request, response.clone()); } return response; })()); });
+self.addEventListener('fetch', event => { const request = event.request; const url = new URL(request.url); if (request.method !== 'GET' || url.origin !== self.location.origin || url.pathname.startsWith('/api/') || url.pathname.startsWith('/auth/') || url.pathname.startsWith('/.well-known/')) return; if (request.mode === 'navigate') { event.respondWith((async () => { try { return await fetch(request); } catch { return (await caches.match(SHELL)) || Response.error(); } })()); return; } if (ASSETS.includes(url.pathname)) event.respondWith((async () => { const cached = await caches.match(request); if (cached) return cached; const response = await fetch(request); if (response.ok && response.type === 'basic') { const cache = await caches.open(VERSION); await cache.put(request, response.clone()); } return response; })()); });
 self.addEventListener('push', event => {
   let payload = {};
   try { payload = event.data ? event.data.json() : {}; } catch {}
@@ -66,7 +65,10 @@ self.addEventListener('notificationclick', event => {
 
 export default defineConfig({
   plugins: [react(), tailwind(), offlineShell()],
-  resolve: { alias: { '@': fileURLToPath(new URL('./src', import.meta.url)) } },
+  resolve: {
+    dedupe: ['react', 'react-dom'],
+    alias: { '@': fileURLToPath(new URL('./src', import.meta.url)) },
+  },
   server: { port: 5173, strictPort: true, proxy: { '/api': 'http://127.0.0.1:3000' } },
   preview: { port: 5173, strictPort: true },
 });

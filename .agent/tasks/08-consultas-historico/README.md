@@ -60,3 +60,6 @@ Pontos de entrada: `apps/web/src/pages/issues-pages.tsx`, `apps/web/src/offline/
 ## Evidências
 
 28/10/2026 — Planejamento baseado no roadmap, arquitetura, memória e inspeção dos pontos de entrada acima. O índice geral ainda indicava N01 como próxima execução, embora N06/slice 07 estivessem concluídas; índice corrigido. Nenhuma task de implementação concluída, fonte alterada ou dado operacional modificado nesta preparação. A verificação documental final fica registrada no índice geral e na memória.
+
+
+Q05 — 30/10/2026: validação automatizada executada (`pnpm check`, 57 testes/builds, e integração de issues com fixture isolada de 128 registros). Aceite integrado permanece aberto: navegador MCP Pencil indisponível por aplicativo desconectado; front autenticado, perda de rede entre páginas e saída/retorno real Electric ainda precisam de ensaio. Sem alterações de fonte, schema ou infraestrutura. Ver evidências em Q05; slice 08 e roadmap 10 não concluídos.

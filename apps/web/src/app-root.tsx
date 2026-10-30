@@ -51,7 +51,7 @@ function OfflineUpdateNotice() {
   const [activatedElsewhere, setActivatedElsewhere] = useState(false);
   const applyUpdate = useRef(false);
   useEffect(() => {
-    if (!('serviceWorker' in navigator)) return;
+    if (import.meta.env.DEV || !('serviceWorker' in navigator)) return;
     let registration: ServiceWorkerRegistration | undefined;
     let active = true;
     const announce = () => {

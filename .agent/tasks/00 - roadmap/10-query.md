@@ -27,3 +27,6 @@ Cache frio/quente, filtros e paginação, mudança de status removendo shape, se
 ## Referências e atualização
 
 Seguir [memória](../../memory.md) e [arquitetura](../../architeture.md). Este arquivo descreve uma etapa do roadmap; a execução é detalhada nas slices de [tasks](../README.md). Atualizar status e registrar evidência ao concluir. Não marcar integração pronta apenas por instalar dependências.
+
+
+Q05 — 30/10/2026: validação automatizada executada (`pnpm check`, 57 testes/builds, e integração de issues com fixture isolada de 128 registros). Aceite integrado permanece aberto: navegador MCP Pencil indisponível por aplicativo desconectado; front autenticado, perda de rede entre páginas e saída/retorno real Electric ainda precisam de ensaio. Sem alterações de fonte, schema ou infraestrutura. Ver evidências em Q05; slice 08 e roadmap 10 não concluídos.

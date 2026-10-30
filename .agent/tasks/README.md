@@ -64,3 +64,6 @@ Mudanças de produto descobertas no design devem ser conciliadas com o propriet�
 Planejamento da slice 06 em 28/10/2026: seis tasks abertas, dependências e critérios de aceite registrados. Verificação documental: 11 documentos e 50 links locais conferidos; `git diff --check` passou. Somente documentação alterada; `pnpm check` e testes da aplicação não executados.
 
 Planejamento da slice 08 em 28/10/2026: cinco tasks Q01–Q05 abertas, base existente e lacunas identificadas por inspeção de API, páginas e journal. A etapa 10 reaproveita filtros/cursores existentes e trata paginação do Histórico, ordem por lista, classificação após saída do shape e retenção de projeções recebidas pela API. Verificação documental: links locais, seções obrigatórias, dependências e checkboxes conferidos; `git diff --check` passou. Somente documentação alterada; `pnpm check` e testes da aplicação não executados.
+
+
+Q05 — 30/10/2026: validação automatizada executada (`pnpm check`, 57 testes/builds, e integração de issues com fixture isolada de 128 registros). Aceite integrado permanece aberto: navegador MCP Pencil indisponível por aplicativo desconectado; front autenticado, perda de rede entre páginas e saída/retorno real Electric ainda precisam de ensaio. Sem alterações de fonte, schema ou infraestrutura. Ver evidências em Q05; slice 08 e roadmap 10 não concluídos.
