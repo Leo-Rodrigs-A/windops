@@ -69,6 +69,8 @@ function allowedPushEndpoint(value: string) {
       (host === 'fcm.googleapis.com' ||
         host === 'push.services.mozilla.com' ||
         host === 'updates.push.services.mozilla.com' ||
+        host === 'notify.windows.com' ||
+        host.endsWith('.notify.windows.com') ||
         host === 'web.push.apple.com' ||
         host.endsWith('.push.apple.com'))
     );
