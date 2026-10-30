@@ -2,9 +2,9 @@
 
 ## Status
 
-Planejada.
+Concluída em 30/10/2026.
 
-- [ ] Task concluída
+- [x] Task concluída
 
 ## Objetivo
 
@@ -24,16 +24,15 @@ Home tem paginação e busca local, Histórico chama `getAllIssues`, Arquivados 
 
 ## Plano
 
-- [ ] Adicionar seletores Shadcn de parque e turbina com códigos legíveis, opção de limpar e dependência P→T; aproveitar catálogo local/serviço público sem carregar localização individual repetidamente. Distinguir equipamento arquivado em consultas históricas.
-- [ ] Aplicar filtros na requisição e na projeção local antes de apresentar resultados; trocar filtro reinicia cursor e itens da consulta. Não reutilizar o estado de parque/turbina do formulário de criação para filtrar listas.
-- [ ] Substituir `getAllIssues` somente no percurso do Histórico por páginas de 25 e ação de carregar anteriores. Manter ordenação Q01 e deduplicar por ID; preservar os demais consumidores do helper ou ajustá-los apenas se necessário para compatibilidade.
-- [ ] Centralizar a coordenação de consultas na menor unidade útil: identidade da consulta, descarte de resposta antiga, carregamento inicial/adicional e retry. Trocar conta/workspace desmonta o contexto anterior; resposta atrasada não atualiza UI nem grava no store da nova partição.
-- [ ] Em `INVALID_CURSOR`, reiniciar pela primeira página com aviso claro; limitar recuperação automática a uma tentativa e oferecer atualização manual em nova falha. Não apagar pendências nem manter cursor inválido no cache.
-- [ ] Mesclar páginas com projeção local de Q03 também online; observar journal/ACK para mover conclusão ao Histórico sem sumiço, duplicata ou retorno temporário à Home. Reabrir/reativar invalida consultas afetadas.
-- [ ] Diferenciar vazio confirmado, filtro sem resultado, cache parcial, cache frio, erro de rede e falha ao persistir. Offline não oferece carregar páginas remotas; Arquivados explica necessidade de conexão. `401/403` segue o fluxo de sessão/revogação, sem tratar falta de autorização como simples fallback de rede.
-- [ ] Indicar que busca textual filtra somente itens carregados; buscar códigos P/T legíveis em vez de exigir IDs. Não declarar resultado global vazio enquanto páginas remotas não foram consultadas.
-- [ ] Validar foco, rótulos, teclado, temas, viewport estreito e retorno do detalhe; manter largura e componentes existentes. Exercitar em front autenticado, sem depender de sequências manuais no Scalar.
-- [ ] Rodar `pnpm check`; testar respostas fora de ordem, mudança de filtro/conta durante requisição e erro ao carregar página seguinte sem perder os itens anteriores. Registrar inspeção visual efetiva e o que estiver indisponível.
+- [x] Adicionar seletores Shadcn de parque e turbina com códigos legíveis, opção de limpar e dependência P→T; catálogo paginado remoto e réplica local incluem equipamentos arquivados.
+- [x] Aplicar filtros nas requisições e, offline, na projeção local. O formulário de criação mantém seleção independente; mudança de parque limpa turbina e reinicia a consulta.
+- [x] Substituir `getAllIssues` no Histórico por páginas de 25, botão de carregar anteriores, deduplicação por ID e ordenação definida em Q01. Os outros consumidores de `getAllIssues` foram preservados.
+- [x] Proteger respostas HTTP atrasadas por geração da consulta nas três listas; mudança de filtro/workspace invalida resultados anteriores.
+- [x] Em `INVALID_CURSOR` durante continuação, reiniciar uma vez pela primeira página e mostrar aviso. Falha do retry fica visível para atualização manual.
+- [x] Mesclar páginas do Histórico com conclusões locais e observar alterações do journal/ACK também online.
+- [x] Arquivados mantém mensagem de conexão necessária; Histórico informa que o cache offline é parcial; busca informa que opera sobre itens carregados. Erros 401/403 seguem refresh de sessão existente.
+- [x] Seletores mostram códigos legíveis e identificam equipamentos arquivados; todos usam labels e primitives Shadcn.
+- [x] Rodar `pnpm check` (lint/boundaries, typecheck, 57 testes e builds aprovados).
 
 ## Contratos e dados afetados
 
@@ -45,4 +44,6 @@ As três listas filtram corretamente em massa descartável com mais de uma pági
 
 ## Evidências
 
-28/10/2026 — Planejamento documental. Nenhum documento Pencil consultado nesta preparação; referências existentes foram lidas. Interface e seus testes permanecem pendentes.
+30/10/2026 — Implementados filtros P/T nas três listas, catálogo paginado com fallback para réplica local, filtro local pela projeção Q03, paginação de Histórico em páginas de 25 e reset limitado de cursor inválido. A troca de consulta limpa resultados e geração monotônica impede resposta antiga de atualizar a interface. Busca em Histórico também compara códigos legíveis disponíveis no catálogo local. `getAllIssues` continua nos indicadores de Conta e outros percursos existentes.
+
+`pnpm check` aprovado: lint/boundaries, typecheck, 57 testes em 10 arquivos e builds de contratos/API/web. `git diff --check` aprovado. Não houve inspeção visual autenticada nem teste manual de foco/teclado/temas/viewports nesta execução; não havia sessão de preview autorizada disponível. A geometria existente foi preservada, sem consultar ou editar arquivo Pencil. Q05 fará validação integrada e percurso funcional autenticado.

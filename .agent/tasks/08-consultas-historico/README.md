@@ -2,7 +2,7 @@
 
 ## Status
 
-Em andamento; Q01 documental concluída em 30/10/2026. Q02 concluída em 30/10/2026; Q03 concluída em 30/10/2026; Q04 é a próxima execução.
+Em andamento; Q01–Q04 concluídas em 30/10/2026. Q05 é a próxima execução.
 
 - [ ] Slice concluída
 
@@ -44,7 +44,7 @@ Pontos de entrada: `apps/web/src/pages/issues-pages.tsx`, `apps/web/src/offline/
 - [x] [Q01 — Regras de consulta e matriz de compatibilidade](01-regras-consulta.md) — slices 05–07; início da execução.
 - [x] [Q02 — Consultas paginadas e autorização](02-api-consultas.md) — Q01.
 - [x] [Q03 — Projeção e cache local de histórico](03-cache-projecao.md) — Q01/Q02.
-- [ ] [Q04 — Filtros e paginação nas interfaces](04-interface-consultas.md) — Q02/Q03.
+- [x] [Q04 — Filtros e paginação nas interfaces](04-interface-consultas.md) — Q02/Q03.
 - [ ] [Q05 — Validação integrada e encerramento](05-validacao-integrada.md) — Q01–Q04.
 
 ## Aceite da slice

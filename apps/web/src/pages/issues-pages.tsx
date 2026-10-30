@@ -504,11 +504,166 @@ function AppPageHeader({
   );
 }
 
+function IssueLocationFilters({
+  workspaceId,
+  store,
+  online,
+  parkId,
+  turbineId,
+  onParkChange,
+  onTurbineChange,
+}: {
+  workspaceId: string;
+  store?: LocalIssueStore | null | undefined;
+  online: boolean;
+  parkId: string;
+  turbineId: string;
+  onParkChange: (value: string) => void;
+  onTurbineChange: (value: string) => void;
+}) {
+  const [parks, setParks] = useState<Park[]>([]);
+  const [turbines, setTurbines] = useState<Turbine[]>([]);
+  const [loading, setLoading] = useState(false);
+  useEffect(() => {
+    let active = true;
+    if (!online && store) {
+      setParks(store.listReplica('parks') as unknown as Park[]);
+      setLoading(false);
+      return () => {
+        active = false;
+      };
+    }
+    if (!online || !workspaceId) {
+      setParks([]);
+      return;
+    }
+    void (async () => {
+      setLoading(true);
+      try {
+        const all: Park[] = [];
+        let cursor: string | undefined;
+        do {
+          const page = await getParks(workspaceId, { limit: 100, ...(cursor ? { cursor } : {}) });
+          all.push(...page.items);
+          cursor = page.nextCursor ?? undefined;
+        } while (cursor);
+        if (active) setParks(all);
+      } catch {
+        if (active) setParks((store?.listReplica('parks') as unknown as Park[]) ?? []);
+      } finally {
+        if (active) setLoading(false);
+      }
+    })();
+    return () => {
+      active = false;
+    };
+  }, [online, store, workspaceId]);
+  useEffect(() => {
+    let active = true;
+    if (!parkId) {
+      setTurbines([]);
+      return () => {
+        active = false;
+      };
+    }
+    if (!online && store) {
+      setTurbines(
+        store
+          .listReplica('turbines')
+          .filter((row) => row.parkId === parkId) as unknown as Turbine[],
+      );
+      return () => {
+        active = false;
+      };
+    }
+    if (!online) {
+      setTurbines([]);
+      return () => {
+        active = false;
+      };
+    }
+    void (async () => {
+      try {
+        const all: Turbine[] = [];
+        let cursor: string | undefined;
+        do {
+          const page = await getParkTurbines(workspaceId, parkId, {
+            limit: 100,
+            ...(cursor ? { cursor } : {}),
+          });
+          all.push(...page.items);
+          cursor = page.nextCursor ?? undefined;
+        } while (cursor);
+        if (active) setTurbines(all);
+      } catch {
+        if (active)
+          setTurbines(
+            (store
+              ?.listReplica('turbines')
+              .filter((row) => row.parkId === parkId) as unknown as Turbine[]) ?? [],
+          );
+      }
+    })();
+    return () => {
+      active = false;
+    };
+  }, [online, parkId, store, workspaceId]);
+  return (
+    <fieldset aria-label="Filtrar por equipamento" className="flex flex-wrap gap-3 border-0 p-0">
+      <div className="min-w-44 flex-1 space-y-1">
+        <Label htmlFor="query-park">Parque</Label>
+        <Select
+          disabled={loading}
+          value={parkId || 'all'}
+          onValueChange={(value) => onParkChange(value === 'all' ? '' : value)}
+        >
+          <SelectTrigger id="query-park">
+            <SelectValue placeholder="Todos os parques" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todos os parques</SelectItem>
+            {parks.map((park) => (
+              <SelectItem key={park.id} value={park.id}>
+                Parque {park.code}
+                {park.deactivatedAt ? ' · Arquivado' : ''}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+      <div className="min-w-44 flex-1 space-y-1">
+        <Label htmlFor="query-turbine">Turbina</Label>
+        <Select
+          disabled={!parkId}
+          value={turbineId || 'all'}
+          onValueChange={(value) => onTurbineChange(value === 'all' ? '' : value)}
+        >
+          <SelectTrigger id="query-turbine">
+            <SelectValue placeholder="Todas as turbinas" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todas as turbinas</SelectItem>
+            {turbines.map((turbine) => (
+              <SelectItem key={turbine.id} value={turbine.id}>
+                Turbina {turbine.code}
+                {turbine.deactivatedAt ? ' · Arquivada' : ''}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+    </fieldset>
+  );
+}
+
 export function WorkspaceHomePage() {
   const { snapshot, refresh } = useAuth();
   const offlineWorkspace = useOfflineWorkspace();
   const workspaceId = offlineWorkspace.workspaceId ?? '';
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
+  const [queryParkId, setQueryParkId] = useState('');
+  const [queryTurbineId, setQueryTurbineId] = useState('');
+  const queryGeneration = useRef(0);
   const [issues, setIssues] = useState<IssueListEntry[]>([]);
   const [issueCursor, setIssueCursor] = useState<string | null>(null);
   const [issueLoading, setIssueLoading] = useState(true);
@@ -532,6 +687,7 @@ export function WorkspaceHomePage() {
   const loadIssues = useCallback(
     async (cursor?: string, append = false) => {
       if (!workspaceId) return;
+      const generation = queryGeneration.current;
       append ? setMoreLoading(true) : setIssueLoading(true);
       setIssueError('');
       setIssueCacheNotice('');
@@ -545,9 +701,23 @@ export function WorkspaceHomePage() {
           setIssueLoading(false);
           return;
         }
-        const local = localIssueListEntries(offlineWorkspace.store, statusFilter).filter(
-          (issue) => issue.status !== 'completed',
-        );
+        const commands = offlineWorkspace.store.listPendingCommands();
+        const local = offlineWorkspace.store.listIssues().flatMap((projection) => {
+          const selected = selectIssueProjection(
+            projection,
+            commands.filter((command) => command.issueId === projection.id),
+            {
+              status: statusFilter === 'all' ? 'active' : statusFilter,
+              ...(queryParkId ? { parkId: queryParkId } : {}),
+              ...(queryTurbineId ? { turbineId: queryTurbineId } : {}),
+            },
+          );
+          return selected
+            ? localIssueListEntries(offlineWorkspace.store as LocalIssueStore, statusFilter).filter(
+                (item) => item.id === projection.id,
+              )
+            : [];
+        });
         if (!offlineWorkspace.store.hasReplicaSnapshot('issues'))
           setIssueCacheNotice(
             'Este aparelho ainda não tem cache dos chamados. Conecte-se ao workspace para preparar os dados antes de usar offline.',
@@ -563,8 +733,11 @@ export function WorkspaceHomePage() {
         const page = await getIssues(workspaceId, {
           limit: 25,
           status: statusFilter === 'all' ? 'active' : statusFilter,
+          ...(queryParkId ? { parkId: queryParkId } : {}),
+          ...(queryTurbineId ? { turbineId: queryTurbineId } : {}),
           ...(cursor ? { cursor } : {}),
         });
+        if (generation !== queryGeneration.current) return;
         if (offlineWorkspace.store) {
           await offlineWorkspace.store.recordServerIssuePage(page.items);
           await Promise.all(
@@ -610,6 +783,13 @@ export function WorkspaceHomePage() {
           ...Object.fromEntries(pairs.flat()),
         });
       } catch (error) {
+        if (generation !== queryGeneration.current) return;
+        if (cursor && error instanceof ApiRequestError && error.code === 'INVALID_CURSOR') {
+          setIssueNotice('A página mudou no servidor. Atualizando a lista desde o início.');
+          setIssueCursor(null);
+          void loadIssues();
+          return;
+        }
         if (offlineWorkspace.store?.hasReplicaSnapshot('issues')) {
           setIssues(
             localIssueListEntries(offlineWorkspace.store, statusFilter).filter(
@@ -631,11 +811,14 @@ export function WorkspaceHomePage() {
       refresh,
       snapshot.status,
       statusFilter,
+      queryParkId,
+      queryTurbineId,
       workspaceId,
     ],
   );
 
   useEffect(() => {
+    queryGeneration.current += 1;
     setIssues([]);
     setIssueCursor(null);
     void loadIssues();
@@ -905,6 +1088,21 @@ export function WorkspaceHomePage() {
                   value={search}
                 />
               </div>
+              <IssueLocationFilters
+                workspaceId={workspaceId}
+                store={offlineWorkspace.store ?? undefined}
+                online={offlineWorkspace.online && snapshot.status === 'authenticated'}
+                parkId={queryParkId}
+                turbineId={queryTurbineId}
+                onParkChange={(value) => {
+                  setQueryParkId(value);
+                  setQueryTurbineId('');
+                }}
+                onTurbineChange={setQueryTurbineId}
+              />
+              <p className="text-xs text-muted-foreground">
+                A pesquisa filtra somente os chamados carregados.
+              </p>
             </CardHeader>
             <CardContent className="p-0">
               {issueNotice && (
@@ -1141,6 +1339,9 @@ export function ArchivedIssuesPage() {
   const [issues, setIssues] = useState<Issue[]>([]);
   const [cursor, setCursor] = useState<string | null>(null);
   const [search, setSearch] = useState('');
+  const [queryParkId, setQueryParkId] = useState('');
+  const [queryTurbineId, setQueryTurbineId] = useState('');
+  const generation = useRef(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [busyId, setBusyId] = useState('');
@@ -1152,6 +1353,7 @@ export function ArchivedIssuesPage() {
     snapshot.status === 'authenticated' && snapshot.context.role === 'admin' && offline.online;
   const load = useCallback(
     async (next?: string, append = false) => {
+      const requestGeneration = generation.current;
       if (!workspaceId || !offline.online || snapshot.status !== 'authenticated') {
         setError('Conecte-se para consultar os chamados arquivados.');
         setLoading(false);
@@ -1163,26 +1365,45 @@ export function ArchivedIssuesPage() {
         const page = await getIssues(workspaceId, {
           status: 'archived',
           limit: 25,
+          ...(queryParkId ? { parkId: queryParkId } : {}),
+          ...(queryTurbineId ? { turbineId: queryTurbineId } : {}),
           ...(next ? { cursor: next } : {}),
         });
-        setIssues((previous) => (append ? [...previous, ...page.items] : page.items));
+        if (requestGeneration !== generation.current) return;
+        setIssues((previous) => {
+          const merged = new Map((append ? previous : []).map((item) => [item.id, item]));
+          for (const item of page.items) merged.set(item.id, item);
+          return [...merged.values()].sort(
+            (a, b) =>
+              (b.archivedAt ?? '').localeCompare(a.archivedAt ?? '') || b.id.localeCompare(a.id),
+          );
+        });
         setCursor(page.nextCursor);
       } catch (cause) {
+        if (next && cause instanceof ApiRequestError && cause.code === 'INVALID_CURSOR') {
+          setCursor(null);
+          setNotice('A página mudou no servidor. Atualizando a lista desde o início.');
+          void load();
+          return;
+        }
         setError(issueErrorMessage(cause, 'carregar os chamados arquivados'));
       } finally {
         setLoading(false);
       }
     },
-    [offline.online, snapshot.status, workspaceId],
+    [offline.online, snapshot.status, workspaceId, queryParkId, queryTurbineId],
   );
   useEffect(() => {
+    generation.current += 1;
+    setIssues([]);
+    setCursor(null);
     void load();
   }, [load]);
   const visible = issues.filter(
     (item) =>
       item.text.toLocaleLowerCase('pt-BR').includes(search.trim().toLocaleLowerCase('pt-BR')) ||
-      item.parkId.toLowerCase().includes(search.trim().toLowerCase()) ||
-      item.turbineId.toLowerCase().includes(search.trim().toLowerCase()),
+      `parque ${item.parkId}`.toLowerCase().includes(search.trim().toLowerCase()) ||
+      `turbina ${item.turbineId}`.toLowerCase().includes(search.trim().toLowerCase()),
   );
   function closeReactivateDialog(focusSearch = false) {
     setReactivateTarget(null);
@@ -1231,6 +1452,17 @@ export function ArchivedIssuesPage() {
           />
           <Card className="gap-0 overflow-hidden py-0">
             <CardHeader className="border-b border-border/70 px-4 py-4 sm:px-5">
+              <IssueLocationFilters
+                workspaceId={workspaceId}
+                online={offline.online && snapshot.status === 'authenticated'}
+                parkId={queryParkId}
+                turbineId={queryTurbineId}
+                onParkChange={(value) => {
+                  setQueryParkId(value);
+                  setQueryTurbineId('');
+                }}
+                onTurbineChange={setQueryTurbineId}
+              />
               <Label htmlFor="archived-search">Pesquisar chamados arquivados</Label>
               <Input
                 id="archived-search"
@@ -1299,6 +1531,9 @@ export function ArchivedIssuesPage() {
                   ))}
                 </ul>
               )}
+              <p className="px-4 py-2 text-xs text-muted-foreground">
+                A pesquisa filtra somente os chamados carregados.
+              </p>
               {cursor && !loading && (
                 <div className="border-t p-3 text-center">
                   <Button variant="ghost" onClick={() => void load(cursor, true)}>
@@ -2312,11 +2547,100 @@ export function IssueHistoryPage() {
   const workspaceName = offlineWorkspace.workspaceName ?? 'Workspace';
   const historyLocations = offlineWorkspace.store ? localLocations(offlineWorkspace.store) : {};
   const [completed, setCompleted] = useState<Array<Issue | IssueListEntry>>([]);
+  const [queryParkId, setQueryParkId] = useState('');
+  const [queryTurbineId, setQueryTurbineId] = useState('');
+  const [cursor, setCursor] = useState<string | null>(null);
+  const [moreLoading, setMoreLoading] = useState(false);
+  const [search, setSearch] = useState('');
+  const generation = useRef(0);
   const [historyError, setHistoryError] = useState('');
   const [historyLoading, setHistoryLoading] = useState(true);
-  // Re-read local completion entries whenever the journal changes, including after a sync ACK.
-  // biome-ignore lint/correctness/useExhaustiveDependencies: The journal version intentionally refreshes offline history.
+  const loadHistory = useCallback(
+    async (next?: string, append = false) => {
+      if (!workspaceId || !offlineWorkspace.online || snapshot.status !== 'authenticated') return;
+      const requestGeneration = generation.current;
+      append ? setMoreLoading(true) : setHistoryLoading(true);
+      setHistoryError('');
+      try {
+        const page = await getIssues(workspaceId, {
+          status: 'completed',
+          limit: 25,
+          ...(queryParkId ? { parkId: queryParkId } : {}),
+          ...(queryTurbineId ? { turbineId: queryTurbineId } : {}),
+          ...(next ? { cursor: next } : {}),
+        });
+        const store = offlineWorkspace.store;
+        let cacheError = false;
+        if (store)
+          try {
+            await store.recordServerIssuePage(page.items);
+            await Promise.all(
+              page.items.map((issue) =>
+                store.recordIssueIdentity({
+                  issueId: issue.id,
+                  creatorUserId: issue.creator.id,
+                  creatorName: issue.creator.name,
+                  handlerUserId: issue.handler?.id ?? null,
+                  handlerName: issue.handler?.name ?? null,
+                }),
+              ),
+            );
+          } catch {
+            cacheError = true;
+          }
+        if (requestGeneration !== generation.current) return;
+        setCompleted((current) => {
+          const merged = new Map((append ? current : []).map((item) => [item.id, item]));
+          for (const item of page.items) merged.set(item.id, item);
+          if (store) for (const item of locallyCompletedEntries(store)) merged.set(item.id, item);
+          return [...merged.values()].sort(compareCompleted);
+        });
+        setCursor(page.nextCursor);
+        if (cacheError)
+          setHistoryError(
+            'Histórico carregado, mas não foi possível salvar uma cópia neste aparelho.',
+          );
+      } catch (error) {
+        if (requestGeneration !== generation.current) return;
+        if (next && error instanceof ApiRequestError && error.code === 'INVALID_CURSOR') {
+          setCursor(null);
+          setHistoryError('A página mudou no servidor. Atualizando o histórico desde o início.');
+          void loadHistory();
+          return;
+        }
+        setCompleted(offlineWorkspace.store ? locallyCompletedEntries(offlineWorkspace.store) : []);
+        setHistoryError(
+          offlineWorkspace.store?.isReplicaReady()
+            ? 'Servidor indisponível; exibindo o histórico salvo neste aparelho.'
+            : issueErrorMessage(error, 'carregar os chamados concluídos'),
+        );
+        if (error instanceof ApiRequestError && [401, 403].includes(error.status)) await refresh();
+      } finally {
+        if (requestGeneration === generation.current) {
+          setHistoryLoading(false);
+          setMoreLoading(false);
+        }
+      }
+    },
+    [
+      offlineWorkspace.online,
+      offlineWorkspace.store,
+      queryParkId,
+      queryTurbineId,
+      refresh,
+      snapshot.status,
+      workspaceId,
+    ],
+  );
   useEffect(() => {
+    generation.current += 1;
+    setCursor(null);
+    setCompleted([]);
+    void loadHistory();
+  }, [loadHistory]);
+  useEffect(() => {
+    const journalChanged = offlineWorkspace.version >= 0;
+    if (!journalChanged) return;
     if (!workspaceId) return;
     if (offlineWorkspace.online && snapshot.status === 'authenticated') {
       const store = offlineWorkspace.store;
@@ -2355,62 +2679,6 @@ export function IssueHistoryPage() {
     workspaceId,
   ]);
 
-  useEffect(() => {
-    if (!workspaceId || !offlineWorkspace.online || snapshot.status !== 'authenticated') return;
-    let active = true;
-    const store = offlineWorkspace.store;
-    setHistoryLoading(true);
-    setHistoryError('');
-    void (async () => {
-      try {
-        const items = await getAllIssues(workspaceId, 'completed');
-        let cacheError = false;
-        if (store) {
-          try {
-            await store.recordServerIssuePage(items);
-            await Promise.all(
-              items.map((issue) =>
-                store.recordIssueIdentity({
-                  issueId: issue.id,
-                  creatorUserId: issue.creator.id,
-                  creatorName: issue.creator.name,
-                  handlerUserId: issue.handler?.id ?? null,
-                  handlerName: issue.handler?.name ?? null,
-                }),
-              ),
-            );
-          } catch {
-            cacheError = true;
-          }
-        }
-        if (active) {
-          const merged = new Map<string, Issue | IssueListEntry>(
-            items.map((item) => [item.id, item]),
-          );
-          if (store) for (const item of locallyCompletedEntries(store)) merged.set(item.id, item);
-          setCompleted([...merged.values()].sort(compareCompleted));
-          if (cacheError)
-            setHistoryError(
-              'Histórico carregado, mas não foi possível salvar uma cópia neste aparelho.',
-            );
-        }
-      } catch (error) {
-        if (!active) return;
-        setCompleted(store ? locallyCompletedEntries(store) : []);
-        setHistoryError(
-          store?.isReplicaReady()
-            ? 'Servidor indisponível; exibindo o histórico salvo neste aparelho.'
-            : issueErrorMessage(error, 'carregar os chamados concluídos'),
-        );
-        if (error instanceof ApiRequestError && [401, 403].includes(error.status)) await refresh();
-      }
-    })().finally(() => {
-      if (active) setHistoryLoading(false);
-    });
-    return () => {
-      active = false;
-    };
-  }, [offlineWorkspace.online, offlineWorkspace.store, refresh, snapshot.status, workspaceId]);
   if (snapshot.status !== 'authenticated' && snapshot.status !== 'offline')
     return <LoadingState label="Conferindo sua sessão…" />;
   return (
@@ -2426,29 +2694,88 @@ export function IssueHistoryPage() {
             title="Histórico"
             subtitle="Conferência e recuperação de chamados concluídos. Os mais recentes aparecem primeiro."
           />
-          {historyError && <Feedback message={historyError} tone="error" />}
+          {historyError && (
+            <div className="space-y-2">
+              <Feedback message={historyError} tone="error" />
+              <Button onClick={() => void loadHistory()} variant="outline">
+                <RefreshCw aria-hidden="true" /> Atualizar histórico
+              </Button>
+            </div>
+          )}
           <Card>
             <CardHeader>
               <CardTitle>Chamados concluídos</CardTitle>
               <CardDescription>Registro para auditoria e conferência.</CardDescription>
+              <IssueLocationFilters
+                workspaceId={workspaceId}
+                store={offlineWorkspace.store ?? undefined}
+                online={offlineWorkspace.online && snapshot.status === 'authenticated'}
+                parkId={queryParkId}
+                turbineId={queryTurbineId}
+                onParkChange={(value) => {
+                  setQueryParkId(value);
+                  setQueryTurbineId('');
+                }}
+                onTurbineChange={setQueryTurbineId}
+              />
+              <Label htmlFor="history-search">Pesquisar nos chamados carregados</Label>
+              <Input
+                id="history-search"
+                type="search"
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
+                placeholder="Texto, parque ou turbina"
+              />
             </CardHeader>
             <CardContent>
               {historyLoading ? (
                 <LoadingState label="Carregando chamados concluídos…" />
-              ) : completed.length === 0 ? (
+              ) : completed.filter(
+                  (item) =>
+                    item.text
+                      .toLocaleLowerCase('pt-BR')
+                      .includes(search.trim().toLocaleLowerCase('pt-BR')) ||
+                    `${historyLocations[`${item.parkId}:${item.turbineId}`]?.park ?? ''} ${historyLocations[`${item.parkId}:${item.turbineId}`]?.turbine ?? ''}`
+                      .toLowerCase()
+                      .includes(search.trim().toLowerCase()),
+                ).length === 0 ? (
                 <p className="py-8 text-center text-sm text-muted-foreground">
                   Nenhum chamado concluído.
                 </p>
               ) : (
                 <ul className="divide-y divide-border/70">
-                  {completed.map((issue) => (
-                    <IssueListItem
-                      key={issue.id}
-                      issue={issue}
-                      location={historyLocations[`${issue.parkId}:${issue.turbineId}`]}
-                    />
-                  ))}
+                  {completed
+                    .filter(
+                      (item) =>
+                        item.text
+                          .toLocaleLowerCase('pt-BR')
+                          .includes(search.trim().toLocaleLowerCase('pt-BR')) ||
+                        `${historyLocations[`${item.parkId}:${item.turbineId}`]?.park ?? ''} ${historyLocations[`${item.parkId}:${item.turbineId}`]?.turbine ?? ''}`
+                          .toLowerCase()
+                          .includes(search.trim().toLowerCase()),
+                    )
+                    .map((issue) => (
+                      <IssueListItem
+                        key={issue.id}
+                        issue={issue}
+                        location={historyLocations[`${issue.parkId}:${issue.turbineId}`]}
+                      />
+                    ))}
                 </ul>
+              )}
+              <p className="text-xs text-muted-foreground">
+                O histórico offline é parcial. A pesquisa filtra somente os itens carregados.
+              </p>
+              {cursor && (
+                <div className="border-t p-3 text-center">
+                  <Button
+                    disabled={moreLoading}
+                    variant="ghost"
+                    onClick={() => void loadHistory(cursor, true)}
+                  >
+                    {moreLoading ? 'Carregando…' : 'Carregar anteriores'}
+                  </Button>
+                </div>
               )}
             </CardContent>
           </Card>
