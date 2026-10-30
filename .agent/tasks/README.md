@@ -10,7 +10,7 @@ Cada nova slice fica em uma pasta `NN-nome/`, com um `README.md` que define resu
 
 - [ ] [08 — Filtros e histórico de consulta](08-consultas-historico/README.md): filtros P/T nas três listas, paginação por demanda, projeção e retenção segura de histórico.
 
-Próxima execução: [08 — Filtros e histórico de consulta](08-consultas-historico/README.md), planejada em 28/10/2026 com Q01–Q05. Q01 e Q02 concluídas em 30/10/2026; continuar pela [Q03](08-consultas-historico/03-cache-projecao.md). Planejamento não conclui implementação.
+Próxima execução: [08 — Filtros e histórico de consulta](08-consultas-historico/README.md), planejada em 28/10/2026 com Q01–Q05. Q01–Q03 concluídas em 30/10/2026; continuar pela [Q04](08-consultas-historico/04-interface-consultas.md). Planejamento não conclui implementação.
 
 - [x] [07 — Campainha e Web Push](07-notificacoes/README.md): N01–N06 concluídas em 28/10/2026; outbox, campainha, worker, interface/PWA, push real confirmado pelo proprietário e validação integrada. Android/iPhone instalados e produção permanecem no roadmap 11.
 

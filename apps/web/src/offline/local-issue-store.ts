@@ -139,7 +139,8 @@ type JournalRow =
       kind: 'replica';
       value: { collection: ReplicaCollection; row: ReplicaRow; active: boolean; cachedAt: string };
     }
-  | { id: string; kind: 'checkpoint'; value: ReplicaCheckpoint };
+  | { id: string; kind: 'checkpoint'; value: ReplicaCheckpoint }
+  | { id: string; kind: 'revision'; value: { revision: number } };
 
 type Partition = { accountId: string; workspaceId: string };
 
@@ -577,13 +578,11 @@ export class LocalIssueStore {
     await this.recordServerIssuePage([issue]);
   }
 
-  async recordServerIssuePage(issues: Issue[], completeActiveSnapshot = false) {
-    const incomingIds = new Set<string>();
+  async recordServerIssuePage(issues: Issue[]) {
     const rows: JournalRow[] = [];
     for (const issue of issues) {
       if (issue.workspaceId !== this.partition.workspaceId)
         throw new Error('O chamado pertence a outro workspace.');
-      incomingIds.add(issue.id);
       const remote: SyncedIssueRow = {
         id: issue.id,
         workspaceId: issue.workspaceId,
@@ -598,22 +597,6 @@ export class LocalIssueStore {
         revision: issue.revision,
       };
       rows.push(...this.reconcileRemoteIssue(issue.id, remote));
-    }
-    if (completeActiveSnapshot) {
-      for (const projection of this.listIssues()) {
-        if (
-          incomingIds.has(projection.id) ||
-          projection.serverActive === false ||
-          (!projection.serverIssue && projection.serverRevision === null)
-        )
-          continue;
-        rows.push({
-          id: `issue:${projection.id}`,
-          kind: 'issue',
-          value: { ...projection, serverActive: false },
-        });
-        rows.push(...this.confirmCompletedIssueDeparture(projection.id));
-      }
     }
     if (rows.length > 0) await this.commitRows(rows);
   }
@@ -786,7 +769,6 @@ export class LocalIssueStore {
      * incomplete snapshot, callers keep changes in memory and persist offset -1.
      */
 
-    for (const id of this.pruneReplicaCache(collection, records)) removedIds.add(id);
     for (const id of dirtyIds) {
       const row = records.get(id);
       if (row) rows.push(row);
@@ -804,42 +786,11 @@ export class LocalIssueStore {
     await this.commitRows(rows, [...removedIds]);
   }
 
-  private pruneReplicaCache(
-    collection: ReplicaCollection,
-    records: Map<string, JournalRow>,
-  ): string[] {
-    if (collection !== 'issues' && collection !== 'issue-events') return [];
-    const pendingIssueIds = new Set(this.listPendingCommands().map((command) => command.issueId));
-    const maximum = collection === 'issues' ? 250 : 1_000;
-    const removedIds: string[] = [];
-    const inactive = [...records.entries()]
-      .filter(([, row]) => row.kind === 'replica' && !row.value.active)
-      .sort((left, right) => {
-        const time = (entry: JournalRow) =>
-          entry.kind === 'replica'
-            ? String(
-                entry.value.row.occurredAt ?? entry.value.row.updatedAt ?? entry.value.cachedAt,
-              )
-            : '';
-        return time(right[1]).localeCompare(time(left[1]));
-      });
-    let retained = 0;
-    for (const [id, row] of inactive) {
-      if (row.kind !== 'replica') continue;
-      const relatedIssueId = String(row.value.row.issueId ?? row.value.row.id);
-      if (pendingIssueIds.has(relatedIssueId) || retained < maximum) {
-        retained++;
-      } else {
-        records.delete(id);
-        removedIds.push(row.id);
-        if (collection === 'issues') removedIds.push(`issue:${relatedIssueId}`);
-      }
-    }
-    return removedIds;
-  }
-
   private reconcileRemoteIssue(id: string, remote: SyncedIssueRow): JournalRow[] {
     const current = this.getIssue(id);
+    const retained = this.journal.get(`revision:${id}`);
+    if (!current && retained?.kind === 'revision' && remote.revision < retained.value.revision)
+      return [];
     if (!current) {
       return [
         {
@@ -980,8 +931,14 @@ export class LocalIssueStore {
     )
       throw new Error('A confirmação não corresponde ao comando local.');
     const current = this.getIssue(issue.id);
-    const observedRevision = current?.serverRevision ?? 0;
-    const confirmedByDeparture = current?.serverActive === false && issue.status === 'completed';
+    const observedRevision = Math.max(
+      current?.serverRevision ?? 0,
+      current?.serverIssue?.revision ?? 0,
+    );
+    const confirmedByDeparture =
+      current?.serverActive === false &&
+      issue.status === 'completed' &&
+      (current.serverRevision ?? 0) <= issue.revision;
     const updatedCommand: LocalIssueCommand = {
       ...command,
       status:
@@ -1157,6 +1114,61 @@ export class LocalIssueStore {
   }
 
   private async commitRows(rows: JournalRow[], removedIds: string[] = []) {
+    const next = new Map<string, JournalRow>(
+      [...this.journal.values()].map((row) => [row.id, row]),
+    );
+    for (const id of removedIds) next.delete(id);
+    for (const row of rows) next.set(row.id, row);
+    const protectedIds = new Set(
+      [...next.values()].flatMap((row) =>
+        row.kind === 'command' && !['confirmed', 'superseded'].includes(row.value.status)
+          ? [row.value.issueId]
+          : [],
+      ),
+    );
+    const evicted = new Set(removedIds);
+    const inactive = [...next.values()]
+      .filter(
+        (row): row is Extract<JournalRow, { kind: 'issue' }> =>
+          row.kind === 'issue' &&
+          row.value.serverActive === false &&
+          !protectedIds.has(row.value.id),
+      )
+      .sort(
+        (a, b) =>
+          (b.value.serverIssue?.updatedAt ?? b.value.updatedAt).localeCompare(
+            a.value.serverIssue?.updatedAt ?? a.value.updatedAt,
+          ) || b.id.localeCompare(a.id),
+      );
+    for (const row of inactive.slice(250)) {
+      evicted.add(row.id);
+      const revision: JournalRow = {
+        id: `revision:${row.value.id}`,
+        kind: 'revision',
+        value: {
+          revision: Math.max(row.value.serverRevision ?? 0, row.value.serverIssue?.revision ?? 0),
+        },
+      };
+      rows.push(revision);
+      evicted.add(`replica:issues:${row.value.id}`);
+    }
+    const events = [...next.values()]
+      .filter(
+        (row): row is Extract<JournalRow, { kind: 'replica' }> =>
+          row.kind === 'replica' &&
+          row.value.collection === 'issue-events' &&
+          !row.value.active &&
+          !protectedIds.has(String(row.value.row.issueId)),
+      )
+      .sort(
+        (a, b) =>
+          String(b.value.row.occurredAt ?? b.value.cachedAt).localeCompare(
+            String(a.value.row.occurredAt ?? a.value.cachedAt),
+          ) || b.id.localeCompare(a.id),
+      );
+    for (const row of events.slice(1000)) evicted.add(row.id);
+    removedIds = [...evicted];
+    rows = rows.filter((row) => !evicted.has(row.id));
     const tx = createTransaction({
       autoCommit: false,
       mutationFn: async ({ transaction }) => this.journal.utils.acceptMutations(transaction),

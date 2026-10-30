@@ -285,3 +285,8 @@ Verificação documental: links locais, seções, dependências e checkboxes abe
 ## Q02 — Consultas paginadas
 
 Q02 concluída em 30/10/2026: paginação preserva microssegundos do timestamp interno do cursor, mantendo UUID/DTO públicos. Matriz PostgreSQL descartável com 128 issues validou filtros, ordem, empates, invalidação de cursor, tenant, revogação e inserção concorrente entre páginas. pnpm check (54 testes/builds) e test:issues-integration passaram; planos usaram índice existente, sem migration necessária. Q03/Q04 ainda corrigirão projeção/cache e interface; não há nova validação móvel/produção.
+
+
+## Q03 — 30/10/2026
+
+Q03 concluída: páginas HTTP não inferem snapshot; seletores distinguem arquivo/tombstone/conclusão e revisão de ACK, Histórico reage ao journal e ordena por conclusão. Retenção transacional inclui projeções API (250) e eventos inativos (1.000), isenta comandos não resolvidos e preserva marcadores mínimos de revisão após poda. IndexedDB v2 preservado. pnpm check aprovado com 57 testes e builds; testes novos de poda/restart/revisão e seleção, mais suítes existentes de quota simulada/retry/compatibilidade. Sem ensaio visual, quota física ou aparelho. Próxima Q04.

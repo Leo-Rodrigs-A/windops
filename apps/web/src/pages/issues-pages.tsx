@@ -59,6 +59,7 @@ import {
   releaseIssue,
 } from '../lib/issues-api';
 import { getPark, getParks, getParkTurbines, getTurbine } from '../lib/workspace-api';
+import { confirmedIssue, selectIssueProjection } from '../offline/issue-query';
 import type {
   LocalIssueCommand,
   LocalIssueProjection,
@@ -155,12 +156,8 @@ function localIssueDetailEntry(
         'confirmed_waiting_replica',
       ].includes(command.status),
   );
-  const acknowledged = commands.find(
-    (command) => command.status === 'confirmed_waiting_replica' && command.acknowledgedIssue,
-  )?.acknowledgedIssue;
-  const confirmedStatus =
-    acknowledged?.status ??
-    (projection.serverActive === false ? 'completed' : projection.serverIssue?.status);
+  const acknowledged = confirmedIssue(projection, commands);
+  const confirmedStatus = acknowledged?.status ?? projection.serverIssue?.status;
   return {
     id: projection.id,
     workspaceId: projection.workspaceId,
@@ -208,8 +205,8 @@ function issueListEntry(issue: Issue): IssueListEntry {
 }
 
 function compareIssuesByRecency(
-  left: Pick<IssueListEntry, 'createdAt' | 'id'>,
-  right: Pick<IssueListEntry, 'createdAt' | 'id'>,
+  left: Pick<IssueListEntry, 'createdAt' | 'id'> & { updatedAt?: string },
+  right: Pick<IssueListEntry, 'createdAt' | 'id'> & { updatedAt?: string },
 ) {
   const recency = Date.parse(right.createdAt) - Date.parse(left.createdAt);
   return Number.isFinite(recency) && recency !== 0 ? recency : right.id.localeCompare(left.id);
@@ -223,12 +220,10 @@ function projectionStatus(projection: LocalIssueProjection, commands: LocalIssue
       unresolvedStatuses.has(command.status),
   );
   if (pendingStatusChange && projection.local.status !== 'local') return projection.local.status;
-  const acknowledged = commands.find(
-    (command) => command.status === 'confirmed_waiting_replica' && command.acknowledgedIssue,
-  )?.acknowledgedIssue;
+  const acknowledged = confirmedIssue(projection, commands);
   return (
     acknowledged?.status ??
-    (projection.serverActive === false ? 'completed' : projection.serverIssue?.status) ??
+    projection.serverIssue?.status ??
     (projection.local.status === 'local' ? 'pending' : projection.local.status)
   );
 }
@@ -353,23 +348,18 @@ function pendingLocalEntries(store: LocalIssueStore, filter: StatusFilter) {
   );
 }
 
+function compareCompleted(
+  left: { id: string; createdAt: string; updatedAt?: string },
+  right: { id: string; createdAt: string; updatedAt?: string },
+) {
+  return (
+    (right.updatedAt ?? right.createdAt).localeCompare(left.updatedAt ?? left.createdAt) ||
+    right.id.localeCompare(left.id)
+  );
+}
+
 function locallyCompletedEntries(store: LocalIssueStore) {
   const commands = store.listPendingCommands();
-  const completingCommands = new Set(
-    commands
-      .filter(
-        (command) =>
-          command.kind === 'complete' &&
-          [
-            'pending',
-            'sending',
-            'waiting_auth',
-            'waiting_eligibility',
-            'confirmed_waiting_replica',
-          ].includes(command.status),
-      )
-      .map((command) => command.issueId),
-  );
   const pendingTextChanges = new Set(
     commands
       .filter(
@@ -381,11 +371,12 @@ function locallyCompletedEntries(store: LocalIssueStore) {
   );
   return store
     .listIssues()
-    .filter(
-      (projection) =>
-        projection.serverIssue?.status === 'completed' ||
-        projection.serverActive === false ||
-        (projection.local.status === 'completed' && completingCommands.has(projection.id)),
+    .filter((projection) =>
+      selectIssueProjection(
+        projection,
+        commands.filter((command) => command.issueId === projection.id),
+        { status: 'completed' },
+      ),
     )
     .map((projection) => ({
       id: projection.id,
@@ -398,9 +389,18 @@ function locallyCompletedEntries(store: LocalIssueStore) {
           : projection.serverIssue.text,
       creatorLabel: projection.localIdentity?.creatorName ?? 'Registrado neste aparelho',
       handlerLabel: projection.localIdentity?.handlerName ?? null,
+      updatedAt:
+        commands.find(
+          (command) =>
+            command.issueId === projection.id &&
+            command.kind === 'complete' &&
+            ['pending', 'sending', 'waiting_auth', 'waiting_eligibility'].includes(command.status),
+        )?.createdAt ??
+        projection.serverIssue?.updatedAt ??
+        projection.updatedAt,
       createdAt: projection.serverIssue?.createdAt ?? projection.createdAt ?? projection.updatedAt,
     }))
-    .sort(compareIssuesByRecency);
+    .sort(compareCompleted);
 }
 
 function issueErrorMessage(error: unknown, action: string) {
@@ -566,10 +566,7 @@ export function WorkspaceHomePage() {
           ...(cursor ? { cursor } : {}),
         });
         if (offlineWorkspace.store) {
-          await offlineWorkspace.store.recordServerIssuePage(
-            page.items,
-            statusFilter === 'all' && page.nextCursor === null,
-          );
+          await offlineWorkspace.store.recordServerIssuePage(page.items);
           await Promise.all(
             page.items.map((issue) =>
               offlineWorkspace.store?.recordIssueIdentity({
@@ -2321,7 +2318,30 @@ export function IssueHistoryPage() {
   // biome-ignore lint/correctness/useExhaustiveDependencies: The journal version intentionally refreshes offline history.
   useEffect(() => {
     if (!workspaceId) return;
-    if (offlineWorkspace.online && snapshot.status === 'authenticated') return;
+    if (offlineWorkspace.online && snapshot.status === 'authenticated') {
+      const store = offlineWorkspace.store;
+      if (store)
+        setCompleted((current) => {
+          const merged = new Map(
+            current
+              .filter((item) => {
+                const projection = store.getIssue(item.id);
+                return (
+                  !projection ||
+                  selectIssueProjection(
+                    projection,
+                    store.listPendingCommands().filter((command) => command.issueId === item.id),
+                    { status: 'completed' },
+                  )
+                );
+              })
+              .map((item) => [item.id, item]),
+          );
+          for (const item of locallyCompletedEntries(store)) merged.set(item.id, item);
+          return [...merged.values()].sort(compareCompleted);
+        });
+      return;
+    }
     setHistoryLoading(false);
     setHistoryError('');
     setCompleted(offlineWorkspace.store ? locallyCompletedEntries(offlineWorkspace.store) : []);
@@ -2367,10 +2387,8 @@ export function IssueHistoryPage() {
           const merged = new Map<string, Issue | IssueListEntry>(
             items.map((item) => [item.id, item]),
           );
-          if (store)
-            for (const item of locallyCompletedEntries(store))
-              if (!merged.has(item.id)) merged.set(item.id, item);
-          setCompleted([...merged.values()].sort(compareIssuesByRecency));
+          if (store) for (const item of locallyCompletedEntries(store)) merged.set(item.id, item);
+          setCompleted([...merged.values()].sort(compareCompleted));
           if (cacheError)
             setHistoryError(
               'Histórico carregado, mas não foi possível salvar uma cópia neste aparelho.',

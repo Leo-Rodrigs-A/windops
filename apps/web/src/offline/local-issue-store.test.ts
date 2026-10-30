@@ -34,6 +34,59 @@ afterEach(() => {
 });
 
 describe('armazenamento local de issues e outbox', () => {
+  it('limita histórico API, preserva pendências e revisões após restart', async () => {
+    const scope = { ...partition, workspaceId: crypto.randomUUID() };
+    const store = await open(scope);
+    const base = {
+      id: issueId,
+      workspaceId: scope.workspaceId,
+      parkId,
+      turbineId,
+      creatorMembershipId: crypto.randomUUID(),
+      creator: { id: partition.accountId, name: 'Técnico', email: 'test@example.invalid' },
+      handlerMembershipId: null,
+      handler: null,
+      text: 'Texto',
+      completionReport: null,
+      archivedAt: null,
+      status: 'pending' as const,
+      createdAt: '2026-01-01T00:00:00.000Z',
+      updatedAt: '2026-01-01T00:00:00.000Z',
+      revision: 1,
+    };
+    await store.recordServerIssue(base);
+    const commandId = crypto.randomUUID();
+    await store.queueMutation({
+      issueId,
+      commandId,
+      kind: 'start',
+      payload: { commandId, expectedRevision: 1 },
+    });
+    await store.recordServerIssue({ ...base, revision: 2, archivedAt: base.updatedAt });
+    const history = Array.from({ length: 260 }, (_, index) => ({
+      ...base,
+      id: crypto.randomUUID(),
+      status: 'completed' as const,
+      revision: 3,
+      updatedAt: new Date(Date.UTC(2026, 1, 1, 0, 0, index)).toISOString(),
+    }));
+    const oldest = history[0];
+    if (!oldest) throw new Error('Missing fixture');
+    await store.recordServerIssuePage(history);
+    expect(store.listIssues()).toHaveLength(251);
+    expect(store.getCommand(commandId)?.status).toBe('conflict');
+    expect(store.getIssue(oldest.id)).toBeUndefined();
+    store.close();
+    const reopened = await open(scope);
+    expect(reopened.listIssues()).toHaveLength(251);
+    expect(reopened.getCommand(commandId)).toBeDefined();
+    await reopened.recordServerIssue({ ...oldest, status: 'pending', revision: 2 });
+    expect(reopened.getIssue(oldest.id)).toBeUndefined();
+    await reopened.recordServerIssue({ ...oldest, status: 'pending', revision: 4 });
+    await reopened.recordServerIssuePage([]);
+    expect(reopened.getIssue(oldest.id)?.serverActive).toBe(true);
+  });
+
   it('preserva chamados concluídos recebidos para consulta offline do histórico', async () => {
     const scope = { ...partition, workspaceId: crypto.randomUUID() };
     const store = await open(scope);
@@ -185,9 +238,9 @@ describe('armazenamento local de issues e outbox', () => {
     });
     expect(store.getCommand(completeCommandId)?.status).toBe('confirmed_waiting_replica');
 
-    await store.recordServerIssuePage([], true);
-    expect(store.getIssue(issueId)?.serverActive).toBe(false);
-    expect(store.getCommand(completeCommandId)?.status).toBe('confirmed');
+    await store.recordServerIssuePage([]);
+    expect(store.getIssue(issueId)?.serverActive).toBe(true);
+    expect(store.getCommand(completeCommandId)?.status).toBe('confirmed_waiting_replica');
   });
 
   it('persiste criação, edição e dependências após reabrir, isolado por conta', async () => {
