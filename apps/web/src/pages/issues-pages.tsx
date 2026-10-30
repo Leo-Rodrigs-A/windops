@@ -437,8 +437,18 @@ function statusLabel(status: IssueStatus) {
       : 'Concluído';
 }
 
-function statusVariant(status: IssueStatus) {
-  return status === 'pending' || status === 'completed' ? 'secondary' : 'default';
+function statusVariant(status: IssueStatus, archived = false) {
+  if (archived) return 'outline';
+  return status === 'pending' ? 'secondary' : status === 'in_progress' ? 'outline' : 'default';
+}
+
+function statusBadgeClass(status: IssueStatus, archived = false) {
+  if (archived) return 'border-border bg-muted text-muted-foreground';
+  return status === 'pending'
+    ? 'border-amber-300 bg-amber-100 text-amber-900 dark:border-amber-700 dark:bg-amber-950/50 dark:text-amber-200'
+    : status === 'in_progress'
+      ? 'border-sky-300 bg-sky-100 text-sky-900 dark:border-sky-700 dark:bg-sky-950/50 dark:text-sky-200'
+      : 'border-emerald-300 bg-emerald-100 text-emerald-900 dark:border-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-200';
 }
 
 function formatDate(value: string, withTime = true) {
@@ -1309,13 +1319,18 @@ function IssueListItem({
           <ClipboardList aria-hidden="true" className="size-5" />
         </span>
         <span className="min-w-0 flex-1 space-y-2">
-          <span className="flex flex-wrap items-center gap-2">
+          <span className="flex w-full flex-wrap items-center gap-2">
             <span className="font-medium">
               {location
                 ? `Parque ${location.park} · Turbina ${location.turbine}`
                 : 'Equipamento associado'}
             </span>
-            <Badge variant={statusVariant(item.status)}>{statusLabel(item.status)}</Badge>
+            <Badge
+              className={`ml-auto ${statusBadgeClass(item.status)}`}
+              variant={statusVariant(item.status)}
+            >
+              {statusLabel(item.status)}
+            </Badge>
           </span>
           <span className="line-clamp-2 block whitespace-pre-wrap text-sm text-muted-foreground">
             {item.text}
@@ -2243,7 +2258,10 @@ export function IssueDetailPage() {
                 <CardHeader className="gap-4">
                   <div className="flex flex-wrap items-center justify-between gap-3">
                     <div className="flex flex-wrap items-center gap-2">
-                      <Badge variant={statusVariant(issue.status)}>
+                      <Badge
+                        className={statusBadgeClass(issue.status, Boolean(issue.archivedAt))}
+                        variant={statusVariant(issue.status, Boolean(issue.archivedAt))}
+                      >
                         {statusLabel(issue.status)}
                       </Badge>
                       {hasUnconfirmedChanges && (
