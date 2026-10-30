@@ -280,3 +280,8 @@ Verificação documental: links locais, seções, dependências e checkboxes abe
 ## Q01 — 30/10/2026
 
 [Q01](tasks/08-consultas-historico/01-regras-consulta.md) concluída como entrega documental: matriz Home/Histórico/Arquivados, localização projetada, maior revisão entre API/réplica/ACK com overlay elegível, saída sem causa aguardando atualização e conflitos preservados na Cloud. Cursor UUID/limites/DTO mantidos; reset automático limitado a uma tentativa, gerações de consulta contra respostas antigas e nenhuma página HTTP prova snapshot completo. Retenção conjunta API/réplica de 250 issues/1.000 eventos inativos não protegidos, com isenção de pendências e compatibilidade aditiva do journal. Sem nova regra de produto. Links e diff-check aprovados; aplicação, integrações e pnpm check não executados por mudança exclusivamente documental. Q02 é a próxima; Q02–Q05 implementarão e validarão essas regras.
+
+
+## Q02 — Consultas paginadas
+
+Q02 concluída em 30/10/2026: paginação preserva microssegundos do timestamp interno do cursor, mantendo UUID/DTO públicos. Matriz PostgreSQL descartável com 128 issues validou filtros, ordem, empates, invalidação de cursor, tenant, revogação e inserção concorrente entre páginas. pnpm check (54 testes/builds) e test:issues-integration passaram; planos usaram índice existente, sem migration necessária. Q03/Q04 ainda corrigirão projeção/cache e interface; não há nova validação móvel/produção.

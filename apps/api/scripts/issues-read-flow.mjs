@@ -14,6 +14,7 @@ import {
 import { createParksCatalogService } from '../src/modules/parks/index.ts';
 import { createSyncService } from '../src/modules/sync/index.ts';
 import { createWorkspaceAuthorizationService } from '../src/modules/workspaces/index.ts';
+import { verifyIssueQueries } from './issues-query-matrix.mjs';
 
 config({ path: fileURLToPath(new URL('../../../.env', import.meta.url)), quiet: true });
 for (const key of ['DATABASE_URL', 'MIGRATION_DATABASE_URL'])
@@ -1868,6 +1869,8 @@ try {
   );
   assert.equal(finalRestoredChild.status, 'ok');
   assert.equal(finalRestoredChild.value.deactivatedAt, null);
+
+  await verifyIssueQueries({ pool, app, ids, headers, membershipByUser });
 
   const revokedHandlerIssueId = randomUUID();
   const revokedHandlerCreate = await issues.createIssue(headers(ids.tech), ids.workspaceA, {

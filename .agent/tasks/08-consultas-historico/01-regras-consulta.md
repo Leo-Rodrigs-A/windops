@@ -52,11 +52,11 @@ Esta seção é normativa para Q02–Q05; não descreve correções já entregue
 
 ### Matriz das listas
 
-| Lista | Inclusão e exclusão | Filtros | Ordem decrescente e desempate | Origem e cobertura |
-| --- | --- | --- | --- | --- |
-| Home | `pending` e `in_progress` sem `archivedAt`; criação local durável entra como pendente de envio. Excluir concluídas, arquivos e saída de shape sem causa conhecida | `active` (padrão), `pending` ou `in_progress`, P/T | `createdAt`, depois `id`; criação sem data remota usa instante persistido da criação local até ACK | Réplica ativa + projeção de comandos + páginas HTTP; informar preparação/cache desatualizado enquanto snapshot não estiver completo |
-| Histórico | `completed` sem `archivedAt`, ou conclusão local elegível ainda não resolvida, identificada como pendente. Excluir arquivo, reabertura conhecida e conclusão rejeitada/conflitante como resultado confirmado | Estado fixo `completed`, P/T | `updatedAt` remoto, depois `id`; conclusão pendente usa `createdAt` do comando de conclusão persistido | API sob demanda + cache + conclusão local; offline sempre parcial, inclusive quando vazio |
-| Arquivados | `archivedAt` conhecido não nulo, independentemente do estado operacional; excluir reativados | Estado de consulta `archived`, P/T | `archivedAt`, depois `id` | API online paginada; sem consulta offline prometida |
+| Lista      | Inclusão e exclusão                                                                                                                                                                                          | Filtros                                            | Ordem decrescente e desempate                                                                          | Origem e cobertura                                                                                                                  |
+| ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------- | ------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------- |
+| Home       | `pending` e `in_progress` sem `archivedAt`; criação local durável entra como pendente de envio. Excluir concluídas, arquivos e saída de shape sem causa conhecida                                            | `active` (padrão), `pending` ou `in_progress`, P/T | `createdAt`, depois `id`; criação sem data remota usa instante persistido da criação local até ACK     | Réplica ativa + projeção de comandos + páginas HTTP; informar preparação/cache desatualizado enquanto snapshot não estiver completo |
+| Histórico  | `completed` sem `archivedAt`, ou conclusão local elegível ainda não resolvida, identificada como pendente. Excluir arquivo, reabertura conhecida e conclusão rejeitada/conflitante como resultado confirmado | Estado fixo `completed`, P/T                       | `updatedAt` remoto, depois `id`; conclusão pendente usa `createdAt` do comando de conclusão persistido | API sob demanda + cache + conclusão local; offline sempre parcial, inclusive quando vazio                                           |
+| Arquivados | `archivedAt` conhecido não nulo, independentemente do estado operacional; excluir reativados                                                                                                                 | Estado de consulta `archived`, P/T                 | `archivedAt`, depois `id`                                                                              | API online paginada; sem consulta offline prometida                                                                                 |
 
 `archived` é um seletor de consulta, não um novo estado operacional. O timestamp de conclusão local não muda ao editar relato, tentar envio ou receber página. Após ACK usa-se a data autoritativa. Todos os empates usam comparação consistente de UUID descendente, também nos merges locais. Deduplicar por ID antes de ordenar.
 
@@ -88,17 +88,17 @@ Manter journal e partição conta/workspace existentes. Evolução necessária e
 
 ### Matriz de aceite para execução posterior
 
-| Cenário | Resultado exigido | Validação responsável |
-| --- | --- | --- |
-| Cache frio offline / quente offline | Aviso de cache indisponível / parcial; nenhuma promessa de histórico completo | Q03/Q04/Q05 |
-| Mais de 25 itens, empates, P/T incompatíveis | Páginas ordenadas/deduplicadas; combinação incompatível vazia | Q02/Q04 |
-| Conclusão local, restart, ACK e tombstone em ambas as ordens | Uma entrada, relato preservado, pendente até confirmação, data autoritativa após ACK | Q03/Q05 |
-| Tombstone sem causa / arquivo conhecido | Estado aguardando atualização / somente Arquivados online; nenhuma conclusão inferida | Q03/Q04 |
-| Reabertura/reativação, ACK ou página atrasada | Maior revisão prevalece; estado histórico antigo não reaparece | Q03/Q05 |
-| Rejeição/conflito com descendentes | Texto exportável na Cloud, sem confirmação falsa | Q03/Q05 |
-| Cursor removido ou movido entre páginas | Reset limitado ou deduplicação; concorrência não é snapshot | Q02/Q04 |
-| Troca de filtro, conta ou workspace com fetch em voo | Resposta antiga não aparece nem grava na partição atual | Q04/Q05 |
-| API acima do limite, réplica mista, quota e restart | Poda coerente; pendências intactas; falha não é persistência | Q03/Q05 |
-| Página final ou filtrada omite outra issue ativa | Outra issue permanece ativa; nenhum snapshot global inferido | Q03/Q05 |
+| Cenário                                                      | Resultado exigido                                                                     | Validação responsável |
+| ------------------------------------------------------------ | ------------------------------------------------------------------------------------- | --------------------- |
+| Cache frio offline / quente offline                          | Aviso de cache indisponível / parcial; nenhuma promessa de histórico completo         | Q03/Q04/Q05           |
+| Mais de 25 itens, empates, P/T incompatíveis                 | Páginas ordenadas/deduplicadas; combinação incompatível vazia                         | Q02/Q04               |
+| Conclusão local, restart, ACK e tombstone em ambas as ordens | Uma entrada, relato preservado, pendente até confirmação, data autoritativa após ACK  | Q03/Q05               |
+| Tombstone sem causa / arquivo conhecido                      | Estado aguardando atualização / somente Arquivados online; nenhuma conclusão inferida | Q03/Q04               |
+| Reabertura/reativação, ACK ou página atrasada                | Maior revisão prevalece; estado histórico antigo não reaparece                        | Q03/Q05               |
+| Rejeição/conflito com descendentes                           | Texto exportável na Cloud, sem confirmação falsa                                      | Q03/Q05               |
+| Cursor removido ou movido entre páginas                      | Reset limitado ou deduplicação; concorrência não é snapshot                           | Q02/Q04               |
+| Troca de filtro, conta ou workspace com fetch em voo         | Resposta antiga não aparece nem grava na partição atual                               | Q04/Q05               |
+| API acima do limite, réplica mista, quota e restart          | Poda coerente; pendências intactas; falha não é persistência                          | Q03/Q05               |
+| Página final ou filtrada omite outra issue ativa             | Outra issue permanece ativa; nenhum snapshot global inferido                          | Q03/Q05               |
 
 30/10/2026 — Q01 concluída por inspeção estática dos contratos, serviço de issues, journal e helpers de listas. Matriz e precedência consolidadas sem nova decisão de produto, dependência ou contrato público. Verificação documental de links locais e `git diff --check` aprovadas. Sem alteração de fonte/infra/banco/design; `pnpm check`, integrações e testes da aplicação não executados. A matriz acima é aceite futuro, não evidência de comportamento implementado. Próxima task: Q02.

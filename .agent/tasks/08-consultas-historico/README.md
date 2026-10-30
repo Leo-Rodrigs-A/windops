@@ -2,7 +2,7 @@
 
 ## Status
 
-Em andamento; Q01 documental concluída em 30/10/2026. Q02 é a próxima execução.
+Em andamento; Q01 documental concluída em 30/10/2026. Q02 concluída em 30/10/2026; Q03 é a próxima execução.
 
 - [ ] Slice concluída
 
@@ -16,14 +16,14 @@ Esta slice executa as lacunas da [etapa 10 do roadmap](<../00 - roadmap/10-query
 
 Inspeção de código em 28/10/2026; constatações estáticas, sem nova execução da aplicação:
 
-| Área | Já existe | Lacuna a tratar |
-| --- | --- | --- |
-| API de issues | `status`, `parkId`, `turbineId`, limite e cursor UUID; autorização tenant; integração com filtros e páginas pequenas | Cobertura combinada das três listas, mais de uma página real e alteração do registro usado como cursor |
-| Home | Estados, busca sobre itens carregados, paginação e overlay local | Seletores P/T; respostas atrasadas; páginas filtradas não podem declarar snapshot completo |
-| Histórico | Consulta online e cópia de concluídas no journal | `getAllIssues` percorre todas as páginas; merge reordena por `createdAt`, embora a API use `updatedAt` para concluídas |
-| Arquivados | Lista online paginada e reativação administrativa | Seletores P/T e códigos legíveis; a busca atual compara UUIDs de localização |
-| Projeção local | Journal durável, ACK/revisão, conflitos e proteção de pendências | `locallyCompletedEntries` e `projectionStatus` usam `serverActive === false` como conclusão; saída do shape também pode significar arquivo |
-| Retenção | Réplica limita inativos a 250 issues/1.000 eventos, preservando pendências | `recordServerIssuePage` grava projeções fora desse percurso de poda; cobrir também histórico vindo da API |
+| Área           | Já existe                                                                                                            | Lacuna a tratar                                                                                                                            |
+| -------------- | -------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| API de issues  | `status`, `parkId`, `turbineId`, limite e cursor UUID; autorização tenant; integração com filtros e páginas pequenas | Cobertura combinada das três listas, mais de uma página real e alteração do registro usado como cursor                                     |
+| Home           | Estados, busca sobre itens carregados, paginação e overlay local                                                     | Seletores P/T; respostas atrasadas; páginas filtradas não podem declarar snapshot completo                                                 |
+| Histórico      | Consulta online e cópia de concluídas no journal                                                                     | `getAllIssues` percorre todas as páginas; merge reordena por `createdAt`, embora a API use `updatedAt` para concluídas                     |
+| Arquivados     | Lista online paginada e reativação administrativa                                                                    | Seletores P/T e códigos legíveis; a busca atual compara UUIDs de localização                                                               |
+| Projeção local | Journal durável, ACK/revisão, conflitos e proteção de pendências                                                     | `locallyCompletedEntries` e `projectionStatus` usam `serverActive === false` como conclusão; saída do shape também pode significar arquivo |
+| Retenção       | Réplica limita inativos a 250 issues/1.000 eventos, preservando pendências                                           | `recordServerIssuePage` grava projeções fora desse percurso de poda; cobrir também histórico vindo da API                                  |
 
 Pontos de entrada: `apps/web/src/pages/issues-pages.tsx`, `apps/web/src/offline/local-issue-store.ts`, `apps/web/src/lib/issues-api.ts`, `apps/api/src/modules/issues/service.ts`, `packages/contracts/src/index.ts` e `apps/api/scripts/issues-read-flow.mjs`.
 
@@ -42,7 +42,7 @@ Pontos de entrada: `apps/web/src/pages/issues-pages.tsx`, `apps/web/src/offline/
 ## Ordem e dependências
 
 - [x] [Q01 — Regras de consulta e matriz de compatibilidade](01-regras-consulta.md) — slices 05–07; início da execução.
-- [ ] [Q02 — Consultas paginadas e autorização](02-api-consultas.md) — Q01.
+- [x] [Q02 — Consultas paginadas e autorização](02-api-consultas.md) — Q01.
 - [ ] [Q03 — Projeção e cache local de histórico](03-cache-projecao.md) — Q01/Q02.
 - [ ] [Q04 — Filtros e paginação nas interfaces](04-interface-consultas.md) — Q02/Q03.
 - [ ] [Q05 — Validação integrada e encerramento](05-validacao-integrada.md) — Q01–Q04.

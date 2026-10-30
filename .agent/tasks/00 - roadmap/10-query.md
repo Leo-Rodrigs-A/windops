@@ -2,7 +2,7 @@
 
 ## Status
 
-Parcial; execução restante planejada na [slice 08 — Filtros e histórico de consulta](../08-consultas-historico/README.md), com Q01 documental concluída em 30/10/2026 e Q02–Q05 pendentes. Regras consolidadas na [Q01](../08-consultas-historico/01-regras-consulta.md); comportamento da aplicação ainda não corrigido nesta entrega.
+Parcial; execução restante planejada na [slice 08 — Filtros e histórico de consulta](../08-consultas-historico/README.md), com Q01 documental concluída em 30/10/2026 e Q02 concluída (paginação validada e precisão de cursor corrigida); Q03–Q05 pendentes. Regras consolidadas na [Q01](../08-consultas-historico/01-regras-consulta.md); projeção/cache e interface ainda aguardam Q03/Q04.
 
 Slices 04–06 já entregaram API com filtros P/T/status e cursor, Home e Arquivados paginados, cache de concluídas e proteção de pendências na réplica. Inspeção da slice 08 identificou lacunas: seletores P/T na interface, Histórico que ainda baixa todas as páginas, ordenação local diferente da API, inferência de conclusão a partir de saída do shape e retenção das projeções gravadas diretamente pela API. Evidências anteriores são contexto; o aceite desta etapa ainda está aberto.
 

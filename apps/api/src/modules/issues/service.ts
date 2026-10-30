@@ -535,10 +535,11 @@ export function createIssuesService(
 
   return {
     async listIssues(workspaceId, query) {
-      let cursor: { createdAt: Date; id: string } | null = null;
+      // Keep PostgreSQL microseconds: converting the cursor to Date can skip tied rows.
+      let cursor: { createdAt: string; id: string } | null = null;
       if (query.cursor) {
-        const result = await pool.query<{ createdAt: Date; id: string }>(
-          `SELECT CASE WHEN $3::text = 'archived' THEN archived_at WHEN $3 = 'completed' THEN updated_at ELSE created_at END AS "createdAt", id
+        const result = await pool.query<{ createdAt: string; id: string }>(
+          `SELECT (CASE WHEN $3::text = 'archived' THEN archived_at WHEN $3 = 'completed' THEN updated_at ELSE created_at END)::text AS "createdAt", id
            FROM public.issues
            WHERE workspace_id = $1 AND id = $2
              AND (($3::text = 'archived' AND archived_at IS NOT NULL) OR (archived_at IS NULL AND ($3::text IS NULL OR ($3 = 'active' AND status IN ('pending', 'in_progress')) OR status = $3)))
