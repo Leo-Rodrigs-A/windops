@@ -2,7 +2,7 @@
 
 ## Status
 
-Em andamento; R01 concluída em 30/10/2026. R01A é a próxima execução. Planejada originalmente em 30/10/2026 a pedido do proprietário, usando a análise SOLID fornecida como guia e inspeção do repositório atual. Não representa certificação de aplicação “100%” nem entrega de produção.
+Em andamento; R01 e R01A concluídas em 30/10/2026. Próxima execução: R02. Planejada originalmente em 30/10/2026 a pedido do proprietário, usando a análise SOLID fornecida como guia e inspeção do repositório atual. Não representa certificação de aplicação “100%” nem entrega de produção.
 
 - [ ] Slice concluída
 
@@ -81,6 +81,8 @@ Atualização de dependência — 30/10/2026: Q05 e slice 08 concluídas com ace
 ## Execução R01
 
 - [x] R01 — baseline e inventário concluídos.
-- [ ] [R01A — Sanitização dos logs HTTP](01a-sanitizacao-logs.md): achado alto A01, executar antes de R02.
+- [x] [R01A — Sanitização dos logs HTTP](01a-sanitizacao-logs.md): achado alto A01 corrigido; `pnpm check` e integração auth aprovados.
 
-[Inventário R01](baseline-r01.md) registra checks/integrações aprovados e aceite da alternância Preview/Vite pelo proprietário. Nenhuma refatoração entregue; A01 bloqueia encerramento da slice. Ordem revisada: R01A → R02 → R03–R08.
+[Inventário R01](baseline-r01.md) registra checks/integrações aprovados e aceite da alternância Preview/Vite pelo proprietário. A01 foi resolvido na R01A; R02 é a próxima etapa. Ordem: R01A → R02 → R03–R08.
+
+30/10/2026 — R01A concluiu serializer do logger sem query/fragmento, cobertura da captura real do logger e integração auth; veja [evidências R01A](01a-sanitizacao-logs.md). Nenhuma limpeza de logs históricos foi feita.

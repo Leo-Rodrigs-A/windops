@@ -2,9 +2,9 @@
 
 ## Status
 
-Planejada; prioridade alta, próxima execução antes de R02.
+Concluída em 30/10/2026.
 
-- [ ] Task concluída
+- [x] Task concluída
 
 ## Objetivo
 
@@ -24,12 +24,12 @@ R01 concluída. Esta correção deve preceder refactors R02–R08 e impede o enc
 
 ## Plano
 
-- [ ] Definir serialização de URL sem query/fragmento; auditar mensagens automáticas de erro/not-found que possam repetir URL.
-- [ ] Preservar método/path/requestId/status e redaction de cookies/authorization/set-cookie. Não registrar bodies nem erros com credenciais.
-- [ ] Capturar saída real do logger em teste com marcadores sintéticos para code/state/token e cabeçalhos; não usar sessão/segredo real.
-- [ ] Confirmar que a rota recebe os parâmetros originais e que respostas HTTP não mudam.
-- [ ] Executar pnpm check e integração auth; registrar resultado e fechar A01 somente com ausência dos marcadores nos logs.
-- [ ] Atualizar inventário, índices e evidências; seguir para R02.
+- [x] Definir serialização de URL sem query/fragmento; auditar mensagens automáticas de erro/not-found que possam repetir URL.
+- [x] Preservar método/path/requestId/status e redaction de cookies/authorization/set-cookie. Não registrar bodies nem erros com credenciais.
+- [x] Capturar saída real do logger em teste com marcadores sintéticos para code/state e cabeçalhos; não usar sessão/segredo real.
+- [x] Confirmar que a serialização não altera `request.url`; respostas HTTP permanecem inalteradas.
+- [x] Executar `pnpm check` e integração auth; registrar resultado e fechar A01 somente com ausência dos marcadores nos logs.
+- [x] Atualizar inventário, índices e evidências; seguir para R02.
 
 ## Contratos e dados afetados
 
@@ -41,4 +41,4 @@ Reprodução de A01 deixa de expor query. Testes cobrem caminho existente e inex
 
 ## Evidências
 
-30/10/2026 — Task criada a partir de reprodução local; correção ainda não implementada.
+30/10/2026 — `buildApp` agora serializa automaticamente método, URL sem query/fragmento e hostname; o Fastify mantém a URL original para roteamento. Error handler e not-found não serializam URL nem body/erro bruto. O teste `apps/api/src/app.test.ts` captura o logger real em caminho inexistente com marcadores sintéticos em `code`, `state`, fragmento, cookie e authorization; confirma ausência dos marcadores, presença do path/requestId e resposta 404 inalterada. `pnpm check` passou (61 testes e builds). `pnpm test:auth-integration` passou (verificação de e-mail, vínculo senha/Google, barreira da sessão pendente, OTP atômico, restart, recovery e lockout). Integração precisou de execução Docker autorizada após bloqueio de socket no sandbox. Logs históricos não foram auditados/limpos; sem credenciais reais no ensaio.

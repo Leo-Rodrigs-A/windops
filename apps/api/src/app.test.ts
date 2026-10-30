@@ -14,9 +14,14 @@ it('redacts query strings from automatic request logs while preserving the route
   });
   const app = buildApp({ ready: async () => {}, logger: { stream } });
   try {
-    const response = await app.inject(
-      '/api/auth/callback/google?code=R01_SYNTHETIC_CODE&state=R01_SYNTHETIC_STATE#R01_FRAGMENT',
-    );
+    const response = await app.inject({
+      method: 'GET',
+      url: '/api/auth/callback/google?code=R01_SYNTHETIC_CODE&state=R01_SYNTHETIC_STATE#R01_FRAGMENT',
+      headers: {
+        cookie: 'session=R01_SYNTHETIC_COOKIE',
+        authorization: 'Bearer R01_SYNTHETIC_AUTHORIZATION',
+      },
+    });
     await new Promise((resolve) => setImmediate(resolve));
     expect(response.statusCode).toBe(404);
     expect(output).toContain('/api/auth/callback/google');
@@ -24,6 +29,8 @@ it('redacts query strings from automatic request logs while preserving the route
     expect(output).not.toContain('R01_SYNTHETIC_CODE');
     expect(output).not.toContain('R01_SYNTHETIC_STATE');
     expect(output).not.toContain('R01_FRAGMENT');
+    expect(output).not.toContain('R01_SYNTHETIC_COOKIE');
+    expect(output).not.toContain('R01_SYNTHETIC_AUTHORIZATION');
   } finally {
     await app.close();
     stream.end();
