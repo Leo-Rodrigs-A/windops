@@ -2,7 +2,7 @@
 
 ## Status
 
-Planejada em 28/10/2026.
+Em andamento; Q01 documental concluída em 30/10/2026. Q02 é a próxima execução.
 
 - [ ] Slice concluída
 
@@ -32,7 +32,7 @@ Pontos de entrada: `apps/web/src/pages/issues-pages.tsx`, `apps/web/src/offline/
 - Ler [arquitetura](../../architeture.md), [memória](../../memory.md) e [convenção de execução](../README.md). Depende das slices 05–07 concluídas em seus escopos documentados.
 - Reutilizar rotas, serviços públicos e journal existentes. Não ampliar shapes para todo o histórico nem aceitar filtros Electric do cliente. Autorização tenant permanece obrigatória.
 - Filtros desta entrega: estado já existente na Home, parque e turbina nas três listas. Turbina depende do parque; trocar parque limpa turbina e paginação. Catálogo arquivado deve continuar selecionável quando necessário para consultar histórico.
-- Ordem proposta, preservando a API atual: abertos por `createdAt DESC, id DESC`; concluídos por `updatedAt DESC, id DESC`; arquivados por `archivedAt DESC, id DESC`. Conclusão pendente usa o instante local persistido da conclusão, identificado como pendente; não altera timestamps nem permissões do servidor.
+- Ordem definida em Q01, preservando a API atual: abertos por `createdAt DESC, id DESC`; concluídos por `updatedAt DESC, id DESC`; arquivados por `archivedAt DESC, id DESC`. Conclusão pendente usa o instante local persistido da conclusão, identificado como pendente; não altera timestamps nem permissões do servidor.
 - Manter cursor UUID e recuperação explícita de `INVALID_CURSOR` reiniciando a consulta; não prometer snapshot estável durante alterações concorrentes. Páginas são deduplicadas por ID; filtro/conta/workspace novos invalidam respostas antigas.
 - Arquivados continuam exigindo rede. Histórico offline é parcial; não prometer consulta de registros nunca armazenados. A busca textual existente continua limitada aos itens carregados, com indicação clara; busca global e filtro por data ficam fora do escopo.
 - Limites atuais de retenção são a base (250 issues inativas e 1.000 eventos inativos); dados ativos e tudo que sustenta comandos não resolvidos não podem ser descartados para cumprir esses limites.
@@ -41,7 +41,7 @@ Pontos de entrada: `apps/web/src/pages/issues-pages.tsx`, `apps/web/src/offline/
 
 ## Ordem e dependências
 
-- [ ] [Q01 — Regras de consulta e matriz de compatibilidade](01-regras-consulta.md) — slices 05–07; início da execução.
+- [x] [Q01 — Regras de consulta e matriz de compatibilidade](01-regras-consulta.md) — slices 05–07; início da execução.
 - [ ] [Q02 — Consultas paginadas e autorização](02-api-consultas.md) — Q01.
 - [ ] [Q03 — Projeção e cache local de histórico](03-cache-projecao.md) — Q01/Q02.
 - [ ] [Q04 — Filtros e paginação nas interfaces](04-interface-consultas.md) — Q02/Q03.
