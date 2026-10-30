@@ -2,9 +2,9 @@
 
 ## Status
 
-Planejada.
+Concluída em 30/10/2026.
 
-- [ ] Task concluída
+- [x] Task concluída
 
 ## Objetivo
 
@@ -24,13 +24,13 @@ R01 e Q05 concluídas; concluir R01A (sanitização de logs) antes da alteraçã
 
 ## Plano
 
-- [ ] Atualizar README: funcionalidades implementadas, setup/auth opt-in/bootstrap, comandos realmente disponíveis, situação atual e limites móveis/produção.
-- [ ] Corrigir nome canônico para architecture.md com atualização dos links internos; manter architeture.md como ponte de compatibilidade para instruções externas. Não apagar histórico nem alterar instruções externas silenciosamente.
-- [ ] Injetar NotificationsService explicitamente em auditoria; remover import/factory concreta default e ajustar composição e todos os testes/fixtures consumidores.
-- [ ] Preservar o mesmo cliente transacional na gravação de evento e intenção de notificação; não enviar efeitos externos dentro da transação.
-- [ ] Verificar rollback de auditoria/notificação juntos, destinatários e idempotência na integração de issues; ampliar teste somente onde faltar evidência.
-- [ ] Executar pnpm check, integração de issues e validação de links; registrar evidências e atualizar índice/memória.
-- [ ] Detalhar R03 com fronteiras transacionais encontradas em R01, incluindo retornos de erro e tratamento de falha no rollback.
+- [x] Atualizar README: funcionalidades implementadas, setup/auth opt-in/bootstrap, comandos realmente disponíveis, situação atual e limites móveis/produção.
+- [x] Corrigir nome canônico para architecture.md com atualização dos links internos; manter architeture.md como ponte de compatibilidade para instruções externas. Não apagar histórico nem alterar instruções externas silenciosamente.
+- [x] Injetar NotificationsService explicitamente em auditoria; remover import/factory concreta default e ajustar composição e todos os testes/fixtures consumidores.
+- [x] Preservar o mesmo cliente transacional na gravação de evento e intenção de notificação; não enviar efeitos externos dentro da transação.
+- [x] Verificar rollback de auditoria/notificação juntos, destinatários e idempotência na integração de issues; ampliar teste somente onde faltar evidência.
+- [x] Executar `pnpm check`, integração de issues e validação de links; registrar evidências e atualizar índice/memória.
+- [x] Detalhar R03 com fronteiras transacionais encontradas em R01, incluindo retornos de erro e tratamento de falha no rollback.
 
 ## Contratos e dados afetados
 
@@ -42,7 +42,9 @@ Nenhum consumidor depende da criação implícita de notificações; uma falha t
 
 ## Evidências
 
-30/10/2026 — Plano criado; nenhuma alteração de fonte ou documentação operacional entregue por esta task.
+30/10/2026 — README atualizado para o escopo entregue, setup de Auth opt-in, bootstrap explícito, comandos existentes e limites de validação. `.agent/architecture.md` tornou-se canônico e `.agent/architeture.md` permanece como ponte; links internos foram migrados. `createAuditService` agora exige `NotificationsService`; composição de produção e quatro consumidores da integração injetam a mesma instância, e `appendIssueEvent` continua usando o cliente recebido pela transação. `pnpm check` passou (61 testes e builds); `pnpm test:issues-integration` passou em PostgreSQL descartável, cobrindo rollback, destinatários, atomicidade e retries/idempotência existentes. Links verificados e `git diff --check` aprovado. Nenhum contrato, schema ou efeito externo foi alterado.
+
+R03 foi detalhada em [03-transacoes-erros.md](03-transacoes-erros.md), com pontos de transação, comportamento de rollback e classificador de erros a estudar; implementação não iniciada.
 
 
 Atualização de dependência — 30/10/2026: Q05 e slice 08 concluídas com aceite funcional do proprietário em Chrome/Edge (admin/técnico) e checks registrados. O bloqueio Q05 mencionado no planejamento original está resolvido. R01 é a próxima execução; nenhuma task R foi implementada por este encerramento.

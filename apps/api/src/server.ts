@@ -70,7 +70,7 @@ const app = buildApp({
   issues: createIssuesService(pool, identityService, {
     authorization: workspaceAuthorization,
     parks: parksCatalog,
-    audit: createAuditService(),
+    audit: createAuditService(notifications),
     sync,
   }),
   notifications,

@@ -331,3 +331,5 @@ As pendências de navegador registradas acima são históricas e ficam superadas
 ## R01 concluída — 30/10/2026
 
 Auditoria da slice 09 baseada no commit b718743; [baseline](tasks/09-revisao-confiabilidade/baseline-r01.md). R01A resolveu A01: o logger HTTP omite query/fragmento e mantém método/path/requestId; teste captura logger com marcadores sintéticos de query, cookie e authorization. `pnpm check` passou (61 testes/builds) e `pnpm test:auth-integration` passou após execução autorizada de Docker. Logs históricos não foram limpos. R02 é a próxima task; demais achados orientam refactors graduais preservando locks/tenant/journal.
+
+R02 concluída: README atualiza o estado real do produto/setup; `.agent/architecture.md` é canônico e `.agent/architeture.md` permanece como ponte; `createAuditService` recebe `NotificationsService` explicitamente e usa o cliente transacional já fornecido. `pnpm check` (61 testes/builds) e `pnpm test:issues-integration` passaram, com rollback/outbox/idempotência. Planos executáveis R03–R08 agora cobrem os achados conhecidos A01–A13 da baseline; não representam garantia absoluta. Próxima execução: R03.

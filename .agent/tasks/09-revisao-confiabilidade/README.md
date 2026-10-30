@@ -2,7 +2,7 @@
 
 ## Status
 
-Em andamento; R01 e R01A concluídas em 30/10/2026. Próxima execução: R02. Planejada originalmente em 30/10/2026 a pedido do proprietário, usando a análise SOLID fornecida como guia e inspeção do repositório atual. Não representa certificação de aplicação “100%” nem entrega de produção.
+Em andamento; R01, R01A e R02 concluídas em 30/10/2026. Próxima execução: R03. Planejada originalmente em 30/10/2026 a pedido do proprietário, usando a análise SOLID fornecida como guia e inspeção do repositório atual. Não representa certificação de aplicação “100%” nem entrega de produção.
 
 - [ ] Slice concluída
 
@@ -18,24 +18,24 @@ Não considerar automaticamente defeitos: composição explícita em app.ts, aus
 
 ## Dependências
 
-Ler [arquitetura](../../architeture.md), [memória](../../memory.md) e [convenção](../README.md). R01 pode começar com Q05 aberta, registrando suas lacunas. Refactors de comportamento começam somente após o aceite Q05, ou após resolver explicitamente seus bloqueios no escopo de R01 sem marcar ensaios indisponíveis como aprovados. Slices 01–07 fornecem a base de regressão, não evidência automática desta entrega.
+Ler [arquitetura](../../architecture.md), [memória](../../memory.md) e [convenção](../README.md). R01 pode começar com Q05 aberta, registrando suas lacunas. Refactors de comportamento começam somente após o aceite Q05, ou após resolver explicitamente seus bloqueios no escopo de R01 sem marcar ensaios indisponíveis como aprovados. Slices 01–07 fornecem a base de regressão, não evidência automática desta entrega.
 
 ## Sequência e detalhamento progressivo
 
-Apenas R01/R02 possuem plano detalhado nesta preparação. Antes de iniciar cada etapa seguinte, criar seu arquivo executável com resultados da anterior, arquivos afetados, falhas e testes necessários.
+R03–R08 estão detalhadas a partir dos achados A01–A13. Antes de executar cada etapa, incorporar ao arquivo executável os resultados da anterior, arquivos afetados, falhas encontradas e testes necessários.
 
 | Etapa | Entrega planejada                                                                                                                                                                  | Dependência                                      |
 | ----- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------ |
 | R01   | [Auditoria reproduzível e baseline](01-auditoria-baseline.md)                                                                                                                      | Base atual; registrar e resolver dependência Q05 |
 | R02   | [Documentação e composição da auditoria](02-documentacao-composicao.md)                                                                                                            | R01; Q05 para alteração de fonte                 |
-| R03   | Transações e erros: extrair executor pequeno, preservar locks/rollback e traduzir erros no domínio; helpers HTTP só onde contratos coincidirem                                     | R02                                              |
-| R04   | Workspaces: separar autorização, membros e convites; consumidores dependem da menor interface necessária; manter exports públicos compatíveis durante migração                     | R03                                              |
-| R05   | Issues: separar políticas puras, orquestração e SQL; comandos explícitos e tabela de regras somente se tornar invariantes mais legíveis; repositório interno de escopo demonstrado | R04                                              |
-| R06   | Front por feature: começar issues, extrair consultas/ações/componentes, depois equipe e parques; manter primitives Shadcn compartilhadas                                           | R05                                              |
-| R07   | Store offline: separar persistência, projeção e fila por responsabilidade sem dividir a atomicidade; preservar API/fachada e journal existente                                     | R06                                              |
-| R08   | Revisão funcional, segurança e aceite integrado final; encerrar pendências ou documentar exclusões aceitas com destino                                                             | R07                                              |
+| R03   | [Transações e erros](03-transacoes-erros.md) — executor pequeno, preservação de locks/rollback e tradução de erros de domínio                                                      | R02                                              |
+| R04   | [Interfaces Workspaces](04-interfaces-workspaces.md) — separar autorização, membros e convites; manter facade/export compatível                                                  | R03                                              |
+| R05   | [Domínio Issues](05-dominio-issues.md) — separar políticas, orquestração e SQL; preservar hashes/recibos                                                                         | R04                                              |
+| R06   | [Frontend por feature](06-frontend-features.md) — issues, equipe e parques, com estados/filtros/foco preservados                                                                 | R05                                              |
+| R07   | [Store offline](07-store-offline.md) — separar persistência, projeção e fila mantendo atomicidade e journal                                                                       | R06                                              |
+| R08   | [Aceite integrado](08-aceite-integrado.md) — fechar matriz A01–A13, regressões e pendências com evidência                                                                       | R07                                              |
 
-R01 concluída; demais etapas pendentes. Ajustar recortes depois da auditoria, sem expandir automaticamente para todo o backlog.
+R01–R02 concluídas. R03–R08 detalhadas conforme o inventário A01–A13. O plano cobre os achados conhecidos da baseline e não equivale a garantia absoluta de ausência de defeitos.
 
 ## Invariantes obrigatórios
 
@@ -83,6 +83,10 @@ Atualização de dependência — 30/10/2026: Q05 e slice 08 concluídas com ace
 - [x] R01 — baseline e inventário concluídos.
 - [x] [R01A — Sanitização dos logs HTTP](01a-sanitizacao-logs.md): achado alto A01 corrigido; `pnpm check` e integração auth aprovados.
 
-[Inventário R01](baseline-r01.md) registra checks/integrações aprovados e aceite da alternância Preview/Vite pelo proprietário. A01 foi resolvido na R01A; R02 é a próxima etapa. Ordem: R01A → R02 → R03–R08.
+[Inventário R01](baseline-r01.md) registra checks/integrações aprovados e aceite da alternância Preview/Vite pelo proprietário. A01 foi resolvido na R01A; R02 alinhou documentação/composição e validou atomicidade. Próxima etapa: R03.
 
 30/10/2026 — R01A concluiu serializer do logger sem query/fragmento, cobertura da captura real do logger e integração auth; veja [evidências R01A](01a-sanitizacao-logs.md). Nenhuma limpeza de logs históricos foi feita.
+
+- [x] [R02 — Documentação e composição da auditoria](02-documentacao-composicao.md): README/arquitetura alinhados e `NotificationsService` injetado explicitamente.
+
+30/10/2026 — R02 concluída: `pnpm check` (61 testes/builds), `pnpm test:issues-integration` e links passaram. Próxima: R03.

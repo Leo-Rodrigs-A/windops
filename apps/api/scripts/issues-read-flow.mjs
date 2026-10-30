@@ -275,13 +275,13 @@ try {
   );
   const sync = createSyncService();
   const parks = createParksCatalogService(pool, authorization, sync);
+  const notifications = createNotificationsService(pool, 'A'.repeat(87));
   const issues = createIssuesService(pool, identity, {
     authorization,
     parks,
-    audit: createAuditService(),
+    audit: createAuditService(notifications),
     sync,
   });
-  const notifications = createNotificationsService(pool, 'A'.repeat(87));
   app = buildApp({
     ready: async () => {},
     workspaceAuthorization: authorization,
@@ -884,7 +884,7 @@ try {
     const blockedIssues = createIssuesService(pool, identity, {
       authorization,
       parks: blockingParks,
-      audit: createAuditService(),
+      audit: createAuditService(notifications),
       sync: createSyncService(),
     });
     const mutationPromise = mutate(blockedIssues);
@@ -966,7 +966,7 @@ try {
   );
 
   const failedIssueId = randomUUID();
-  const realAudit = createAuditService();
+  const realAudit = createAuditService(notifications);
   const failingIssues = createIssuesService(pool, identity, {
     authorization,
     parks,
@@ -1008,7 +1008,7 @@ try {
   const restartedIssues = createIssuesService(pool, identity, {
     authorization,
     parks,
-    audit: createAuditService(),
+    audit: createAuditService(notifications),
     sync: createSyncService(),
   });
   app = buildApp({

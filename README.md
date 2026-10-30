@@ -1,6 +1,6 @@
 # Wind Ops
 
-Base de um webapp local-first para registrar problemas em elevadores de torres eólicas. **Esta entrega não implementa login, issues, persistência offline ou push.** Integrações estão preparadas, com rotas de sincronização bloqueadas até existir autorização.
+Aplicação local-first para registrar, atender e consultar problemas em elevadores de torres eólicas. O produto implementa autenticação com segunda etapa, autorização por workspace, catálogo de parques/turbinas, issues, sincronização offline no browser/desktop, histórico e notificações push. Produção e suporte instalado em Android/iPhone ainda não foram validados; consulte os limites abaixo e a arquitetura.
 
 ## Desenvolvimento no WSL
 
@@ -19,6 +19,8 @@ pnpm dev
 Frontend: http://localhost:5173. API: http://localhost:3000/api/health/live.
 Documentação local: http://localhost:3000/api/docs. Mailpit: http://localhost:8025.
 
+Rotas Better Auth ficam desativadas por padrão. Para habilitá-las localmente, configure `AUTH_ENABLED=true`, `BETTER_AUTH_SECRET` e `APP_ORIGIN` em `.env`; configure também SMTP para os códigos de verificação. OAuth Google requer credenciais próprias. O primeiro workspace/admin é provisionado pelo procedimento explícito em `apps/api/scripts/bootstrap-workspace.sql`, nunca por cadastro automático. Web Push exige chaves VAPID no servidor. Nunca coloque segredos em variáveis `VITE_`.
+
 A prontidão em `/api/health/ready` exige PostgreSQL e Electric saudáveis. A API pode iniciar com as dependências indisponíveis, mas não fica pronta. A rota `/api/sync/:collection` responde 503 intencionalmente.
 
 ```bash
@@ -32,7 +34,7 @@ pnpm infra:down
 
 `db:setup` provisiona/reconcilia os papéis locais, aplica migrações com o papel migrador e atualiza as permissões/publicação manual do Electric. Pode ser repetido; preserva o volume existente. `infra:down` também preserva volumes. Não execute remoção de volumes sobre dados necessários. A migração inicial cria apenas a fundação de workspaces e limita a instalação a um registro; não cria usuários nem credenciais padrão.
 
-`pnpm db:empty-check` testa provisionamento repetido e migração em uma database temporária, reinicia PostgreSQL para verificar persistência e remove somente essa database ao final. Ele reinicia o serviço PostgreSQL local.
+`pnpm db:empty-check` testa provisionamento repetido e migração em uma database temporária, reinicia PostgreSQL para verificar persistência e remove somente essa database ao final. Ele reinicia o serviço PostgreSQL local. Integrações disponíveis incluem `pnpm test:auth-integration`, `pnpm test:workspaces-integration`, `pnpm test:parks-integration` e `pnpm test:issues-integration`; elas usam bancos descartáveis via Docker.
 
 Verifique backup e restauração em um banco com nome descartável e exclusivo:
 
@@ -48,13 +50,13 @@ O script compara contagens de `workspaces` e do journal após restaurar, remove 
 - `apps/api`: monólito Fastify, módulos, adaptadores e Drizzle.
 - `packages/contracts`: schemas Zod e tipos públicos.
 - `infra`: Compose, Dockerfiles, Caddy e modelo de ambiente.
-- `.agent/architeture.md`: arquitetura e operação.
+- `.agent/architecture.md`: arquitetura e operação atual (com `.agent/architeture.md` como ponte legada).
 - `.agent/memory.md`: decisões completas e situação real.
 - `.agent/tasks/README.md`: convenções e índice das tasks executáveis, com checkboxes e evidências.
 - `.agent/tasks/00 - roadmap`: as 11 etapas originais do produto, mantidas como visão geral.
-- `.agent/tasks/01-fundacao`: primeira slice executável; modelagem, banco seguro, autenticação, autorização e interfaces iniciais.
+- `.agent/tasks/01-fundacao`: fundação executável; modelagem, banco seguro, autenticação, autorização e interfaces iniciais.
 
-A próxima task executável é [F04 — Autenticação e segunda etapa](.agent/tasks/01-fundacao/04-autenticacao.md). F01–F03 modelaram, protegeram e migraram o schema PostgreSQL local.
+Consulte o índice de tasks para o estado do trabalho. A etapa atual é a revisão de confiabilidade; os planos executáveis e suas dependências estão em `.agent/tasks/09-revisao-confiabilidade/README.md`.
 
 ## Referências visuais — Pencil/pen.dev
 
