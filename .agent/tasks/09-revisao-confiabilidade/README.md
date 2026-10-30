@@ -2,7 +2,7 @@
 
 ## Status
 
-Planejada em 30/10/2026 a pedido do proprietário, usando a análise SOLID fornecida como guia e inspeção do repositório atual. Não representa certificação de aplicação “100%” nem entrega de produção.
+Em andamento; R01 concluída em 30/10/2026. R01A é a próxima execução. Planejada originalmente em 30/10/2026 a pedido do proprietário, usando a análise SOLID fornecida como guia e inspeção do repositório atual. Não representa certificação de aplicação “100%” nem entrega de produção.
 
 - [ ] Slice concluída
 
@@ -35,7 +35,7 @@ Apenas R01/R02 possuem plano detalhado nesta preparação. Antes de iniciar cada
 | R07   | Store offline: separar persistência, projeção e fila por responsabilidade sem dividir a atomicidade; preservar API/fachada e journal existente                                     | R06                                              |
 | R08   | Revisão funcional, segurança e aceite integrado final; encerrar pendências ou documentar exclusões aceitas com destino                                                             | R07                                              |
 
-Todas as etapas estão pendentes. Ajustar recortes depois da auditoria, sem expandir automaticamente para todo o backlog.
+R01 concluída; demais etapas pendentes. Ajustar recortes depois da auditoria, sem expandir automaticamente para todo o backlog.
 
 ## Invariantes obrigatórios
 
@@ -76,3 +76,11 @@ Verificação documental: três documentos novos e 5 links locais conferidos; gi
 
 
 Atualização de dependência — 30/10/2026: Q05 e slice 08 concluídas com aceite funcional do proprietário em Chrome/Edge (admin/técnico) e checks registrados. O bloqueio Q05 mencionado no planejamento original está resolvido. R01 é a próxima execução; nenhuma task R foi implementada por este encerramento.
+
+
+## Execução R01
+
+- [x] R01 — baseline e inventário concluídos.
+- [ ] [R01A — Sanitização dos logs HTTP](01a-sanitizacao-logs.md): achado alto A01, executar antes de R02.
+
+[Inventário R01](baseline-r01.md) registra checks/integrações aprovados e aceite da alternância Preview/Vite pelo proprietário. Nenhuma refatoração entregue; A01 bloqueia encerramento da slice. Ordem revisada: R01A → R02 → R03–R08.

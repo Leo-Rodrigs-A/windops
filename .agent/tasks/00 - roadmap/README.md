@@ -24,7 +24,7 @@ O status detalhado fica nas tasks executáveis; estas etapas registram a cobertu
 
 Slices 01–08 concluídas no escopo documentado. A slice 05 entregou operação offline browser/desktop; a slice 06 completou o ciclo de vida das issues; a slice 07 entregou campainha/Web Push com validação real confirmada pelo proprietário e integração concluída na N06.
 
-Próxima execução: [slice 09 — Revisão técnica e confiabilidade](../09-revisao-confiabilidade/README.md), pela R01. Q05/slice 08 e etapa 10 concluídas no escopo browser/desktop. Etapa 11 permanece pendente.
+Próxima execução: [slice 09 — Revisão técnica e confiabilidade](../09-revisao-confiabilidade/README.md), pela R01A (sanitização de logs), após auditoria R01 concluída. Q05/slice 08 e etapa 10 concluídas no escopo browser/desktop. Etapa 11 permanece pendente.
 
 
 Preparada em 30/10/2026 a [slice 09 — Revisão técnica e confiabilidade](../09-revisao-confiabilidade/README.md), transversal às etapas existentes e anterior ao aceite de produção. Não cria uma décima segunda etapa; Q05/etapa 10 foram encerradas posteriormente por testes e aceite funcional. R01/R02 detalhadas; restante progressivo.

@@ -8,13 +8,13 @@ Cada nova slice fica em uma pasta `NN-nome/`, com um `README.md` que define resu
 
 ## Próxima slice preparada
 
-- [ ] [09 — Revisão técnica e confiabilidade](09-revisao-confiabilidade/README.md): auditoria, refactors graduais e revisão funcional. Q05 concluída; iniciar pela R01. Apenas R01/R02 detalhadas nesta preparação.
+- [ ] [09 — Revisão técnica e confiabilidade](09-revisao-confiabilidade/README.md): auditoria, refactors graduais e revisão funcional. Q05 e R01 concluídas; iniciar pela R01A (sanitização de logs). Apenas R01/R02 detalhadas nesta preparação.
 
 ## Última slice concluída
 
 - [x] [08 — Filtros e histórico de consulta](08-consultas-historico/README.md): filtros P/T nas três listas, paginação por demanda, projeção e retenção segura de histórico.
 
-Próxima execução: [R01 — Auditoria reproduzível e baseline](09-revisao-confiabilidade/01-auditoria-baseline.md). Q05 e slice 08 concluídas; aceite funcional Chrome/Edge com administrador/técnico registrado na task.
+Próxima execução: [R01A — Sanitização dos logs HTTP](09-revisao-confiabilidade/01a-sanitizacao-logs.md). R01 concluiu auditoria/baseline; achado alto de query sensível no logger deve ser corrigido antes de R02.
 
 - [x] [07 — Campainha e Web Push](07-notificacoes/README.md): N01–N06 concluídas em 28/10/2026; outbox, campainha, worker, interface/PWA, push real confirmado pelo proprietário e validação integrada. Android/iPhone instalados e produção permanecem no roadmap 11.
 

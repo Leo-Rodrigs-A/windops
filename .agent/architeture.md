@@ -137,3 +137,8 @@ Evidência automatizada complementar: último pnpm check aprovado com 60 testes,
 Correções entregues durante Q05: isolamento do cache pelo build ativo, proteção contra worker de Preview no Vite, manifesto offline coberto por teste e mensagens corretas para ações de atendimento. Dinossauro no ensaio final foi resolvido ao desmarcar Bypass for network; não constitui defeito comprovado do handler.
 
 As pendências de navegador registradas acima são históricas e ficam superadas por este aceite. Android/iPhone físicos, quota/evicção real e HTTPS/infraestrutura de produção permanecem na etapa 11. Nenhuma nova fonte/schema/infra alterada neste encerramento documental; não houve repetição de testes da aplicação. Próxima execução: R01 da slice 09.
+
+
+## R01 concluída — 30/10/2026
+
+Auditoria da slice 09 baseada no commit b718743, árvore inicialmente limpa. [Baseline e inventário](tasks/09-revisao-confiabilidade/baseline-r01.md): pnpm check (60 testes/builds) e quatro integrações passaram; proprietário confirmou Preview/Vite com HMR e pendências preservados. Nenhuma fonte/schema alterada. Reprodução sintética confirmou query OAuth no logger req.url, achado alto A01. Próxima task R01A sanitiza logs antes de R02; não declarar falha real de conta nem vazamento operacional. Demais achados orientam refactors graduais preservando locks/tenant/journal.

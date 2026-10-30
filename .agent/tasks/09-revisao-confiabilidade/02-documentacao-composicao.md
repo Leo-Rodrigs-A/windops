@@ -20,7 +20,7 @@ README ainda nega funcionalidades existentes e aponta F04 como próxima tarefa. 
 
 ## Dependências
 
-R01 concluída e Q05 resolvida antes da alteração de fonte. Confirmar todos os consumidores/factories na versão corrente.
+R01 e Q05 concluídas; concluir R01A (sanitização de logs) antes da alteração de fonte. Confirmar todos os consumidores/factories na versão corrente.
 
 ## Plano
 
@@ -46,3 +46,8 @@ Nenhum consumidor depende da criação implícita de notificações; uma falha t
 
 
 Atualização de dependência — 30/10/2026: Q05 e slice 08 concluídas com aceite funcional do proprietário em Chrome/Edge (admin/técnico) e checks registrados. O bloqueio Q05 mencionado no planejamento original está resolvido. R01 é a próxima execução; nenhuma task R foi implementada por este encerramento.
+
+
+## Refinamento pela R01
+
+Migrar createAuditService em server.ts e as quatro chamadas de issues-read-flow.mjs (incluindo realAudit usado no failpoint). Reutilizar instância notifications composta, mantendo o cliente da transação de issues; não transformar appendIssueEvent em conexão independente. Revisar README e resumo atual da arquitetura, hoje misturado com estados históricos. Aceite: integração de rollback/evento/outbox e destinatários já existente permanece aprovada, sem exigir push externo. Referência: [A02/A03 na baseline](baseline-r01.md).

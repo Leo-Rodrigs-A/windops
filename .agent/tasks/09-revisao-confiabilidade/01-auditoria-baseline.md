@@ -2,9 +2,9 @@
 
 ## Status
 
-Planejada.
+Concluída em 30/10/2026; inventário e baseline registrados, reparos seguem em tasks próprias.
 
-- [ ] Task concluída
+- [x] Task concluída
 
 ## Objetivo
 
@@ -16,7 +16,7 @@ Revisar composição, módulos, frontend, persistência, testes e documentação
 
 ## Estado atual
 
-A análise do zip identificou concentração de responsabilidades e duplicação. Inspeção preliminar confirmou pontos concretos listados no índice. Q05 permanece com aceite de navegador/Electric aberto; o erro de hooks/HMR reportado tem correção proposta, ainda sem confirmação no navegador do proprietário.
+A análise do zip identificou concentração de responsabilidades e duplicação. Inspeção preliminar confirmou pontos concretos listados no índice. Q05 concluída; proprietário confirmou também a alternância Preview/Vite durante R01.
 
 ## Dependências
 
@@ -24,14 +24,14 @@ Arquitetura, memória, Q01–Q05 e evidências das slices 01–07. Pode começar
 
 ## Plano
 
-- [ ] Conferir árvore atual e mudanças locais; preservar trabalho pré-existente e registrar revisão/base da auditoria.
-- [ ] Mapear interfaces públicas e dependências reais, factories, consumidores e transações; revalidar cada recomendação externa e justificar as rejeitadas.
-- [ ] Criar inventário de achados com arquivo/local, reprodução, impacto, severidade, decisão, etapa e aceite. Separar defeito funcional de dívida de manutenção.
-- [ ] Mapear invariantes e testes existentes por fluxo; identificar lacunas de regressão relevantes, sem usar contagem de linhas/testes como meta.
-- [ ] Executar pnpm check e integrações auth/workspaces/parks/issues em bancos descartáveis; registrar falhas e indisponibilidades reais.
-- [ ] Reproduzir alternância Preview/Vite com worker pré-existente, hooks e WebSocket; validar correção sem apagar journal. Completar percurso Q05 ou mantê-lo explicitamente bloqueante.
-- [ ] Revisar segurança transversal: auth/tenant, shapes, segredos/logs, validação de entrada, idempotência, efeitos externos e persistência offline.
-- [ ] Consolidar ordem, riscos e alcance de R02–R08; detalhar a próxima task apenas com evidência suficiente.
+- [x] Conferir árvore atual e mudanças locais; preservar trabalho pré-existente e registrar revisão/base da auditoria.
+- [x] Mapear interfaces públicas e dependências reais, factories, consumidores e transações; revalidar cada recomendação externa e justificar as rejeitadas.
+- [x] Criar inventário de achados com arquivo/local, reprodução, impacto, severidade, decisão, etapa e aceite. Separar defeito funcional de dívida de manutenção.
+- [x] Mapear invariantes e testes existentes por fluxo; identificar lacunas de regressão relevantes, sem usar contagem de linhas/testes como meta.
+- [x] Executar pnpm check e integrações auth/workspaces/parks/issues em bancos descartáveis; registrar falhas e indisponibilidades reais.
+- [x] Reproduzir alternância Preview/Vite com worker pré-existente, hooks e WebSocket; validar correção sem apagar journal. Completar percurso Q05 ou mantê-lo explicitamente bloqueante.
+- [x] Revisar segurança transversal: auth/tenant, shapes, segredos/logs, validação de entrada, idempotência, efeitos externos e persistência offline.
+- [x] Consolidar ordem, riscos e alcance de R02–R08; detalhar a próxima task apenas com evidência suficiente.
 
 ## Contratos e dados afetados
 
@@ -47,3 +47,10 @@ Achados rastreáveis; baseline com resultado real e localização dos testes; ri
 
 
 Atualização de dependência — 30/10/2026: Q05 e slice 08 concluídas com aceite funcional do proprietário em Chrome/Edge (admin/técnico) e checks registrados. O bloqueio Q05 mencionado no planejamento original está resolvido. R01 é a próxima execução; nenhuma task R foi implementada por este encerramento.
+
+
+## Entrega R01 — 30/10/2026
+
+Ver [baseline e inventário](baseline-r01.md): commit b718743 limpo, 13 achados separados por tipo/prioridade, mapa de composição/transações, invariantes, testes e decisões. pnpm check (60 testes/builds) e integrações auth/workspaces/parks/issues passaram. Alternância Preview/Vite confirmada pelo proprietário, sem alegar observação direta. Achado alto A01 reproduzido com valores fictícios: query OAuth aparece em req.url nos logs. [R01A](01a-sanitizacao-logs.md) é a próxima task, bloqueante antes dos refactors; R02 enriquecida com consumidores concretos. Nenhuma fonte/schema/infra alterada nesta auditoria.
+
+Verificação documental final: 5 documentos e 11 links locais válidos; git diff --check aprovado.
