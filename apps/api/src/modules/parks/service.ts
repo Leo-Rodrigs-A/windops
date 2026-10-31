@@ -17,6 +17,10 @@ import type {
 } from '@windops/contracts';
 import { parkLifecycleResultSchema, turbineLifecycleResultSchema } from '@windops/contracts';
 import type { Pool, PoolClient, QueryResultRow } from 'pg';
+import {
+  isPostgresConstraintError,
+  withPostgresTransaction,
+} from '../../platform/database/transaction.js';
 import type { SyncService } from '../sync/index.js';
 import type {
   AuthorizedWorkspacePrincipal,
@@ -204,35 +208,28 @@ export function createParksCatalogService(
       principal: AuthorizedWorkspacePrincipal,
     ) => Promise<CatalogWriteResult<T>>,
   ): Promise<CatalogWriteResult<T>> {
-    const client = await pool.connect();
     try {
-      await client.query('BEGIN');
-      const permission = await authorization.authorizeWorkspaceInTransaction(
-        client,
-        headers,
-        workspaceId,
-        ['admin'],
+      return await withPostgresTransaction(
+        pool,
+        async (client) => {
+          const permission = await authorization.authorizeWorkspaceInTransaction(
+            client,
+            headers,
+            workspaceId,
+            ['admin'],
+          );
+          if (permission.status !== 'ok') return permission;
+          return operation(client, permission.value);
+        },
+        (result) => result.status === 'ok',
       );
-      if (permission.status !== 'ok') {
-        await client.query('ROLLBACK');
-        return permission;
-      }
-      const result = await operation(client, permission.value);
-      if (result.status !== 'ok') {
-        await client.query('ROLLBACK');
-        return result;
-      }
-      await client.query('COMMIT');
-      return result;
     } catch (error) {
-      await client.query('ROLLBACK').catch(() => undefined);
-      if (error && typeof error === 'object' && 'code' in error && error.code === '23505')
-        return { status: 'conflict' };
-      if (error && typeof error === 'object' && 'code' in error && error.code === '23503')
+      if (
+        isPostgresConstraintError(error, '23505', 'parks_workspace_code_unique') ||
+        isPostgresConstraintError(error, '23505', 'turbines_park_code_unique')
+      )
         return { status: 'conflict' };
       throw error;
-    } finally {
-      client.release();
     }
   }
 

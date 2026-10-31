@@ -8,7 +8,7 @@ Cada nova slice fica em uma pasta `NN-nome/`, com um `README.md` que define resu
 
 ## Próxima slice preparada
 
-- [ ] [09 — Revisão técnica e confiabilidade](09-revisao-confiabilidade/README.md): auditoria e refactors graduais. Q05, R01, R01A e R02 concluídas; R03 é a próxima execução. R03–R08 detalhadas conforme A01–A13.
+- [ ] [09 — Revisão técnica e confiabilidade](09-revisao-confiabilidade/README.md): auditoria e refactors graduais. Q05, R01, R01A, R02 e R03 concluídas; R04 é a próxima execução. R04–R08 detalhadas conforme A01–A13.
 
 - [ ] [10 — Cadastro e identidade](10-cadastro-identidade/README.md): O01–O03 implementadas; O04 aguarda ensaio manual do fluxo email/Google no browser.
 
@@ -16,7 +16,7 @@ Cada nova slice fica em uma pasta `NN-nome/`, com um `README.md` que define resu
 
 - [x] [08 — Filtros e histórico de consulta](08-consultas-historico/README.md): filtros P/T nas três listas, paginação por demanda, projeção e retenção segura de histórico.
 
-Próxima execução: [R03 — Transações e erros](09-revisao-confiabilidade/03-transacoes-erros.md). R01A removeu query e fragmento dos logs automáticos; R02 atualizou documentação e tornou explícita a composição de auditoria/notificações. Consulte o índice da slice 09 para os planos R04–R08.
+Próxima execução: [R04 — Interfaces Workspaces](09-revisao-confiabilidade/04-interfaces-workspaces.md). R01A removeu query e fragmento dos logs automáticos; R02 atualizou documentação e tornou explícita a composição de auditoria/notificações; R03 centralizou transações em issues/parks e classificou erros por constraint. Consulte o índice da slice 09 para os planos R05–R08.
 
 - [x] [07 — Campainha e Web Push](07-notificacoes/README.md): N01–N06 concluídas em 28/10/2026; outbox, campainha, worker, interface/PWA, push real confirmado pelo proprietário e validação integrada. Android/iPhone instalados e produção permanecem no roadmap 11.
 

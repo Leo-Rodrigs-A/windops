@@ -63,6 +63,8 @@ O adaptador atual é IndexedDB pelo journal TanStack persistente, comprovado em 
 
 Gravação: UI -> armazenamento local + comando durável -> Fastify -> transação PostgreSQL contendo mudança, evento e trabalho de notificação -> confirmação -> réplica Electric -> reconciliação. Identificadores gerados no cliente, chave idempotente por comando, versão esperada por registro. Não apagar comando antes da confirmação; retries não duplicam issues, eventos ou notificações. Não interpretar atualização otimista em memória como persistência.
 
+R03 centraliza o ciclo PostgreSQL em `apps/api/src/platform/database/transaction.ts`, usado por issues e parks. O callback continua recebendo o mesmo `PoolClient`, para autorização, locks, evento, recibo e mutação permanecerem na mesma transação. Tradução de constraint é específica por SQLSTATE e nome; falhas desconhecidas seguem para o handler interno HTTP. Workspaces, identity e notifications mantêm transações locais com protocolos próprios.
+
 Leitura: Electric -> proxy Fastify autenticado -> coleção local. O servidor escolhe tabela, filtro de workspace e campos permitidos; nunca encaminhar table/where arbitrários. Segredo Electric nunca chega ao navegador.
 
 Cache obrigatório: issues Pendentes/Em andamento, histórico dessas issues e cadastros necessários. Concluídas são consultadas online ou pelo cache já existente. A conclusão criada offline permanece local, com relato editável somente enquanto offline e antes do envio. Preservar registros e dependências com comandos pendentes, mesmo que saiam de um shape de issues abertas.

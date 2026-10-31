@@ -17,6 +17,7 @@ import type {
   WorkspaceRole,
 } from '@windops/contracts';
 import type { Pool, PoolClient } from 'pg';
+import { isPostgresConstraintError } from '../../platform/database/transaction.js';
 import type { EmailSender } from '../../platform/email.js';
 import type { IdentityService } from '../identity/index.js';
 
@@ -413,7 +414,8 @@ export function createWorkspaceAuthorizationService(
         await client.query('COMMIT');
       } catch (error) {
         await client.query('ROLLBACK').catch(() => undefined);
-        if ((error as { code?: string }).code === '23505') return { status: 'conflict' };
+        if (isPostgresConstraintError(error, '23505', 'workspace_invitations_active_email_unique'))
+          return { status: 'conflict' };
         throw error;
       } finally {
         client.release();
@@ -487,7 +489,8 @@ export function createWorkspaceAuthorizationService(
         await client.query('COMMIT');
       } catch (error) {
         await client.query('ROLLBACK').catch(() => undefined);
-        if ((error as { code?: string }).code === '23505') return { status: 'conflict' };
+        if (isPostgresConstraintError(error, '23505', 'workspace_invitations_active_email_unique'))
+          return { status: 'conflict' };
         throw error;
       } finally {
         client.release();

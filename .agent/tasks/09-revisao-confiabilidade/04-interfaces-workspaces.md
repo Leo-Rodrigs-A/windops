@@ -16,11 +16,11 @@ Refatorar contratos internos do módulo e dependências mínimas de issues, park
 
 ## Estado atual
 
-Baseline A06 encontrou serviço de autorização com 12 métodos que mistura contexto, diretório, membros e convites. A13 identificou limite no verificador de fronteiras de imports.
+Baseline A06 encontrou serviço de autorização com 12 métodos que mistura contexto, diretório, membros e convites. A13 identificou limite no verificador de fronteiras de imports. R03 migrou issues/parks para `withPostgresTransaction`; workspaces mantém cinco transações próprias por conter fluxos distintos de membership, convite e revogação. O executor novo recebe `PoolClient`, permitindo reuso sem mover a autorização transacional para fora do módulo.
 
 ## Dependências
 
-R03 concluída; referência de regressão: `test:workspaces-integration` e `test:auth-integration`.
+R03 concluída; referência de regressão: `test:workspaces-integration` e `test:auth-integration`. Não migrar as transações de workspaces sem demonstrar equivalência de locks e regras do último admin.
 
 ## Plano
 

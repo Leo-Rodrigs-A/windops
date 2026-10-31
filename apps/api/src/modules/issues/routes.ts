@@ -15,25 +15,12 @@ import {
 } from '@windops/contracts';
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import { z } from 'zod';
+import { respondAccessError } from '../../platform/http/access-error.js';
 import type { WorkspaceAuthorizationService } from '../workspaces/index.js';
 import type { IssuesService } from './service.js';
 
 const workspaceParamsSchema = z.object({ workspaceId: z.uuid() }).strict();
 const issuePathParamsSchema = z.object({ workspaceId: z.uuid(), issueId: z.uuid() }).strict();
-
-function respondAccessError(
-  reply: FastifyReply,
-  request: FastifyRequest,
-  status: 401 | 403,
-): FastifyReply {
-  return reply.code(status).send({
-    error: {
-      code: status === 401 ? 'AUTHENTICATION_REQUIRED' : 'WORKSPACE_ACCESS_DENIED',
-      message: status === 401 ? 'Authentication required.' : 'Workspace access denied.',
-      requestId: request.id,
-    },
-  });
-}
 
 function respondIssueReadError(
   reply: FastifyReply,

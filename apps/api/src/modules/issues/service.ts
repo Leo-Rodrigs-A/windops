@@ -20,6 +20,10 @@ import type {
 } from '@windops/contracts';
 import { issueSchema } from '@windops/contracts';
 import type { Pool, PoolClient, QueryResultRow } from 'pg';
+import {
+  isPostgresConstraintError,
+  withPostgresTransaction,
+} from '../../platform/database/transaction.js';
 import type { AuditService } from '../audit/index.js';
 import type { IdentityService } from '../identity/index.js';
 import type { ParksCatalogService } from '../parks/index.js';
@@ -257,33 +261,30 @@ export function createIssuesService(
       principal: AuthorizedWorkspacePrincipal,
     ) => Promise<IssueWriteResult<T>>,
   ): Promise<IssueWriteResult<T>> {
-    const client = await pool.connect();
     try {
-      await client.query('BEGIN');
-      const permission = await writeDependencies.authorization.authorizeWorkspaceInTransaction(
-        client,
-        headers,
-        workspaceId,
-        allowedRoles,
+      return await withPostgresTransaction(
+        pool,
+        async (client) => {
+          const permission = await writeDependencies.authorization.authorizeWorkspaceInTransaction(
+            client,
+            headers,
+            workspaceId,
+            allowedRoles,
+          );
+          if (permission.status !== 'ok') return permission;
+          return operation(client, permission.value);
+        },
+        (result) => result.status === 'ok',
       );
-      if (permission.status !== 'ok') {
-        await client.query('ROLLBACK');
-        return permission;
-      }
-      const result = await operation(client, permission.value);
-      if (result.status !== 'ok') {
-        await client.query('ROLLBACK');
-        return result;
-      }
-      await client.query('COMMIT');
-      return result;
     } catch (error) {
-      await client.query('ROLLBACK').catch(() => undefined);
-      if (error && typeof error === 'object' && 'code' in error && error.code === '23505')
+      if (
+        isPostgresConstraintError(error, '23505', 'issues_pkey') ||
+        isPostgresConstraintError(error, '23505', 'issues_id_workspace_unique')
+      )
         return { status: 'conflict' };
+      if (isPostgresConstraintError(error, '23505', 'sync_commands_workspace_actor_command_unique'))
+        return { status: 'idempotency_conflict' };
       throw error;
-    } finally {
-      client.release();
     }
   }
 
