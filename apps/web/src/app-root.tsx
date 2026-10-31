@@ -12,6 +12,8 @@ export function AppRoot() {
     '/',
     '/entrar',
     '/cadastro',
+    '/cadastro/confirmar',
+    '/cadastro/perfil',
     '/verificar-email',
     '/confirmar-acesso',
     '/recuperar-senha',
@@ -26,6 +28,15 @@ export function AppRoot() {
         <Outlet />
         <OfflineUpdateNotice />
       </>
+    );
+  if (
+    (snapshot.status === 'authenticated' || snapshot.status === 'orphan') &&
+    snapshot.onboardingRequired
+  )
+    return (
+      <main className="grid min-h-dvh place-items-center px-5">
+        <LoadingState label="Abrindo a configuração da conta…" />
+      </main>
     );
   if (snapshot.status === 'loading') return <SessionCheckFallback />;
   if (

@@ -92,6 +92,13 @@
       "when": 1793220001000,
       "tag": "0012_notifications_outbox",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1793406000000,
+      "tag": "0013_signup_intents",
+      "breakpoints": true
     }
   ]
 }

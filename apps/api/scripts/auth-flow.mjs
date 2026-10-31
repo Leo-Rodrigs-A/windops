@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
-import { generateKeyPairSync, randomBytes, sign } from 'node:crypto';
+import { createHash, generateKeyPairSync, randomBytes, sign } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 import { config } from 'dotenv';
 import { Pool } from 'pg';
@@ -148,13 +148,13 @@ function textBody(message) {
   return message.Text ?? message.text ?? '';
 }
 
-function parseVerificationLink(message) {
+function parseSignupToken(message) {
   const link = textBody(message)
     .match(/https?:\/\/[^\s<>"']+/g)
     ?.map((candidate) => candidate.replace(/[),.]+$/, ''))
-    .find((candidate) => candidate.includes('/api/auth/verify-email?token='));
-  assert.ok(link, 'verification email must contain the Better Auth verification link');
-  return new URL(link);
+    .find((candidate) => candidate.includes('/cadastro/confirmar#token='));
+  assert.ok(link, 'signup email must contain the one-time completion link');
+  return new URL(link).hash.slice('#token='.length);
 }
 
 function parseResetLink(message) {
@@ -205,7 +205,7 @@ function cookieHeader(response) {
   return values.map((value) => value.split(';', 1)[0]).join('; ');
 }
 
-async function googleSignIn(service, profile) {
+async function googleSignIn(service, profile, callbackURL = origin) {
   googleProfile = profile;
   const originalFetch = globalThis.fetch;
   globalThis.fetch = async (input, init) => {
@@ -235,7 +235,7 @@ async function googleSignIn(service, profile) {
   try {
     const start = await call(service, 'POST', '/api/auth/sign-in/social', {
       provider: 'google',
-      callbackURL: origin,
+      callbackURL,
       errorCallbackURL: origin,
       disableRedirect: true,
     });
@@ -284,35 +284,69 @@ try {
   pool = new Pool({ connectionString: connectionFor(process.env.DATABASE_URL), max: 4 });
 
   app = await startApp();
-  const signup = await call(app, 'POST', '/api/auth/sign-up/email', {
-    name: 'F04 Integration User',
-    email: email.toUpperCase(),
+  const bypassSignup = await call(app, 'POST', '/api/auth/sign-up/email', {
+    name: 'Blocked direct signup',
+    email,
     password,
-    callbackURL: origin,
   });
+  assert.equal(bypassSignup.statusCode, 403, 'direct Better Auth signup must stay blocked');
+  const signup = await call(app, 'POST', '/api/auth/signup/email', { email: email.toUpperCase() });
   assert.equal(signup.statusCode, 200, signup.body);
-  let verification = await waitForMail('Confirme seu e-mail no Wind Ops');
-  let verifyUrl = parseVerificationLink(verification);
-  const unverifiedSignIn = await call(app, 'POST', '/api/auth/sign-in/email', { email, password });
-  assert.equal(
-    unverifiedSignIn.statusCode,
-    403,
-    'unverified local addresses must not receive a session',
-  );
-  verification = await waitForMail('Confirme seu e-mail no Wind Ops');
-  verifyUrl = parseVerificationLink(verification);
-  const verificationResponse = await app.inject({
-    method: 'GET',
-    url: `${verifyUrl.pathname}${verifyUrl.search}`,
-    headers: { host: new URL(origin).host },
+  const signupMail = await waitForMail('Confirme seu e-mail para criar sua conta Wind Ops');
+  const signupToken = parseSignupToken(signupMail);
+  const completedSignup = await call(app, 'POST', '/api/auth/signup/complete', {
+    token: signupToken,
+    name: 'F04 Integration User',
+    password,
   });
-  assert.equal(verificationResponse.statusCode, 302);
+  assert.equal(completedSignup.statusCode, 200, completedSignup.body);
+  const replaySignup = await call(app, 'POST', '/api/auth/signup/complete', {
+    token: signupToken,
+    name: 'F04 Integration User',
+    password,
+  });
+  assert.equal(replaySignup.statusCode, 400, 'signup link must be single-use');
+  const unverifiedSignIn = await call(app, 'POST', '/api/auth/sign-in/email', { email, password });
+  assert.equal(unverifiedSignIn.statusCode, 200, 'confirmed signup should allow credential login');
+  assert.deepEqual(unverifiedSignIn.json(), { status: 'pending_email_second_step' });
+  await call(app, 'POST', '/api/auth/sign-out', {}, cookieFrom(unverifiedSignIn));
   const verified = await pool.query(
     'SELECT id, email, email_verified FROM public.auth_users WHERE email = $1',
     [email],
   );
   assert.equal(verified.rows.length, 1, 'email normalization must prevent duplicate case variants');
   assert.equal(verified.rows[0].email_verified, true);
+  const existingEmailSignup = await call(app, 'POST', '/api/auth/signup/email', { email });
+  assert.equal(existingEmailSignup.statusCode, signup.statusCode);
+  assert.deepEqual(
+    existingEmailSignup.json(),
+    signup.json(),
+    'signup start must not enumerate email',
+  );
+  const intentCount = await pool.query(
+    'SELECT count(*)::int AS count FROM public.auth_signup_intents WHERE email = $1',
+    [email],
+  );
+  assert.equal(intentCount.rows[0].count, 1, 'known accounts must not receive a new signup intent');
+
+  const expiringEmail = `expiring-${process.pid}@example.invalid`;
+  const expiringStart = await call(app, 'POST', '/api/auth/signup/email', { email: expiringEmail });
+  assert.equal(expiringStart.statusCode, 200);
+  const expiringMail = await waitForMail(
+    'Confirme seu e-mail para criar sua conta Wind Ops',
+    expiringEmail,
+  );
+  const expiringToken = parseSignupToken(expiringMail);
+  await pool.query(
+    "UPDATE public.auth_signup_intents SET expires_at = clock_timestamp() - interval '1 second' WHERE token_hash = $1",
+    [createHash('sha256').update(expiringToken).digest()],
+  );
+  const expiredSignup = await call(app, 'POST', '/api/auth/signup/complete', {
+    token: expiringToken,
+    name: 'Expired Intent',
+    password,
+  });
+  assert.equal(expiredSignup.statusCode, 400, 'expired signup link must be rejected');
 
   await app.close();
   app = await startApp(createEmailSender(env), true);
@@ -390,13 +424,51 @@ try {
   );
 
   const googleFirstEmail = `google-first-${process.pid}@example.invalid`;
-  const googleFirst = await googleSignIn(app, {
-    sub: 'google-first-subject',
-    email: googleFirstEmail,
-    emailVerified: true,
-  });
+  const googleFirst = await googleSignIn(
+    app,
+    {
+      sub: 'google-first-subject',
+      email: googleFirstEmail,
+      emailVerified: true,
+    },
+    `${origin}/cadastro/perfil`,
+  );
   googleFirst.cookie = cookieFrom(googleFirst.callback);
   assert.equal(googleFirst.callback.statusCode, 302, googleFirst.callback.body);
+  const onboardingBeforeSetup = await call(
+    app,
+    'GET',
+    '/api/auth/onboarding/status',
+    undefined,
+    googleFirst.cookie,
+  );
+  assert.deepEqual(onboardingBeforeSetup.json(), { status: 'needs_setup' });
+  const googleSetup = await call(
+    app,
+    'POST',
+    '/api/auth/signup/google/complete',
+    { name: 'Google First Account', password: newPassword },
+    googleFirst.cookie,
+  );
+  assert.equal(googleSetup.statusCode, 200, googleSetup.body);
+  const onboardingAfterSetup = await call(
+    app,
+    'GET',
+    '/api/auth/onboarding/status',
+    undefined,
+    googleFirst.cookie,
+  );
+  assert.deepEqual(onboardingAfterSetup.json(), { status: 'already_configured' });
+  const googleFirstAccount = await pool.query(
+    `SELECT id, name FROM public.auth_users u
+     WHERE u.email = $1 AND EXISTS (
+       SELECT 1 FROM public.auth_accounts a
+       WHERE a.user_id = u.id AND a.provider_id = 'credential' AND a.password IS NOT NULL
+     )`,
+    [googleFirstEmail],
+  );
+  assert.equal(googleFirstAccount.rows.length, 1, 'Google onboarding must add a credential');
+  assert.equal(googleFirstAccount.rows[0].name, 'Google First Account');
   const googleFirstOtp = parseCode(
     await waitForMail('Seu código de acesso ao Wind Ops', googleFirstEmail),
   );
@@ -412,28 +484,14 @@ try {
     ).statusCode,
     200,
   );
-  const passwordSet = await identity.auth.api.setPassword({
-    headers: new Headers({ cookie: googleFirst.cookie, origin }),
-    body: { newPassword },
-  });
-  assert.equal(
-    passwordSet.status,
-    true,
-    'a verified Google account must be able to add a password',
+  const onboardingAfterSecondStep = await call(
+    app,
+    'GET',
+    '/api/auth/onboarding/status',
+    undefined,
+    googleFirst.cookie,
   );
-  const googleFirstAccount = await pool.query(
-    `SELECT id FROM public.auth_users u
-     WHERE u.email = $1 AND EXISTS (
-       SELECT 1 FROM public.auth_accounts a
-       WHERE a.user_id = u.id AND a.provider_id = 'credential' AND a.password IS NOT NULL
-     )`,
-    [googleFirstEmail],
-  );
-  assert.equal(
-    googleFirstAccount.rows.length,
-    1,
-    'adding a password must retain the Google identity',
-  );
+  assert.deepEqual(onboardingAfterSecondStep.json(), { status: 'already_configured' });
   await call(app, 'POST', '/api/auth/sign-out', {}, googleFirst.cookie);
   const passwordLoginAfterGoogle = await call(app, 'POST', '/api/auth/sign-in/email', {
     email: googleFirstEmail,

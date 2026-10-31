@@ -4,6 +4,17 @@ import { z } from 'zod';
 import type { IdentityProvider } from './provider.js';
 
 const verifyBody = z.object({ code: z.string().regex(/^\d{8}$/) }).strict();
+const signupStartBody = z.object({ email: z.email().max(320) }).strict();
+const signupCompleteBody = z
+  .object({
+    token: z.string().min(32).max(128),
+    name: z.string().trim().min(1).max(120),
+    password: z.string().min(12).max(128),
+  })
+  .strict();
+const onboardingBody = z
+  .object({ name: z.string().trim().min(1).max(120), password: z.string().min(12).max(128) })
+  .strict();
 const pendingAllowedPaths = new Set([
   '/sign-in/email',
   '/sign-in/social',
@@ -27,6 +38,76 @@ export function registerIdentityRoutes(
   origin: string,
 ) {
   const { auth, challenges } = identity;
+
+  app.post('/api/auth/signup/email', async (request, reply) => {
+    if (!hasSameOrigin(request, origin))
+      return errorResponse(reply, 403, 'ORIGIN_NOT_ALLOWED', request.id);
+    const parsed = signupStartBody.safeParse(request.body);
+    if (!parsed.success) return errorResponse(reply, 400, 'INVALID_REQUEST', request.id);
+    try {
+      await challenges.consumeRateLimit('signup-email-ip', request.ip, 5, 60 * 60_000);
+      await challenges.consumeRateLimit(
+        'signup-email-address',
+        parsed.data.email.trim().toLowerCase(),
+        3,
+        60 * 60_000,
+      );
+      await identity.beginEmailSignup(parsed.data.email, origin);
+    } catch {
+      // Keep registration enumeration-resistant and avoid exposing delivery/rate details.
+    }
+    return reply.send({ status: 'verification_sent' });
+  });
+
+  app.post('/api/auth/signup/complete', async (request, reply) => {
+    if (!hasSameOrigin(request, origin))
+      return errorResponse(reply, 403, 'ORIGIN_NOT_ALLOWED', request.id);
+    const parsed = signupCompleteBody.safeParse(request.body);
+    if (!parsed.success) return errorResponse(reply, 400, 'INVALID_REQUEST', request.id);
+    try {
+      await challenges.consumeRateLimit('signup-complete-ip', request.ip, 20, 60 * 60_000);
+      const result = await identity.completeEmailSignup(parsed.data);
+      if (result !== 'created') return errorResponse(reply, 400, 'SIGNUP_LINK_INVALID', request.id);
+      return reply.send({ status: 'created' });
+    } catch {
+      return errorResponse(reply, 400, 'SIGNUP_LINK_INVALID', request.id);
+    }
+  });
+
+  app.post('/api/auth/signup/google/complete', async (request, reply) => {
+    if (!hasSameOrigin(request, origin))
+      return errorResponse(reply, 403, 'ORIGIN_NOT_ALLOWED', request.id);
+    const parsed = onboardingBody.safeParse(request.body);
+    if (!parsed.success) return errorResponse(reply, 400, 'INVALID_REQUEST', request.id);
+    try {
+      const session = await getProviderSession(request, identity);
+      if (!session) return errorResponse(reply, 401, 'SESSION_REQUIRED', request.id);
+      const state = await challenges.getState(session.session.id);
+      if (!state) return errorResponse(reply, 403, 'ONBOARDING_NOT_AVAILABLE', request.id);
+      const onboardingStatus = await identity.onboardingStatus(state.userId);
+      if (onboardingStatus !== 'needs_setup')
+        return errorResponse(reply, 403, 'GOOGLE_VERIFICATION_REQUIRED', request.id);
+      await auth.api.updateUser({
+        headers: fromNodeHeaders(request.headers),
+        body: { name: parsed.data.name },
+      });
+      await auth.api.setPassword({
+        headers: fromNodeHeaders(request.headers),
+        body: { newPassword: parsed.data.password },
+      });
+      return reply.send({ status: 'completed' });
+    } catch {
+      return errorResponse(reply, 400, 'ONBOARDING_FAILED', request.id);
+    }
+  });
+
+  app.get('/api/auth/onboarding/status', async (request, reply) => {
+    const session = await getProviderSession(request, identity);
+    if (!session) return errorResponse(reply, 401, 'SESSION_REQUIRED', request.id);
+    const state = await challenges.getState(session.session.id);
+    if (!state) return errorResponse(reply, 403, 'ONBOARDING_NOT_AVAILABLE', request.id);
+    return reply.send({ status: await identity.onboardingStatus(state.userId) });
+  });
 
   app.get('/api/auth/providers', async (_request, reply) =>
     reply.send({ google: identity.googleEnabled }),
@@ -110,6 +191,8 @@ export function registerIdentityRoutes(
       }
 
       const state = await getRequestState(request, identity);
+      if (authPath === '/sign-up/email')
+        return errorResponse(reply, 403, 'SIGNUP_FLOW_REQUIRED', request.id);
       const pendingRouteAllowed =
         pendingAllowedPaths.has(authPath) || authPath.startsWith('/reset-password/');
       if (state && !state.emailSecondStepAt && !pendingRouteAllowed) {

@@ -72,6 +72,37 @@ export async function getAuthProviders() {
   return authProvidersSchema.parse(await requestJson('/api/auth/providers'));
 }
 
+export async function beginEmailSignup(email: string) {
+  return requestJson('/api/auth/signup/email', {
+    method: 'POST',
+    body: JSON.stringify({ email }),
+  });
+}
+
+export async function completeEmailSignup(input: {
+  token: string;
+  name: string;
+  password: string;
+}) {
+  return requestJson('/api/auth/signup/complete', {
+    method: 'POST',
+    body: JSON.stringify(input),
+  });
+}
+
+export async function completeGoogleSignup(input: { name: string; password: string }) {
+  return requestJson('/api/auth/signup/google/complete', {
+    method: 'POST',
+    body: JSON.stringify(input),
+  });
+}
+
+export async function getOnboardingStatus() {
+  return z
+    .object({ status: z.enum(['needs_setup', 'already_configured', 'ineligible']) })
+    .parse(await requestJson('/api/auth/onboarding/status'));
+}
+
 export async function getMe(): Promise<Me> {
   return meSchema.parse(await requestJson('/api/me'));
 }

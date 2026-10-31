@@ -19,7 +19,7 @@ pnpm dev
 Frontend: http://localhost:5173. API: http://localhost:3000/api/health/live.
 Documentação local: http://localhost:3000/api/docs. Mailpit: http://localhost:8025.
 
-Rotas Better Auth ficam desativadas por padrão. Para habilitá-las localmente, configure `AUTH_ENABLED=true`, `BETTER_AUTH_SECRET` e `APP_ORIGIN` em `.env`; configure também SMTP para os códigos de verificação. OAuth Google requer credenciais próprias. O primeiro workspace/admin é provisionado pelo procedimento explícito em `apps/api/scripts/bootstrap-workspace.sql`, nunca por cadastro automático. Web Push exige chaves VAPID no servidor. Nunca coloque segredos em variáveis `VITE_`.
+Rotas Better Auth ficam desativadas por padrão (`AUTH_ENABLED=false` no exemplo). O proprietário já configurou as credenciais do Google OAuth; para ativar as rotas no ambiente, confirme `AUTH_ENABLED=true`, `BETTER_AUTH_SECRET`, `APP_ORIGIN` e que `GOOGLE_CLIENT_ID`/`GOOGLE_CLIENT_SECRET` estão disponíveis para a API. `GET /api/auth/providers` retorna `google: true` quando o processo carregou o par. O cadastro permite Google ou e-mail; o cadastro por e-mail só cria a conta após link de uso único, e ambos definem nome/senha após confirmação. SMTP também é necessário para links e códigos da segunda etapa. O primeiro workspace/admin é provisionado pelo procedimento explícito em `apps/api/scripts/bootstrap-workspace.sql`, nunca por cadastro automático. Web Push exige chaves VAPID no servidor. Nunca coloque segredos em variáveis `VITE_`.
 
 A prontidão em `/api/health/ready` exige PostgreSQL e Electric saudáveis. A API pode iniciar com as dependências indisponíveis, mas não fica pronta. A rota `/api/sync/:collection` responde 503 intencionalmente.
 

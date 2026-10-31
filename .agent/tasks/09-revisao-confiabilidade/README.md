@@ -24,16 +24,16 @@ Ler [arquitetura](../../architecture.md), [memória](../../memory.md) e [conven�
 
 R03–R08 estão detalhadas a partir dos achados A01–A13. Antes de executar cada etapa, incorporar ao arquivo executável os resultados da anterior, arquivos afetados, falhas encontradas e testes necessários.
 
-| Etapa | Entrega planejada                                                                                                                                                                  | Dependência                                      |
-| ----- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------ |
-| R01   | [Auditoria reproduzível e baseline](01-auditoria-baseline.md)                                                                                                                      | Base atual; registrar e resolver dependência Q05 |
-| R02   | [Documentação e composição da auditoria](02-documentacao-composicao.md)                                                                                                            | R01; Q05 para alteração de fonte                 |
-| R03   | [Transações e erros](03-transacoes-erros.md) — executor pequeno, preservação de locks/rollback e tradução de erros de domínio                                                      | R02                                              |
-| R04   | [Interfaces Workspaces](04-interfaces-workspaces.md) — separar autorização, membros e convites; manter facade/export compatível                                                  | R03                                              |
-| R05   | [Domínio Issues](05-dominio-issues.md) — separar políticas, orquestração e SQL; preservar hashes/recibos                                                                         | R04                                              |
-| R06   | [Frontend por feature](06-frontend-features.md) — issues, equipe e parques, com estados/filtros/foco preservados                                                                 | R05                                              |
-| R07   | [Store offline](07-store-offline.md) — separar persistência, projeção e fila mantendo atomicidade e journal                                                                       | R06                                              |
-| R08   | [Aceite integrado](08-aceite-integrado.md) — fechar matriz A01–A13, regressões e pendências com evidência                                                                       | R07                                              |
+| Etapa | Entrega planejada                                                                                                               | Dependência                                      |
+| ----- | ------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------ |
+| R01   | [Auditoria reproduzível e baseline](01-auditoria-baseline.md)                                                                   | Base atual; registrar e resolver dependência Q05 |
+| R02   | [Documentação e composição da auditoria](02-documentacao-composicao.md)                                                         | R01; Q05 para alteração de fonte                 |
+| R03   | [Transações e erros](03-transacoes-erros.md) — executor pequeno, preservação de locks/rollback e tradução de erros de domínio   | R02                                              |
+| R04   | [Interfaces Workspaces](04-interfaces-workspaces.md) — separar autorização, membros e convites; manter facade/export compatível | R03                                              |
+| R05   | [Domínio Issues](05-dominio-issues.md) — separar políticas, orquestração e SQL; preservar hashes/recibos                        | R04                                              |
+| R06   | [Frontend por feature](06-frontend-features.md) — issues, equipe e parques, com estados/filtros/foco preservados                | R05                                              |
+| R07   | [Store offline](07-store-offline.md) — separar persistência, projeção e fila mantendo atomicidade e journal                     | R06                                              |
+| R08   | [Aceite integrado](08-aceite-integrado.md) — fechar matriz A01–A13, regressões e pendências com evidência                       | R07                                              |
 
 R01–R02 concluídas. R03–R08 detalhadas conforme o inventário A01–A13. O plano cobre os achados conhecidos da baseline e não equivale a garantia absoluta de ausência de defeitos.
 

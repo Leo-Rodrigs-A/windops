@@ -1,5 +1,5 @@
 import { Link, useNavigate } from '@tanstack/react-router';
-import { ArrowRight, CheckCircle2, Globe, KeyRound, Mail, ShieldCheck, Wind } from 'lucide-react';
+import { ArrowRight, CheckCircle2, KeyRound, Mail, ShieldCheck, Wind } from 'lucide-react';
 import { type FormEvent, useEffect, useRef, useState } from 'react';
 import { useAuth } from '../auth/auth-context';
 import { AccessLayout } from '../components/access-layout';
@@ -10,7 +10,15 @@ import { Button } from '../components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
 import { Feedback, LoadingState } from '../components/ui/feedback';
 import { TextField } from '../components/ui/form-field';
-import { ApiRequestError, authPost, getAuthProviders } from '../lib/auth-api';
+import {
+  ApiRequestError,
+  authPost,
+  beginEmailSignup,
+  completeEmailSignup,
+  completeGoogleSignup,
+  getAuthProviders,
+  getOnboardingStatus,
+} from '../lib/auth-api';
 import { reconnectLocalAccount } from '../offline/local-access';
 
 function failureMessage(error: unknown, fallback: string) {
@@ -50,6 +58,26 @@ function ErrorNotice({ message }: { message: string }) {
     >
       <Feedback message={message} tone="error" />
     </div>
+  );
+}
+
+function GoogleMark() {
+  return (
+    <svg aria-hidden="true" className="size-4 shrink-0" viewBox="0 0 48 48" fill="none">
+      <path
+        fill="#4285F4"
+        d="M43.6 24.5c0-1.4-.1-2.8-.4-4.1H24v7.8h11a9.4 9.4 0 0 1-4.1 6.2v5.1h6.7c3.9-3.6 6-8.8 6-15Z"
+      />
+      <path
+        fill="#34A853"
+        d="M24 44c5.5 0 10.1-1.8 13.5-4.8l-6.7-5.1c-1.8 1.2-4 1.9-6.8 1.9-5.2 0-9.6-3.5-11.2-8.2H5.9v5.2A20 20 0 0 0 24 44Z"
+      />
+      <path fill="#FBBC05" d="M12.8 27.8a12 12 0 0 1 0-7.6V15H5.9a20 20 0 0 0 0 18l6.9-5.2Z" />
+      <path
+        fill="#EA4335"
+        d="M24 12c3 0 5.7 1 7.8 3.1l5.8-5.8A19.4 19.4 0 0 0 24 4 20 20 0 0 0 5.9 15l6.9 5.2C14.4 15.5 18.8 12 24 12Z"
+      />
+    </svg>
   );
 }
 
@@ -239,7 +267,7 @@ export function SignInPage() {
     try {
       const result = await authPost('/api/auth/sign-in/social', {
         provider: 'google',
-        callbackURL: window.location.origin,
+        callbackURL: `${window.location.origin}/cadastro/perfil`,
         errorCallbackURL: `${window.location.origin}/entrar?erro=google`,
       });
       reconnectLocalAccount();
@@ -319,7 +347,7 @@ export function SignInPage() {
           type="button"
           variant="outline"
         >
-          <Globe aria-hidden="true" /> Continuar com Google
+          <GoogleMark /> Continuar com Google
         </Button>
       )}
       <p className="text-center text-sm text-muted-foreground">
@@ -330,35 +358,166 @@ export function SignInPage() {
 }
 
 export function SignUpPage() {
+  const [email, setEmail] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  const [sent, setSent] = useState(false);
+  const [googleConfigured, setGoogleConfigured] = useState(false);
+
+  useEffect(() => {
+    void getAuthProviders()
+      .then((providers) => setGoogleConfigured(providers.google))
+      .catch(() => {});
+  }, []);
+
+  async function submit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setError('');
+    setBusy(true);
+    try {
+      await beginEmailSignup(email);
+      setSent(true);
+    } catch (cause) {
+      setError(failureMessage(cause, 'Não foi possível enviar o link. Tente novamente.'));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function signUpWithGoogle() {
+    setError('');
+    setBusy(true);
+    try {
+      const result = await authPost('/api/auth/sign-in/social', {
+        provider: 'google',
+        callbackURL: `${window.location.origin}/cadastro/perfil`,
+        errorCallbackURL: `${window.location.origin}/cadastro?erro=google`,
+      });
+      const target = new URL((result as { url: string }).url);
+      if (target.protocol !== 'https:' || target.hostname !== 'accounts.google.com')
+        throw new Error('Destino de autenticação inválido.');
+      window.location.assign(target.href);
+    } catch (cause) {
+      setError(failureMessage(cause, 'Não foi possível iniciar o cadastro com Google.'));
+      setBusy(false);
+    }
+  }
+
+  return (
+    <AccessLayout
+      description="Escolha como criar sua conta. Você poderá entrar depois com Google ou e-mail e senha."
+      eyebrow="Novo acesso"
+      formDescription="Confirme seu endereço antes de definir os dados de acesso."
+      formTitle={sent ? 'Confira seu e-mail' : 'Criar sua conta'}
+      heading="Criar sua conta"
+    >
+      {error && <ErrorNotice key={error} message={error} />}
+      {sent ? (
+        <div className="space-y-3">
+          <Feedback
+            message="Se o endereço puder iniciar um cadastro, enviaremos um link de confirmação. Abra o link para escolher seu nome e senha."
+            tone="success"
+          />
+          <Button className="w-full" onClick={() => setSent(false)} variant="outline">
+            Usar outro e-mail
+          </Button>
+        </div>
+      ) : (
+        <>
+          {googleConfigured && (
+            <Button
+              className="w-full"
+              disabled={busy}
+              onClick={() => void signUpWithGoogle()}
+              type="button"
+              variant="outline"
+            >
+              <GoogleMark /> Continuar com Google
+            </Button>
+          )}
+          {googleConfigured && (
+            <p className="text-center text-xs text-muted-foreground">ou continue com e-mail</p>
+          )}
+          <form className="flex flex-col gap-4" onSubmit={submit}>
+            <TextField
+              autoComplete="email"
+              label="E-mail"
+              onChange={(event) => setEmail(event.target.value)}
+              required
+              type="email"
+              value={email}
+            />
+            <Button className="w-full" disabled={busy} type="submit">
+              {busy ? 'Enviando…' : 'Continuar'}
+            </Button>
+          </form>
+        </>
+      )}
+      <p className="text-center text-sm text-muted-foreground">
+        Já tem uma conta? <InlineLink to="/entrar">Entrar</InlineLink>
+      </p>
+    </AccessLayout>
+  );
+}
+
+function AccountSetupForm({ google }: { google: boolean }) {
+  const { refresh } = useAuth();
   const navigate = useNavigate();
   const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmation, setConfirmation] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
+  const [googleStatus, setGoogleStatus] = useState<'loading' | 'needs_setup' | 'ineligible'>(
+    'loading',
+  );
+  const token = new URLSearchParams(window.location.hash.slice(1)).get('token') ?? '';
+
+  useEffect(() => {
+    if (!google) return;
+    let active = true;
+    void getOnboardingStatus()
+      .then(async ({ status }) => {
+        if (!active) return;
+        if (status === 'already_configured') {
+          await navigate({ to: '/confirmar-acesso', replace: true });
+          return;
+        }
+        setGoogleStatus(status);
+      })
+      .catch(() => {
+        if (active) {
+          setGoogleStatus('ineligible');
+          setError('Não foi possível validar sua conta Google. Tente novamente pelo cadastro.');
+        }
+      });
+    return () => {
+      active = false;
+    };
+  }, [google, navigate]);
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError('');
     if (password !== confirmation) {
-      setError('As senhas não conferem. Revise os dois campos.');
+      setError('As senhas não conferem.');
       return;
     }
     setBusy(true);
     try {
-      await authPost('/api/auth/sign-up/email', {
-        name: name.trim(),
-        email,
-        password,
-        callbackURL: `${window.location.origin}/verificar-email?emailVerified=true`,
-      });
-      await navigate({ to: '/verificar-email', replace: true });
+      if (google) await completeGoogleSignup({ name: name.trim(), password });
+      else await completeEmailSignup({ token, name: name.trim(), password });
+      if (google) {
+        const next = await refresh();
+        if (next.status === 'authenticated') await navigate({ to: '/app', replace: true });
+        else if (next.status === 'orphan') await navigate({ to: '/sem-workspace', replace: true });
+        else await navigate({ to: '/confirmar-acesso', replace: true });
+      } else await navigate({ to: '/entrar', replace: true });
     } catch (cause) {
       setError(
         failureMessage(
           cause,
-          'Não foi possível iniciar o cadastro. Confira os dados e tente novamente.',
+          'Não foi possível concluir o cadastro. Verifique o link e tente novamente.',
         ),
       );
     } finally {
@@ -368,13 +527,26 @@ export function SignUpPage() {
 
   return (
     <AccessLayout
-      description="Crie sua identidade de acesso. A entrada na operação depende de um vínculo autorizado com um workspace."
-      eyebrow="Novo acesso"
-      formDescription="Após o cadastro, confirme o e-mail para ativar sua identidade."
-      formTitle="Dados da conta"
-      heading="Criar sua conta"
+      description="Depois de confirmar sua identidade, escolha como será reconhecido no Wind Ops e defina uma senha para usar junto ao Google."
+      eyebrow="Concluir cadastro"
+      formDescription="Use uma senha com pelo menos 12 caracteres."
+      formTitle="Seus dados de acesso"
+      heading="Quase lá"
     >
       {error && <ErrorNotice key={error} message={error} />}
+      {google && googleStatus === 'loading' && <LoadingState label="Validando sua conta Google…" />}
+      {google && googleStatus === 'ineligible' && (
+        <Feedback
+          message="Esta conta Google não pode concluir o cadastro. Volte e tente novamente."
+          tone="error"
+        />
+      )}
+      {!google && !token && (
+        <Feedback
+          message="Link ausente ou inválido. Solicite um novo link de cadastro."
+          tone="error"
+        />
+      )}
       <form className="flex flex-col gap-4" onSubmit={submit}>
         <TextField
           autoComplete="name"
@@ -383,14 +555,6 @@ export function SignUpPage() {
           onChange={(event) => setName(event.target.value)}
           required
           value={name}
-        />
-        <TextField
-          autoComplete="email"
-          label="E-mail de trabalho"
-          onChange={(event) => setEmail(event.target.value)}
-          required
-          type="email"
-          value={email}
         />
         <TextField
           autoComplete="new-password"
@@ -411,15 +575,24 @@ export function SignUpPage() {
           type="password"
           value={confirmation}
         />
-        <Button className="w-full" disabled={busy} type="submit">
-          {busy ? 'Enviando…' : 'Criar conta'}
+        <Button
+          className="w-full"
+          disabled={busy || (google ? googleStatus !== 'needs_setup' : !token)}
+          type="submit"
+        >
+          {busy ? 'Salvando…' : 'Concluir cadastro'}
         </Button>
       </form>
-      <p className="text-center text-sm text-muted-foreground">
-        Já tem uma conta? <InlineLink to="/entrar">Entrar</InlineLink>
-      </p>
     </AccessLayout>
   );
+}
+
+export function SignupConfirmPage() {
+  return <AccountSetupForm google={false} />;
+}
+
+export function GoogleSignupProfilePage() {
+  return <AccountSetupForm google />;
 }
 
 export function VerifyEmailPage() {

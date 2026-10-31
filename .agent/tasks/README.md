@@ -10,6 +10,8 @@ Cada nova slice fica em uma pasta `NN-nome/`, com um `README.md` que define resu
 
 - [ ] [09 — Revisão técnica e confiabilidade](09-revisao-confiabilidade/README.md): auditoria e refactors graduais. Q05, R01, R01A e R02 concluídas; R03 é a próxima execução. R03–R08 detalhadas conforme A01–A13.
 
+- [ ] [10 — Cadastro e identidade](10-cadastro-identidade/README.md): O01–O03 implementadas; O04 aguarda ensaio manual do fluxo email/Google no browser.
+
 ## Última slice concluída
 
 - [x] [08 — Filtros e histórico de consulta](08-consultas-historico/README.md): filtros P/T nas três listas, paginação por demanda, projeção e retenção segura de histórico.

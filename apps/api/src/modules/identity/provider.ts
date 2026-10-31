@@ -1,3 +1,4 @@
+import { createHash, randomBytes, randomUUID } from 'node:crypto';
 import { betterAuth } from 'better-auth';
 import { APIError, createAuthMiddleware } from 'better-auth/api';
 import type { Pool } from 'pg';
@@ -17,9 +18,18 @@ export interface IdentityProvider {
       getSession: (input: {
         headers: Headers;
       }) => Promise<{ session: { id: string }; user: { name: string } } | null>;
+      setPassword: (input: { headers: Headers; body: { newPassword: string } }) => Promise<unknown>;
+      updateUser: (input: { headers: Headers; body: { name: string } }) => Promise<unknown>;
     };
   };
   challenges: LoginChallengeService;
+  beginEmailSignup(email: string, origin: string): Promise<void>;
+  completeEmailSignup(input: {
+    token: string;
+    name: string;
+    password: string;
+  }): Promise<'created' | 'invalid'>;
+  onboardingStatus(userId: string): Promise<'needs_setup' | 'already_configured' | 'ineligible'>;
 }
 
 // Builder only. Do not mount before mandatory second step and account-linking tests exist.
@@ -125,7 +135,7 @@ export function createIdentityProvider(
       },
     },
     emailVerification: {
-      sendOnSignUp: true,
+      sendOnSignUp: false,
       sendOnSignIn: true,
       autoSignInAfterVerification: false,
       expiresIn: 60 * 60,
@@ -194,5 +204,144 @@ export function createIdentityProvider(
         }
       : {}),
   });
-  return { auth, challenges, googleEnabled: Boolean(googleCredentials) };
+  return {
+    auth,
+    challenges,
+    googleEnabled: Boolean(googleCredentials),
+    async beginEmailSignup(email, appOrigin) {
+      const normalized = email.trim().toLowerCase();
+      const alreadyExists = await pool.query('SELECT 1 FROM public.auth_users WHERE email = $1', [
+        normalized,
+      ]);
+      if (alreadyExists.rowCount) return;
+
+      const token = randomBytes(32).toString('base64url');
+      const id = randomUUID();
+      const tokenHash = createHash('sha256').update(token).digest();
+      const client = await pool.connect();
+      try {
+        await client.query('BEGIN');
+        await client.query(
+          `UPDATE public.auth_signup_intents SET consumed_at = clock_timestamp()
+           WHERE email = $1 AND consumed_at IS NULL`,
+          [normalized],
+        );
+        await client.query(
+          `INSERT INTO public.auth_signup_intents (id, email, token_hash, expires_at)
+           VALUES ($1, $2, $3, clock_timestamp() + interval '30 minutes')`,
+          [id, normalized, tokenHash],
+        );
+        await client.query('COMMIT');
+      } catch (error) {
+        await client.query('ROLLBACK');
+        throw error;
+      } finally {
+        client.release();
+      }
+      await emailSender.send({
+        to: normalized,
+        subject: 'Confirme seu e-mail para criar sua conta Wind Ops',
+        text: `Confirme seu e-mail e escolha seu nome e senha: ${new URL(`/cadastro/confirmar#token=${encodeURIComponent(token)}`, appOrigin).href}\n\nO link expira em 30 minutos.`,
+      });
+    },
+    async completeEmailSignup({ token, name, password }) {
+      const tokenHash = createHash('sha256').update(token).digest();
+      const client = await pool.connect();
+      let email: string | undefined;
+      try {
+        await client.query('BEGIN');
+        const result = await client.query<{ id: string; email: string; createdAt: Date }>(
+          `SELECT id, email, created_at AS "createdAt" FROM public.auth_signup_intents
+           WHERE token_hash = $1 AND consumed_at IS NULL AND expires_at > clock_timestamp()
+           FOR UPDATE`,
+          [tokenHash],
+        );
+        const intent = result.rows[0];
+        if (!intent) {
+          await client.query('ROLLBACK');
+          return 'invalid';
+        }
+        email = intent.email;
+        const existing = await client.query<{
+          id: string;
+          createdAt: Date;
+          emailVerified: boolean;
+        }>(
+          `SELECT u.id, u.created_at AS "createdAt", u.email_verified AS "emailVerified"
+           FROM public.auth_users u WHERE u.email = $1`,
+          [email],
+        );
+        const priorUser = existing.rows[0];
+        if (priorUser) {
+          const credential = await client.query(
+            `SELECT 1 FROM public.auth_accounts
+             WHERE user_id = $1 AND provider_id = 'credential'`,
+            [priorUser.id],
+          );
+          if (priorUser.createdAt < intent.createdAt || !credential.rowCount) {
+            await client.query('ROLLBACK');
+            return 'invalid';
+          }
+          await client.query('UPDATE public.auth_users SET email_verified = true WHERE id = $1', [
+            priorUser.id,
+          ]);
+          await client.query(
+            'UPDATE public.auth_signup_intents SET consumed_at = clock_timestamp() WHERE id = $1',
+            [intent.id],
+          );
+          await client.query('COMMIT');
+          return 'created';
+        }
+        const signup = await auth.api.signUpEmail({
+          body: { email, name: name.trim(), password },
+        });
+        if (!signup.user?.id) throw new Error('Signup did not create a user.');
+        const createdUser = await client.query<{ id: string }>(
+          'SELECT id FROM public.auth_users WHERE email = $1',
+          [email],
+        );
+        if (createdUser.rows[0]?.id !== signup.user.id)
+          throw new Error('Signup email was claimed concurrently.');
+        await client.query(
+          'UPDATE public.auth_users SET email_verified = true, updated_at = clock_timestamp() WHERE id = $1',
+          [createdUser.rows[0].id],
+        );
+        await client.query(
+          'UPDATE public.auth_signup_intents SET consumed_at = clock_timestamp() WHERE id = $1',
+          [intent.id],
+        );
+        await client.query('COMMIT');
+        return 'created';
+      } catch (error) {
+        await client.query('ROLLBACK').catch(() => undefined);
+        throw error;
+      } finally {
+        client.release();
+      }
+    },
+    async onboardingStatus(userId) {
+      const result = await pool.query<{
+        hasGoogle: boolean;
+        hasPassword: boolean;
+        hasName: boolean;
+      }>(
+        `SELECT
+           EXISTS (
+             SELECT 1 FROM public.auth_accounts google
+             WHERE google.user_id = u.id AND google.provider_id = 'google'
+           ) AS "hasGoogle",
+           EXISTS (
+             SELECT 1 FROM public.auth_accounts credential
+             WHERE credential.user_id = u.id AND credential.provider_id = 'credential'
+               AND credential.password IS NOT NULL
+           ) AS "hasPassword",
+           (u.name IS NOT NULL AND length(trim(u.name)) > 0) AS "hasName"
+         FROM public.auth_users u WHERE u.id = $1 AND u.email_verified = true`,
+        [userId],
+      );
+      const account = result.rows[0];
+      if (!account?.hasGoogle) return 'ineligible';
+      return account.hasPassword && account.hasName ? 'already_configured' : 'needs_setup';
+    },
+  };
 }

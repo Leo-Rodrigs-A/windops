@@ -82,6 +82,19 @@ export const authVerifications = pgTable(
   (table) => [index('auth_verifications_identifier_idx').on(table.identifier)],
 );
 
+export const authSignupIntents = pgTable(
+  'auth_signup_intents',
+  {
+    id: uuid('id').primaryKey(),
+    email: text('email').notNull(),
+    tokenHash: bytea('token_hash').notNull(),
+    expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+    consumedAt: timestamp('consumed_at', { withTimezone: true }),
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [index('auth_signup_intents_email_created_idx').on(table.email, table.createdAt)],
+);
+
 export const authRateLimits = pgTable('auth_rate_limits', {
   id: uuid('id').primaryKey().defaultRandom(),
   key: text('key').notNull().unique(),

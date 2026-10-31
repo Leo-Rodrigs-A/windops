@@ -16,6 +16,7 @@ import {
   authPost,
   getAuthStatus,
   getMe,
+  getOnboardingStatus,
   getWorkspaceContext,
 } from '../lib/auth-api';
 import { hasPendingInvitation } from '../lib/invitation-token';
@@ -33,10 +34,15 @@ export type AuthSnapshot =
   | { status: 'loading' }
   | { status: 'anonymous' }
   | { status: 'pending'; expiresAt: string }
-  | { status: 'authenticated'; me: Me; context: WorkspaceContext }
+  | {
+      status: 'authenticated';
+      me: Me;
+      context: WorkspaceContext;
+      onboardingRequired: boolean;
+    }
   | { status: 'offline'; accountId: string; workspaceId: string; reason: 'network' | 'expired' }
   | { status: 'revoked'; accountId: string; workspaceId: string }
-  | { status: 'orphan'; me: Me }
+  | { status: 'orphan'; me: Me; onboardingRequired: boolean }
   | { status: 'error'; message: string };
 
 type AuthContextValue = {
@@ -52,6 +58,8 @@ const publicOnlyRoutes = new Set([
   '/',
   '/entrar',
   '/cadastro',
+  '/cadastro/confirmar',
+  '/cadastro/perfil',
   '/verificar-email',
   '/confirmar-acesso',
   '/recuperar-senha',
@@ -128,8 +136,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (isLocalAccountDisconnected(me.user.id)) {
         return publish({ status: 'anonymous' });
       }
+      const onboarding = await getOnboardingStatus();
+      const onboardingRequired = onboarding.status === 'needs_setup';
       if (me.workspaces.length === 0) {
-        const orphan: AuthSnapshot = { status: 'orphan', me };
+        const orphan: AuthSnapshot = { status: 'orphan', me, onboardingRequired };
         return publish(orphan);
       }
       if (me.workspaces.length > 1) {
@@ -166,7 +176,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 workspaceId: hint.workspaceId,
               });
             }
-            const orphan: AuthSnapshot = { status: 'orphan', me: latestMe };
+            const latestOnboarding = await getOnboardingStatus();
+            const orphan: AuthSnapshot = {
+              status: 'orphan',
+              me: latestMe,
+              onboardingRequired: latestOnboarding.status === 'needs_setup',
+            };
             return publish(orphan);
           }
         }
@@ -197,7 +212,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         workspaceId: workspace.id,
         validatedAt: new Date().toISOString(),
       });
-      const authenticated: AuthSnapshot = { status: 'authenticated', me, context };
+      const authenticated: AuthSnapshot = {
+        status: 'authenticated',
+        me,
+        context,
+        onboardingRequired,
+      };
       return publish(authenticated);
     } catch (error) {
       const offline = publishOffline('network');
@@ -286,6 +306,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       path === '/equipe';
 
     if (
+      (snapshot.status === 'authenticated' || snapshot.status === 'orphan') &&
+      snapshot.onboardingRequired &&
+      path !== '/cadastro/perfil'
+    ) {
+      void navigate({ to: '/cadastro/perfil', replace: true });
+    } else if (
       hasPendingInvitation() &&
       (snapshot.status === 'authenticated' || snapshot.status === 'orphan') &&
       path !== '/convite/aceitar' &&
@@ -293,11 +319,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       !invitationAuthRoutes.has(path)
     ) {
       void navigate({ to: '/convite/aceitar', replace: true });
-    } else if (snapshot.status === 'pending' && path !== '/confirmar-acesso') {
+    } else if (
+      snapshot.status === 'pending' &&
+      path !== '/confirmar-acesso' &&
+      path !== '/cadastro/perfil'
+    ) {
       void navigate({ to: '/confirmar-acesso', replace: true });
     } else if (
       snapshot.status === 'authenticated' &&
-      (publicOnlyRoutes.has(path) || path === '/sem-workspace')
+      ((publicOnlyRoutes.has(path) && path !== '/cadastro/perfil') || path === '/sem-workspace')
     ) {
       void navigate({ to: '/app', replace: true });
     } else if (

@@ -45,6 +45,16 @@ const signUpRoute = createRoute({
   path: '/cadastro',
   component: lazyRouteComponent(accessPages, 'SignUpPage'),
 });
+const signupConfirmRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/cadastro/confirmar',
+  component: lazyRouteComponent(accessPages, 'SignupConfirmPage'),
+});
+const signupProfileRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/cadastro/perfil',
+  component: lazyRouteComponent(accessPages, 'GoogleSignupProfilePage'),
+});
 const verifyEmailRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/verificar-email',
@@ -121,6 +131,8 @@ const router = createRouter({
     indexRoute,
     signInRoute,
     signUpRoute,
+    signupConfirmRoute,
+    signupProfileRoute,
     verifyEmailRoute,
     secondStepRoute,
     recoverRoute,
