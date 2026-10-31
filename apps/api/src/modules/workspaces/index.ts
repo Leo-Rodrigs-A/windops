@@ -4,5 +4,13 @@ export {
   type AuthorizedWorkspacePrincipal,
   createWorkspaceAuthorizationService,
   type IdentityResult,
+  type WorkspaceAccessService,
   type WorkspaceAuthorizationService,
+  type WorkspaceContextReader,
+  type WorkspaceIdentityService,
+  type WorkspaceInvitationService,
+  type WorkspaceMemberManagementService,
+  type WorkspaceRequestAuthorizer,
+  type WorkspaceRouteAccessService,
+  type WorkspaceTransactionalAccessService,
 } from './service.js';

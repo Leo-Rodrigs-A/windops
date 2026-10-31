@@ -1,6 +1,6 @@
 import { createHmac, timingSafeEqual } from 'node:crypto';
 import type { IncomingHttpHeaders } from 'node:http';
-import type { WorkspaceAuthorizationService } from '../workspaces/index.js';
+import type { WorkspaceRequestAuthorizer } from '../workspaces/index.js';
 
 const shapes = {
   workspace: {
@@ -105,7 +105,7 @@ export interface SyncShapeProxy {
 }
 
 export function createSyncShapeProxy(options: {
-  authorization: Pick<WorkspaceAuthorizationService, 'authorizeWorkspace'>;
+  authorization: WorkspaceRequestAuthorizer;
   electricUrl: string;
   electricSecret: string;
   fetch?: typeof fetch;

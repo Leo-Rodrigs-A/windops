@@ -65,6 +65,8 @@ Gravação: UI -> armazenamento local + comando durável -> Fastify -> transaç�
 
 R03 centraliza o ciclo PostgreSQL em `apps/api/src/platform/database/transaction.ts`, usado por issues e parks. O callback continua recebendo o mesmo `PoolClient`, para autorização, locks, evento, recibo e mutação permanecerem na mesma transação. Tradução de constraint é específica por SQLSTATE e nome; falhas desconhecidas seguem para o handler interno HTTP. Workspaces, identity e notifications mantêm transações locais com protocolos próprios.
 
+R04 divide a API interna de workspaces em interfaces de identidade, autorização por request/transação, contexto, gestão de membros e convites. `WorkspaceAuthorizationService` continua como facade compatível na composição e no registrador de rotas completo; issues, parks, notifications e sync recebem apenas as capacidades utilizadas. `scripts/check-boundaries.mjs` resolve imports TypeScript estáticos, dinâmicos, type-only, require e aliases configurados e exige entrypoint `index` nas chamadas entre módulos.
+
 Leitura: Electric -> proxy Fastify autenticado -> coleção local. O servidor escolhe tabela, filtro de workspace e campos permitidos; nunca encaminhar table/where arbitrários. Segredo Electric nunca chega ao navegador.
 
 Cache obrigatório: issues Pendentes/Em andamento, histórico dessas issues e cadastros necessários. Concluídas são consultadas online ou pelo cache já existente. A conclusão criada offline permanece local, com relato editável somente enquanto offline e antes do envio. Preservar registros e dependências com comandos pendentes, mesmo que saiam de um shape de issues abertas.

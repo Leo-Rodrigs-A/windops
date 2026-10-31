@@ -150,23 +150,44 @@ async function deliverInvitation(
   return row ? { status: 'ok', value: toInvitationDto(row) } : { status: 'conflict' };
 }
 
-export interface WorkspaceAuthorizationService {
+export interface WorkspaceIdentityService {
   getMe(headers: IncomingHttpHeaders): Promise<IdentityResult<Me>>;
+}
+
+export interface WorkspaceRequestAuthorizer {
   authorizeWorkspace(
     headers: IncomingHttpHeaders,
     workspaceId: string,
     allowedRoles?: readonly WorkspaceRole[],
   ): Promise<AuthorizationResult<AuthorizedWorkspacePrincipal>>;
+}
+
+export interface WorkspaceTransactionalAccessService {
   authorizeWorkspaceInTransaction(
     client: PoolClient,
     headers: IncomingHttpHeaders,
     workspaceId: string,
     allowedRoles?: readonly WorkspaceRole[],
   ): Promise<AuthorizationResult<AuthorizedWorkspacePrincipal>>;
+}
+
+export interface WorkspaceContextReader {
   getContext(
     headers: IncomingHttpHeaders,
     workspaceId: string,
   ): Promise<AuthorizationResult<WorkspaceContext>>;
+}
+
+export interface WorkspaceRouteAccessService
+  extends WorkspaceRequestAuthorizer,
+    WorkspaceTransactionalAccessService {}
+
+export interface WorkspaceAccessService
+  extends WorkspaceRequestAuthorizer,
+    WorkspaceTransactionalAccessService,
+    WorkspaceContextReader {}
+
+export interface WorkspaceMemberManagementService {
   getMembers(
     headers: IncomingHttpHeaders,
     workspaceId: string,
@@ -177,6 +198,22 @@ export interface WorkspaceAuthorizationService {
     workspaceId: string,
     query: WorkspaceListQuery,
   ): Promise<AuthorizationResult<WorkspaceDirectoryPage>>;
+  updateMemberRole(
+    headers: IncomingHttpHeaders,
+    workspaceId: string,
+    membershipId: string,
+    role: WorkspaceRole,
+    expectedRevision: number,
+  ): Promise<WorkspaceOperationResult<WorkspaceMemberMutation>>;
+  revokeMember(
+    headers: IncomingHttpHeaders,
+    workspaceId: string,
+    membershipId: string,
+    expectedRevision: number,
+  ): Promise<WorkspaceOperationResult<WorkspaceMemberMutation>>;
+}
+
+export interface WorkspaceInvitationService {
   createInvitation(
     headers: IncomingHttpHeaders,
     workspaceId: string,
@@ -197,20 +234,13 @@ export interface WorkspaceAuthorizationService {
     token: AcceptWorkspaceInvitation['token'],
     clientIp: string,
   ): Promise<WorkspaceOperationResult<WorkspaceContext>>;
-  updateMemberRole(
-    headers: IncomingHttpHeaders,
-    workspaceId: string,
-    membershipId: string,
-    role: WorkspaceRole,
-    expectedRevision: number,
-  ): Promise<WorkspaceOperationResult<WorkspaceMemberMutation>>;
-  revokeMember(
-    headers: IncomingHttpHeaders,
-    workspaceId: string,
-    membershipId: string,
-    expectedRevision: number,
-  ): Promise<WorkspaceOperationResult<WorkspaceMemberMutation>>;
 }
+
+export interface WorkspaceAuthorizationService
+  extends WorkspaceIdentityService,
+    WorkspaceAccessService,
+    WorkspaceMemberManagementService,
+    WorkspaceInvitationService {}
 
 export function createWorkspaceAuthorizationService(
   pool: Pool,

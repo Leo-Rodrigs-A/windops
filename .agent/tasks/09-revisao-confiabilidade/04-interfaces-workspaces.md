@@ -2,9 +2,9 @@
 
 ## Status
 
-Planejada; depende de R03.
+- Concluída em 30/10/2026.
 
-- [ ] Task concluída
+- [x] Task concluída
 
 ## Objetivo
 
@@ -24,13 +24,13 @@ R03 concluída; referência de regressão: `test:workspaces-integration` e `test
 
 ## Plano
 
-- [ ] Inventariar cada consumidor e os métodos realmente usados, incluindo rotas e integração.
-- [ ] Definir interfaces pequenas por capacidade e manter facade/export público compatível.
-- [ ] Migrar consumidores para o menor contrato sem imports internos entre módulos.
-- [ ] Testar segundo fator, tenant cruzado, revogação concorrente, último admin, convite/aceite/reenvio e pós-commit de e-mail.
-- [ ] Fortalecer `check-boundaries.mjs` contra padrões de import encontrados na auditoria, com casos positivos/negativos, sem aliases internos.
-- [ ] Executar `pnpm check`, integrações auth/workspaces e issues/parks se consumidor alterado.
-- [ ] Verificar diffs de contratos e detalhar R05 a partir dos caminhos de Issues.
+- [x] Inventariar cada consumidor e os métodos realmente usados, incluindo rotas e integração.
+- [x] Definir interfaces pequenas por capacidade e manter facade/export público compatível.
+- [x] Migrar consumidores para o menor contrato sem imports internos entre módulos.
+- [x] Testar segundo fator, tenant cruzado, revogação concorrente, último admin, convite/aceite/reenvio e pós-commit de e-mail.
+- [x] Fortalecer `check-boundaries.mjs` contra imports estáticos, exports, `import()`, `import type`, `require()` e aliases TS, com casos positivos/negativos.
+- [x] Executar `pnpm check`, integrações auth/workspaces/issues/parks.
+- [x] Verificar diffs de contratos e detalhar R05 a partir dos caminhos de Issues.
 
 ## Contratos e dados afetados
 
@@ -42,4 +42,8 @@ Consumidores dependem apenas de capacidades usadas; revogação/membership conti
 
 ## Evidências
 
-Plano criado para A06/A13 da baseline; implementação não iniciada.
+R04 concluiu a segregação dos contratos sem mover as regras para serviços paralelos: `WorkspaceIdentityService`, autorização por request/transação, contexto, gestão de membros e convites; `WorkspaceAuthorizationService` continua facade compatível. Issues/parks dependem do contrato transacional nas escritas e da autorização request nas rotas; notifications declara os dois métodos necessários em suas rotas e só o transacional no serviço; sync usa somente autorização request; o registrador de workspaces e a composição mantêm a facade completa.
+
+O verificador agora usa o scanner suportado pela versão atual de TypeScript, resolve extensões `.js` para fontes TypeScript e mapeamentos `paths` da cadeia local de `tsconfig`. A suíte inclui imports/export estáticos, dinâmicos, `import type`, `require`, templates sem interpolação, aliases profundos rejeitados e barrel público permitido. Sem aliases internos novos.
+
+Validação: `pnpm check` passou (71 testes e builds); `pnpm test:auth-integration`, `pnpm test:workspaces-integration`, `pnpm test:issues-integration` e `pnpm test:parks-integration` passaram em PostgreSQL/Mailpit descartáveis. Integrações preservaram segundo fator, tenant, último admin, convite/reenvio, locks, concorrência e atomicidade. Nenhum diff em contrato HTTP, schema ou políticas de autorização.

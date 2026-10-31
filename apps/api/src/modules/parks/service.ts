@@ -24,7 +24,7 @@ import {
 import type { SyncService } from '../sync/index.js';
 import type {
   AuthorizedWorkspacePrincipal,
-  WorkspaceAuthorizationService,
+  WorkspaceTransactionalAccessService,
 } from '../workspaces/index.js';
 
 interface ParkRow extends QueryResultRow {
@@ -197,7 +197,7 @@ async function getCursor(
 
 export function createParksCatalogService(
   pool: Pool,
-  authorization: WorkspaceAuthorizationService,
+  authorization: WorkspaceTransactionalAccessService,
   sync: SyncService,
 ): ParksCatalogService {
   async function withAdminTransaction<T>(

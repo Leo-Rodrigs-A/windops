@@ -7,7 +7,7 @@ import type {
   PushSubscriptionInput,
 } from '@windops/contracts';
 import type { Pool, PoolClient } from 'pg';
-import type { WorkspaceAuthorizationService } from '../workspaces/index.js';
+import type { WorkspaceTransactionalAccessService } from '../workspaces/index.js';
 
 export type NotificationEvent = {
   id: string;
@@ -35,7 +35,7 @@ export interface NotificationsService {
   ): Promise<NotificationsPage | { status: 'invalid_cursor' }>;
   markRead(
     headers: IncomingHttpHeaders,
-    authorization: WorkspaceAuthorizationService,
+    authorization: WorkspaceTransactionalAccessService,
     workspaceId: string,
     notificationId: string,
   ): Promise<
@@ -45,13 +45,13 @@ export interface NotificationsService {
   pushStatus(): { enabled: boolean; publicKey: string | null };
   subscribe(
     headers: IncomingHttpHeaders,
-    authorization: WorkspaceAuthorizationService,
+    authorization: WorkspaceTransactionalAccessService,
     workspaceId: string,
     input: PushSubscriptionInput,
   ): Promise<{ status: 'ok' | 'unauthenticated' | 'forbidden' | 'invalid_endpoint' }>;
   unsubscribe(
     headers: IncomingHttpHeaders,
-    authorization: WorkspaceAuthorizationService,
+    authorization: WorkspaceTransactionalAccessService,
     workspaceId: string,
     deviceId: string,
   ): Promise<{ status: 'ok' | 'unauthenticated' | 'forbidden' }>;

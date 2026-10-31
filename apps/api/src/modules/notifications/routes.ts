@@ -9,7 +9,7 @@ import {
 } from '@windops/contracts';
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import { z } from 'zod';
-import type { WorkspaceAuthorizationService } from '../workspaces/index.js';
+import type { WorkspaceRouteAccessService } from '../workspaces/index.js';
 import type { NotificationsService } from './service.js';
 
 const workspaceParams = z.object({ workspaceId: z.uuid() }).strict();
@@ -28,7 +28,7 @@ function accessError(reply: FastifyReply, request: FastifyRequest, status: 401 |
 
 export function registerNotificationRoutes(
   app: FastifyInstance,
-  authorization: WorkspaceAuthorizationService,
+  authorization: WorkspaceRouteAccessService,
   notifications: NotificationsService,
 ) {
   app.get(

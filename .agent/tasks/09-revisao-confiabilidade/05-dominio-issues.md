@@ -16,7 +16,7 @@ Foco em `transitionIssue`, validação de estado/ator/hora, hashes e recibos. Re
 
 ## Estado atual
 
-Baseline A07/A08 identifica mistura de estado, papel, autoria, hora, locks, hash, SQL e DTO. Parks possui hash distinto; sync centraliza recibos.
+Baseline A07/A08 identifica mistura de estado, papel, autoria, hora, locks, hash, SQL e DTO. Parks possui hash distinto; sync centraliza recibos. R04 confirmou que o serviço de issues usa apenas a interface transacional de autorização para escritas; a facade continua na composição e nas rotas centrais.
 
 ## Dependências
 
@@ -44,3 +44,7 @@ Matriz de transições e hashes permanece equivalente; rollback e locks passam n
 ## Evidências
 
 Plano criado para A07/A08 e lacuna A12; implementação não iniciada.
+
+## Refinamento pela R04
+
+Priorizar `transitionIssue` e `lifecycleIssue`, depois avaliar `createIssue`/`editIssue`. Cada fluxo atual passa por `withWriteTransaction`, revalida membership dentro da transação, e combina lock de localização em Parks, `FOR UPDATE` da issue, `replayReceipt`, evento de audit e recibo Sync. A regra de uma hora usa `clock_timestamp()` do PostgreSQL e permanece autoritativa no banco. Mapear decisões puras sem tirar locks, hash e recibos da transação nem duplicar políticas. Não mudar a facade ou a interface de autorização transacional já segregada em R04.

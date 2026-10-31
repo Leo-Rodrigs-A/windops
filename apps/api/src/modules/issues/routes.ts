@@ -16,7 +16,7 @@ import {
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import { z } from 'zod';
 import { respondAccessError } from '../../platform/http/access-error.js';
-import type { WorkspaceAuthorizationService } from '../workspaces/index.js';
+import type { WorkspaceRequestAuthorizer } from '../workspaces/index.js';
 import type { IssuesService } from './service.js';
 
 const workspaceParamsSchema = z.object({ workspaceId: z.uuid() }).strict();
@@ -75,7 +75,7 @@ function respondIssueWriteError(
 
 export function registerIssuesRoutes(
   app: FastifyInstance,
-  authorization: WorkspaceAuthorizationService,
+  authorization: WorkspaceRequestAuthorizer,
   issues: IssuesService,
 ) {
   const lifecycleActions = [

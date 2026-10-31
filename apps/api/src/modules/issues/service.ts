@@ -30,7 +30,7 @@ import type { ParksCatalogService } from '../parks/index.js';
 import type { SyncService } from '../sync/index.js';
 import type {
   AuthorizedWorkspacePrincipal,
-  WorkspaceAuthorizationService,
+  WorkspaceTransactionalAccessService,
 } from '../workspaces/index.js';
 
 export type IssuesQueryExecutor = Pick<PoolClient, 'query'>;
@@ -127,7 +127,7 @@ export interface IssuesService {
 }
 
 export interface IssueWriteDependencies {
-  authorization: WorkspaceAuthorizationService;
+  authorization: WorkspaceTransactionalAccessService;
   parks: ParksCatalogService;
   audit: AuditService;
   sync: SyncService;

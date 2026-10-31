@@ -17,7 +17,7 @@ import {
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import { z } from 'zod';
 import { respondAccessError } from '../../platform/http/access-error.js';
-import type { WorkspaceAuthorizationService } from '../workspaces/index.js';
+import type { WorkspaceRequestAuthorizer } from '../workspaces/index.js';
 import type { ParksCatalogService, ParksIssueReferences } from './service.js';
 
 const workspaceParamsSchema = z.object({ workspaceId: z.uuid() }).strict();
@@ -77,7 +77,7 @@ function respondWriteError(
 
 export function registerParksRoutes(
   app: FastifyInstance,
-  authorization: WorkspaceAuthorizationService,
+  authorization: WorkspaceRequestAuthorizer,
   catalog: ParksCatalogService,
   issues?: ParksIssueReferences,
 ) {
