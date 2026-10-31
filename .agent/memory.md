@@ -351,3 +351,14 @@ R06 concluída em 30/10/2026: frontend movido por feature; rotas lazy carregam l
 R07 concluída em 30/10/2026: `LocalIssueStore` mantém a fachada consumida pela UI; tipos do journal, persistência/retenção, reconciliação e helpers de fila foram extraídos para módulos internos. DB v2, export v1 e commit atômico IndexedDB preservados. `pnpm check` passou com 81 testes e builds; provas offline direcionadas passaram com 27 testes incluindo restart/upgrade, partição, quota simulada, retry/ACK, conflito e pruning. Quota/evicção física e validação móvel não foram comprovadas. Próxima: R08.
 
 R08 e slice 09 concluídas em 30/10/2026: `pnpm check` passou com 81 testes/builds e integrações auth, workspaces, parks e issues passaram em bancos descartáveis, com cleanup em `finally`. Baseline R01 fecha A01–A13 com referências. A12 mantém como melhoria futura E2E browser automatizado; aceite funcional Chrome/Edge está baseado na confirmação manual do proprietário pós-R06/Q05. Integração OAuth Google usa provider simulado nesta execução. Nenhum teste de produção, pentest, quota/eviction física, aparelho móvel ou HTTPS de produção foi alegado.
+
+
+## Planejamento da slice 11 e aceite Google — 30/10/2026
+
+A pedido do proprietário, preparada a [slice 11 — Preparação e entrada em produção](tasks/11-producao/README.md), com dez tasks D01–D10 abertas. Primeira tarefa obrigatória: README como manual, na ordem problema/projeto, setup do zero, rotina diária e deploy VPS/PaaS. Não houve execução da D01 nesta preparação. Próxima tarefa: D01.
+
+Responsabilidades: Codex prepara aplicação, infraestrutura, CI/CD, recuperação, monitoramento e roteiros; proprietário decide destino/orçamento/região, cria contas/ambientes, fornece permissões e configura segredos nos canais apropriados, identifica admin, testa aparelhos e confirma liberação. A escolha reabre a referência anterior Hostinger + Neon; Hetzner é opção VPS, PaaS é alternativa separada. Documentar ambos, implantar o escolhido. Sem homologação permanente por padrão, a confirmar em D02; ensaios destrutivos usam ambiente isolado. Não houve contratação ou mudança de infraestrutura.
+
+O proprietário confirmou nesta conversa: Google validado e funcionando perfeitamente. Item de Google real da O04 marcado concluído por aceite informado, não por observação direta do agente. Demais itens de e-mail/vínculo/conta existente permanecem abertos; O04 deve encerrar antes de D08. Referências históricas à pendência de Google real em dev ficam superadas. Callback/origem/segundo passo no domínio de produção ainda serão validados.
+
+Evidência documental: arquivos e links locais conferidos, dez tasks com seções obrigatórias, responsáveis, dependências e checklists abertos; git diff --check aprovado. Somente planos/índices e registro do aceite alterados; pnpm check e testes da aplicação não executados. Produção, restore no destino, CI remoto e aparelhos não validados por este planejamento.

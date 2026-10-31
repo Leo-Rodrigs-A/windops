@@ -8,7 +8,8 @@ Cada nova slice fica em uma pasta `NN-nome/`, com um `README.md` que define resu
 
 ## Próxima slice preparada
 
-- [ ] [10 — Cadastro e identidade](10-cadastro-identidade/README.md): O01–O03 implementadas; O04 aguarda ensaio manual do fluxo email/Google no browser.
+- [ ] [11 — Preparação e entrada em produção](11-producao/README.md): D01–D10 planejadas, começando pelo README como manual; responsabilidades do Codex e proprietário, escolha VPS/PaaS, provisionamento, CI/CD, recuperação, aparelhos e liberação. Próxima tarefa: D01.
+- [ ] [10 — Cadastro e identidade](10-cadastro-identidade/README.md): O01–O03 implementadas; Google real da O04 aceito pelo proprietário. Demais itens manuais de e-mail/vínculo continuam pendentes e devem ser encerrados antes de D08.
 
 ## Slices concluídas mais recentes
 
