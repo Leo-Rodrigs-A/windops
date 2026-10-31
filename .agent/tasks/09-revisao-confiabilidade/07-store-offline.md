@@ -2,9 +2,9 @@
 
 ## Status
 
-Planejada; depende de R06.
+Concluída em 30/10/2026; dependeu de R06, concluída.
 
-- [ ] Task concluída
+- [x] Task concluída
 
 ## Objetivo
 
@@ -26,13 +26,13 @@ R06 concluída; regressão atual de Q03/S09 como baseline.
 
 ## Plano
 
-- [ ] Inventariar stores, versões de journal, callers e atomicidade de `commitRows`/poda.
-- [ ] Registrar fixtures pré-refactor para journal v1/v2, partições, revisão mínima, fila e recursos pendentes.
-- [ ] Extrair uma responsabilidade por vez mantendo a facade pública e o mesmo commit IndexedDB.
-- [ ] Preservar precedência de revisão API/réplica/ACK, saída de shape, tombstone, cursor, retenção, dependências e exportação.
-- [ ] Testar restart/upgrade, quota abortada, ACK perdido/retry, conflito, account/workspace isolation e pruning com pendências.
-- [ ] Executar `pnpm check` e IndexedDB proof; não inferir persistência durável de estado otimista.
-- [ ] Documentar arquivos/fachada final e detalhar matriz R08 incluindo exclusões aceitas.
+- [x] Inventariar stores, versões de journal, callers e atomicidade de `commitRows`/poda.
+- [x] Usar a regressão persistida existente para journal v1/v2, partições, revisão mínima, fila e recursos pendentes; os dados v1 são criados pelo teste de upgrade.
+- [x] Extrair persistência/retenção, reconciliação e fila mantendo a facade pública e o mesmo commit IndexedDB.
+- [x] Preservar precedência de revisão API/réplica/ACK, saída de shape, tombstone, cursor, retenção, dependências e exportação.
+- [x] Validar restart/upgrade, quota abortada, ACK perdido/retry, conflito, account/workspace isolation e pruning com pendências.
+- [x] Executar `pnpm check` e IndexedDB proof; nenhuma garantia de persistência durável foi inferida de estado otimista.
+- [x] Documentar arquivos/fachada e transferir a matriz de aceite integrado para R08.
 
 ## Contratos e dados afetados
 
@@ -44,4 +44,6 @@ Restart/retry/conflito/partição/exportação e atomicidade passam com dados an
 
 ## Evidências
 
-Plano criado para A11/A12; implementação não iniciada.
+30/10/2026: `LocalIssueStore` manteve sua fachada em `local-issue-store.ts`; os tipos do journal foram movidos para `local-issue-store/types.ts`, retenção pura para `retention.ts`, criação/commit transacional para `persistence.ts`, reconciliação de revisão/ACK/tombstone para `reconciliation.ts` e seleção/retry/criação de comandos para `command-queue.ts`. Poda e escrita continuam no mesmo `createTransaction` e no mesmo journal IndexedDB. DB permanece v2; formato de export permanece v1; sem migration ou alteração de contrato.
+
+`pnpm check` passou: lint/boundaries, typecheck, 81 testes e builds de contracts/API/web. Execução explícita das provas offline (`indexed-db-proof.test.ts`, `local-issue-store.test.ts`, `workspace-replica.test.ts`, `command-sender.test.ts`) passou: 4 arquivos/27 testes. Evidências cobrem restart, upgrade v1→v2, isolamento por conta/workspace, falha de quota sem gravação parcial, retry após ACK perdido, revisão/ conflito, tombstone e proteção de comandos durante pruning. O harness IndexedDB usa fake-indexeddb e a quota é simulada; quota/evicção física e navegadores móveis seguem fora desta prova.

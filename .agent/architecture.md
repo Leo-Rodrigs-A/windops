@@ -137,6 +137,8 @@ Q05 — 30/10/2026: validação automatizada executada (`pnpm check`, 57 testes/
 
 A pedido do proprietário, criada a [revisão técnica e confiabilidade](tasks/09-revisao-confiabilidade/README.md), guiada pela análise SOLID externa e inspeção parcial do código atual. R01/R02 detalhadas; R03–R08 serão detalhadas progressivamente. Prioriza baseline, documentação/composição, transações, segregação de workspaces, domínio/SQL de issues, frontend por feature, store offline e aceite integrado. Não impõe repository genérico nem substitui composição explícita. Preserva locks, tenant, atomicidade, contratos e compatibilidade do journal. Q05 continua aberta e bloqueia refactors; R01 pode levantar achados. Planejamento não implementa nem certifica o app. Produção/aparelhos permanecem na etapa 11.
 
+R01–R07 concluídas em 30/10/2026. R07 preserva a fachada `LocalIssueStore`, DB v2 e export v1; tipos, persistência/retenção, reconciliação e helpers de fila foram separados em módulos internos. Todos os writes da store seguem no mesmo commit transacional. `pnpm check` e provas IndexedDB/offline passaram (81 testes no check; 27 direcionados). Quota real e validação móvel seguem fora da cobertura automatizada. R08 é a próxima etapa.
+
 
 ## Encerramento — 30/10/2026
 

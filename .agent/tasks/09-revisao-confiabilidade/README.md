@@ -2,7 +2,7 @@
 
 ## Status
 
-Em andamento; R01, R01A, R02, R03, R04, R05 e R06 concluídas em 30/10/2026. R07 é a próxima execução. Planejada originalmente em 30/10/2026 a pedido do proprietário, usando a análise SOLID fornecida como guia e inspeção do repositório atual. Não representa certificação de aplicação “100%” nem entrega de produção.
+Em andamento; R01, R01A, R02, R03, R04, R05, R06 e R07 concluídas em 30/10/2026. R08 é a próxima execução. Planejada originalmente em 30/10/2026 a pedido do proprietário, usando a análise SOLID fornecida como guia e inspeção do repositório atual. Não representa certificação de aplicação “100%” nem entrega de produção.
 
 - [ ] Slice concluída
 
@@ -35,7 +35,7 @@ R03–R08 estão detalhadas a partir dos achados A01–A13. Antes de executar ca
 | R07   | [Store offline](07-store-offline.md) — separar persistência, projeção e fila mantendo atomicidade e journal                     | R06                                              |
 | R08   | [Aceite integrado](08-aceite-integrado.md) — fechar matriz A01–A13, regressões e pendências com evidência                       | R07                                              |
 
-R01–R06 concluídas. R07–R08 detalhadas conforme o inventário A01–A13. O plano cobre os achados conhecidos da baseline e não equivale a garantia absoluta de ausência de defeitos.
+R01–R07 concluídas. R08 detalhada conforme o inventário A01–A13. O plano cobre os achados conhecidos da baseline e não equivale a garantia absoluta de ausência de defeitos.
 
 ## Invariantes obrigatórios
 
@@ -92,6 +92,7 @@ Atualização de dependência — 30/10/2026: Q05 e slice 08 concluídas com ace
 - [x] [R04 — Interfaces Workspaces](04-interfaces-workspaces.md): interfaces por capacidade, consumidores mínimos e verificador de fronteiras com cobertura de aliases/imports dinâmicos.
 - [x] [R05 — Domínio e orquestração de Issues](05-dominio-issues.md): policies puras extraídas, hash compartilhado com vetores de compatibilidade e integrações issues/parks aprovadas.
 - [x] [R06 — Frontend por feature](06-frontend-features.md): módulos e hook por feature; `pnpm check` e aceite manual Chrome/Edge confirmados pelo proprietário.
+- [x] [R07 — Store offline](07-store-offline.md): persistência/retenção, reconciliação e fila separadas, com facade e transação IndexedDB preservadas.
 
 30/10/2026 — R02 concluída: `pnpm check` (61 testes/builds), `pnpm test:issues-integration` e links passaram. Próxima: R03.
 
@@ -102,3 +103,5 @@ Atualização de dependência — 30/10/2026: Q05 e slice 08 concluídas com ace
 30/10/2026 — R05 concluída: `pnpm check` (76 testes/builds), integrações issues/parks aprovadas. Policies fora da orquestração SQL; hash canônico comum preservando vetores de receipt.
 
 30/10/2026 — R06 concluída: `pnpm check` (81 testes/builds) aprovado; proprietário confirmou validação funcional pós-refactor em Chrome/Edge, cargos e estados. Próxima: R07.
+
+30/10/2026 — R07 concluída: `pnpm check` (81 testes/builds) e provas offline (27 testes direcionados) passaram. Fachada, DB v2, export v1 e commit IndexedDB atômico preservados. Próxima: R08.

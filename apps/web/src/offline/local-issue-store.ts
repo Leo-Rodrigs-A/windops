@@ -1,10 +1,4 @@
-import {
-  createCollection,
-  createIndexedDB,
-  createTransaction,
-  type IndexedDBInstance,
-  indexedDBCollectionOptions,
-} from '@tanstack/db';
+import { createIndexedDB, type IndexedDBInstance } from '@tanstack/db';
 import {
   completeIssueSchema,
   createIssueSchema,
@@ -15,6 +9,42 @@ import {
   updateIssueSchema,
 } from '@windops/contracts';
 import { z } from 'zod';
+
+export type {
+  LocalCommandKind,
+  LocalCommandStatus,
+  LocalIssueCommand,
+  LocalIssueProjection,
+  ReplicaChange,
+  ReplicaCheckpoint,
+  ReplicaCollection,
+  ReplicaRow,
+  SyncedIssueRow,
+} from './local-issue-store/types.js';
+
+import {
+  createLocalCommand,
+  findRetryCommand,
+  listPendingCommands,
+} from './local-issue-store/command-queue';
+import { commitJournalRows, type LocalJournal, makeJournal } from './local-issue-store/persistence';
+import {
+  confirmCompletedIssueDeparture,
+  reconcileRemoteIssue,
+} from './local-issue-store/reconciliation';
+import type {
+  JournalRow,
+  LocalCommandKind,
+  LocalCommandStatus,
+  LocalIssueCommand,
+  LocalIssueProjection,
+  Partition,
+  ReplicaChange,
+  ReplicaCheckpoint,
+  ReplicaCollection,
+  ReplicaRow,
+  SyncedIssueRow,
+} from './local-issue-store/types.js';
 
 const DB_VERSION = 2;
 const JOURNAL_STORE = 'journal';
@@ -39,111 +69,6 @@ const commandSchemas = {
   complete: completeIssueSchema,
 };
 
-export type LocalCommandStatus =
-  | 'pending'
-  | 'sending'
-  | 'waiting_auth'
-  | 'waiting_eligibility'
-  | 'blocked'
-  | 'conflict'
-  | 'superseded'
-  | 'rejected'
-  | 'confirmed_waiting_replica'
-  | 'confirmed';
-export type LocalCommandKind = keyof typeof commandSchemas;
-
-export type ReplicaCollection = 'workspace' | 'parks' | 'turbines' | 'issues' | 'issue-events';
-
-export type SyncedIssueRow = {
-  id: string;
-  workspaceId: string;
-  parkId: string;
-  turbineId: string;
-  text: string;
-  completionReport: string | null;
-  archivedAt?: string | null;
-  status: Issue['status'];
-  createdAt: string;
-  updatedAt: string;
-  revision: number;
-};
-
-export type ReplicaRow = {
-  id: string;
-  workspaceId: string;
-  [key: string]: unknown;
-};
-
-export type ReplicaCheckpoint = {
-  collection: ReplicaCollection;
-  workspaceId: string;
-  offset: string;
-  handle: string | null;
-  snapshotComplete: boolean;
-  updatedAt: string;
-};
-
-export type ReplicaChange = {
-  operation: 'insert' | 'update' | 'delete';
-  id: string;
-  row?: ReplicaRow;
-};
-
-export type LocalIssueProjection = {
-  id: string;
-  workspaceId: string;
-  serverIssue: SyncedIssueRow | null;
-  local: {
-    parkId: string;
-    turbineId: string;
-    text: string;
-    status: Issue['status'] | 'local';
-    completionReport?: string | null;
-  };
-  serverRevision: number | null;
-  serverActive: boolean | null;
-  localRevision: number;
-  createdAt?: string;
-  updatedAt: string;
-  localIdentity?: {
-    creatorUserId: string | null;
-    creatorName: string | null;
-    handlerUserId: string | null;
-    handlerName: string | null;
-  };
-};
-
-export type LocalIssueCommand = {
-  id: string;
-  issueId: string;
-  chainId: string;
-  workspaceId: string;
-  kind: LocalCommandKind;
-  payload: unknown;
-  status: LocalCommandStatus;
-  dependsOn: string | null;
-  baseServerRevision: number | null;
-  createdAt: string;
-  attemptedAt: string | null;
-  frozenPayload: unknown | null;
-  blockReason: string | null;
-  baseServerIssue?: SyncedIssueRow | null;
-  acknowledgedIssue?: SyncedIssueRow | null;
-};
-
-type JournalRow =
-  | { id: string; kind: 'issue'; value: LocalIssueProjection }
-  | { id: string; kind: 'command'; value: LocalIssueCommand }
-  | {
-      id: string;
-      kind: 'replica';
-      value: { collection: ReplicaCollection; row: ReplicaRow; active: boolean; cachedAt: string };
-    }
-  | { id: string; kind: 'checkpoint'; value: ReplicaCheckpoint }
-  | { id: string; kind: 'revision'; value: { revision: number } };
-
-type Partition = { accountId: string; workspaceId: string };
-
 export function localIssueDatabaseName(partition: Partition) {
   return `windops-local-v1-${partition.accountId}-${partition.workspaceId}`;
 }
@@ -152,39 +77,12 @@ function validatePartition(partition: Partition): Partition {
   return z.object({ accountId: z.uuid(), workspaceId: z.uuid() }).strict().parse(partition);
 }
 
-function sameSyncedIssue(left: SyncedIssueRow | null, right: SyncedIssueRow) {
-  return Boolean(
-    left &&
-      left.id === right.id &&
-      left.workspaceId === right.workspaceId &&
-      left.parkId === right.parkId &&
-      left.turbineId === right.turbineId &&
-      left.text === right.text &&
-      left.completionReport === right.completionReport &&
-      left.status === right.status &&
-      (left.archivedAt ?? null) === (right.archivedAt ?? null) &&
-      left.createdAt === right.createdAt &&
-      left.updatedAt === right.updatedAt &&
-      left.revision === right.revision,
-  );
-}
-
-function makeJournal(db: IndexedDBInstance) {
-  return createCollection(
-    indexedDBCollectionOptions<JournalRow>({
-      db,
-      name: JOURNAL_STORE,
-      getKey: (row) => row.id,
-    }),
-  );
-}
-
 export class LocalIssueStore {
   private readonly listeners = new Set<() => void>();
   private constructor(
     readonly partition: Partition,
     private readonly db: IndexedDBInstance,
-    private readonly journal: ReturnType<typeof makeJournal>,
+    private readonly journal: LocalJournal,
   ) {}
 
   static async open(partitionInput: Partition, idbFactory?: IDBFactory): Promise<LocalIssueStore> {
@@ -789,137 +687,17 @@ export class LocalIssueStore {
   private reconcileRemoteIssue(id: string, remote: SyncedIssueRow): JournalRow[] {
     const current = this.getIssue(id);
     const retained = this.journal.get(`revision:${id}`);
-    if (!current && retained?.kind === 'revision' && remote.revision < retained.value.revision)
-      return [];
-    if (!current) {
-      return [
-        {
-          id: `issue:${id}`,
-          kind: 'issue',
-          value: {
-            id,
-            workspaceId: remote.workspaceId,
-            serverIssue: remote,
-            local: {
-              parkId: remote.parkId,
-              turbineId: remote.turbineId,
-              text: remote.text,
-              status: remote.status,
-            },
-            serverRevision: remote.revision,
-            serverActive: !remote.archivedAt && remote.status !== 'completed',
-            createdAt: remote.createdAt,
-            localRevision: 0,
-            updatedAt: remote.updatedAt,
-          },
-        },
-      ];
-    }
-    if (Math.max(current.serverRevision ?? 0, current.serverIssue?.revision ?? 0) > remote.revision)
-      return [];
-    if (
-      current.serverActive === false &&
-      remote.revision <= (current.serverRevision ?? 0) &&
-      !remote.archivedAt
-    )
-      return [];
-    if ((current.serverRevision ?? 0) === remote.revision && current.serverActive) {
-      const issueCommands = this.listPendingCommands().filter((command) => command.issueId === id);
-      if (sameSyncedIssue(current.serverIssue, remote)) return [];
-      return [
-        {
-          id: `issue:${id}`,
-          kind: 'issue',
-          value: {
-            ...current,
-            serverIssue: remote,
-            serverActive: !remote.archivedAt && remote.status !== 'completed',
-            createdAt: current.createdAt ?? remote.createdAt,
-            ...(issueCommands.length === 0
-              ? {
-                  local: {
-                    parkId: remote.parkId,
-                    turbineId: remote.turbineId,
-                    text: remote.text,
-                    status: remote.status,
-                  },
-                }
-              : {}),
-          },
-        },
-      ];
-    }
-
-    const pending = this.listPendingCommands().filter((command) => command.issueId === id);
-    const rows: JournalRow[] = [];
-    const unresolved: LocalIssueCommand[] = [];
-    for (const command of pending) {
-      if (
-        command.status === 'confirmed_waiting_replica' &&
-        command.acknowledgedIssue &&
-        remote.revision >= command.acknowledgedIssue.revision
-      ) {
-        rows.push({
-          id: `command:${command.id}`,
-          kind: 'command',
-          value: { ...command, status: 'confirmed', blockReason: null },
-        });
-      } else unresolved.push(command);
-    }
-
-    const awaitingResponse = unresolved.some(
-      (command) => command.attemptedAt !== null && command.frozenPayload !== null,
-    );
-    if (unresolved.length > 0 && !awaitingResponse) {
-      for (const command of unresolved) {
-        rows.push({
-          id: `command:${command.id}`,
-          kind: 'command',
-          value: {
-            ...command,
-            status: 'conflict',
-            blockReason: 'O servidor avançou a revisão antes da confirmação desta intenção.',
-          },
-        });
-      }
-    }
-    rows.push({
-      id: `issue:${id}`,
-      kind: 'issue',
-      value: {
-        ...current,
-        serverIssue: remote,
-        serverRevision: remote.revision,
-        serverActive: !remote.archivedAt && remote.status !== 'completed',
-        createdAt: current.createdAt ?? remote.createdAt,
-        ...(unresolved.length === 0
-          ? {
-              local: {
-                parkId: remote.parkId,
-                turbineId: remote.turbineId,
-                text: remote.text,
-                status: remote.status,
-              },
-            }
-          : {}),
-      },
+    return reconcileRemoteIssue({
+      id,
+      remote,
+      current,
+      retainedRevision: retained?.kind === 'revision' ? retained.value.revision : undefined,
+      pendingCommands: this.listPendingCommands().filter((command) => command.issueId === id),
     });
-    return rows;
   }
 
   private confirmCompletedIssueDeparture(issueId: string): JournalRow[] {
-    return this.listPendingCommands()
-      .filter(
-        (command) =>
-          command.issueId === issueId &&
-          command.status === 'confirmed_waiting_replica' &&
-          command.acknowledgedIssue?.status === 'completed',
-      )
-      .map((command) => ({
-        id: `command:${command.id}`,
-        kind: 'command' as const,
-        value: { ...command, status: 'confirmed' as const, blockReason: null },
-      }));
+    return confirmCompletedIssueDeparture(issueId, this.listPendingCommands());
   }
 
   async recordCommandAck(commandId: string, issue: SyncedIssueRow) {
@@ -971,11 +749,7 @@ export class LocalIssueStore {
   }
 
   listPendingCommands() {
-    return [...this.journal.values()]
-      .flatMap((row) => (row.kind === 'command' ? [row.value] : []))
-      .filter((command) => command.status !== 'confirmed' && command.status !== 'superseded')
-      .map((command) => ({ ...command, chainId: command.chainId ?? command.issueId }))
-      .sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+    return listPendingCommands(this.journal.values());
   }
 
   async recoverInterruptedSends() {
@@ -1076,16 +850,7 @@ export class LocalIssueStore {
   }
 
   private retryFor(id: string, issueId: string, kind: LocalCommandKind, payload: unknown) {
-    const existing = this.getCommand(id);
-    if (!existing) return undefined;
-    if (
-      existing.issueId !== issueId ||
-      existing.kind !== kind ||
-      JSON.stringify(existing.payload) !== JSON.stringify(payload)
-    ) {
-      throw new Error('A chave local deste comando já está associada a outro conteúdo.');
-    }
-    return existing;
+    return findRetryCommand(this.getCommand(id), issueId, kind, payload);
   }
 
   private newCommand(
@@ -1096,93 +861,19 @@ export class LocalIssueStore {
     dependsOn: string | null,
     baseServerRevision: number | null,
   ): LocalIssueCommand {
-    return {
+    return createLocalCommand(
       id,
       issueId,
-      chainId: issueId,
-      workspaceId: this.partition.workspaceId,
+      this.partition.workspaceId,
       kind,
       payload,
-      status: 'pending',
       dependsOn,
       baseServerRevision,
-      createdAt: new Date().toISOString(),
-      attemptedAt: null,
-      frozenPayload: null,
-      blockReason: null,
-    };
+    );
   }
 
   private async commitRows(rows: JournalRow[], removedIds: string[] = []) {
-    const next = new Map<string, JournalRow>(
-      [...this.journal.values()].map((row) => [row.id, row]),
-    );
-    for (const id of removedIds) next.delete(id);
-    for (const row of rows) next.set(row.id, row);
-    const protectedIds = new Set(
-      [...next.values()].flatMap((row) =>
-        row.kind === 'command' && !['confirmed', 'superseded'].includes(row.value.status)
-          ? [row.value.issueId]
-          : [],
-      ),
-    );
-    const evicted = new Set(removedIds);
-    const inactive = [...next.values()]
-      .filter(
-        (row): row is Extract<JournalRow, { kind: 'issue' }> =>
-          row.kind === 'issue' &&
-          row.value.serverActive === false &&
-          !protectedIds.has(row.value.id),
-      )
-      .sort(
-        (a, b) =>
-          (b.value.serverIssue?.updatedAt ?? b.value.updatedAt).localeCompare(
-            a.value.serverIssue?.updatedAt ?? a.value.updatedAt,
-          ) || b.id.localeCompare(a.id),
-      );
-    for (const row of inactive.slice(250)) {
-      evicted.add(row.id);
-      const revision: JournalRow = {
-        id: `revision:${row.value.id}`,
-        kind: 'revision',
-        value: {
-          revision: Math.max(row.value.serverRevision ?? 0, row.value.serverIssue?.revision ?? 0),
-        },
-      };
-      rows.push(revision);
-      evicted.add(`replica:issues:${row.value.id}`);
-    }
-    const events = [...next.values()]
-      .filter(
-        (row): row is Extract<JournalRow, { kind: 'replica' }> =>
-          row.kind === 'replica' &&
-          row.value.collection === 'issue-events' &&
-          !row.value.active &&
-          !protectedIds.has(String(row.value.row.issueId)),
-      )
-      .sort(
-        (a, b) =>
-          String(b.value.row.occurredAt ?? b.value.cachedAt).localeCompare(
-            String(a.value.row.occurredAt ?? a.value.cachedAt),
-          ) || b.id.localeCompare(a.id),
-      );
-    for (const row of events.slice(1000)) evicted.add(row.id);
-    removedIds = [...evicted];
-    rows = rows.filter((row) => !evicted.has(row.id));
-    const tx = createTransaction({
-      autoCommit: false,
-      mutationFn: async ({ transaction }) => this.journal.utils.acceptMutations(transaction),
-    });
-    tx.mutate(() => {
-      for (const id of removedIds) if (this.journal.get(id)) this.journal.delete(id);
-      for (const row of rows) {
-        if (this.journal.get(row.id))
-          this.journal.update(row.id, (draft) => Object.assign(draft, row));
-        else this.journal.insert(row);
-      }
-    });
-    await tx.commit();
-    for (const listener of this.listeners) listener();
+    await commitJournalRows({ journal: this.journal, listeners: this.listeners, rows, removedIds });
   }
 }
 
