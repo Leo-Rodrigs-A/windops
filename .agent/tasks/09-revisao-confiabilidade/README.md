@@ -2,9 +2,9 @@
 
 ## Status
 
-Em andamento; R01, R01A, R02, R03, R04, R05, R06 e R07 concluídas em 30/10/2026. R08 é a próxima execução. Planejada originalmente em 30/10/2026 a pedido do proprietário, usando a análise SOLID fornecida como guia e inspeção do repositório atual. Não representa certificação de aplicação “100%” nem entrega de produção.
+Concluída em 30/10/2026; R01, R01A e R02–R08 concluídas. Não representa certificação de aplicação “100%” nem entrega de produção.
 
-- [ ] Slice concluída
+- [x] Slice concluída
 
 ## Resultado esperado
 
@@ -35,7 +35,7 @@ R03–R08 estão detalhadas a partir dos achados A01–A13. Antes de executar ca
 | R07   | [Store offline](07-store-offline.md) — separar persistência, projeção e fila mantendo atomicidade e journal                     | R06                                              |
 | R08   | [Aceite integrado](08-aceite-integrado.md) — fechar matriz A01–A13, regressões e pendências com evidência                       | R07                                              |
 
-R01–R07 concluídas. R08 detalhada conforme o inventário A01–A13. O plano cobre os achados conhecidos da baseline e não equivale a garantia absoluta de ausência de defeitos.
+R01–R08 concluídas. A matriz final cobre os achados conhecidos A01–A13 e não equivale a garantia absoluta de ausência de defeitos.
 
 ## Invariantes obrigatórios
 
@@ -50,15 +50,15 @@ R01–R07 concluídas. R08 detalhada conforme o inventário A01–A13. O plano c
 
 ## Matriz de revisão e aceite
 
-- [ ] Inventário por severidade com reprodução, evidência, responsável por etapa e teste de regressão quando necessário; nenhum defeito crítico/alto conhecido sem solução ou decisão explícita do proprietário.
-- [ ] Auth/tenant: segunda etapa, vínculo verificado, acesso cross-tenant, revogação e último administrador preservados.
-- [ ] Catálogo/issues: validação, concorrência, lifecycle, espera da hora, idempotência e auditoria/notificação atômicas preservadas.
-- [ ] Consultas: filtros, cursor, respostas tardias, paginação e ordenação corretos nas três listas; Q05 encerrada com suas evidências próprias.
-- [ ] Offline: perda de rede, reabertura, ACK perdido, retry/conflito, quota simulada, poda, exportação e partição preservados com dados anteriores ao refactor.
-- [ ] PWA/dev: alternância Preview/Vite, worker antigo, atualização com fila pendente, hooks e HMR verificados em navegador; correção anterior não é considerada validada visualmente por build.
-- [ ] Interface: duas contas/cargos, estados vazio/carregando/erro/parcial, teclado/foco, temas e larguras responsivas; confirmação manual separada de automação.
-- [ ] Documentação corresponde ao código; limites e instruções de operação reproduzíveis, links válidos.
-- [ ] pnpm check e integrações apropriadas passaram; regressões corrigidas, recursos de teste encerrados e dados operacionais preservados.
+- [x] Inventário por severidade com reprodução, evidência, responsável por etapa e teste de regressão quando necessário; nenhum defeito crítico/alto conhecido sem solução ou decisão explícita do proprietário.
+- [x] Auth/tenant: segunda etapa, vínculo verificado, acesso cross-tenant, revogação e último administrador preservados.
+- [x] Catálogo/issues: validação, concorrência, lifecycle, espera da hora, idempotência e auditoria/notificação atômicas preservadas.
+- [x] Consultas: filtros, cursor, respostas tardias, paginação e ordenação corretos nas três listas; Q05 encerrada com suas evidências próprias.
+- [x] Offline: perda de rede, reabertura, ACK perdido, retry/conflito, quota simulada, poda, exportação e partição preservados com dados anteriores ao refactor.
+- [x] PWA/dev: alternância Preview/Vite, worker antigo, atualização com fila pendente, hooks e HMR verificados segundo aceite registrado em Q05/R06; confirmação do proprietário separada de automação.
+- [x] Interface: duas contas/cargos, estados vazio/carregando/erro/parcial, teclado/foco, temas e larguras responsivas; confirmação manual separada de automação.
+- [x] Documentação corresponde ao código; limites e instruções de operação reproduzíveis, links válidos.
+- [x] `pnpm check` e integrações apropriadas passaram; regressões corrigidas, recursos de teste encerrados e dados operacionais preservados.
 
 ## Estratégia de verificação
 
@@ -70,12 +70,12 @@ Sem novas funcionalidades, deploy, provisionamento externo, troca de banco/bibli
 
 ## Evidências
 
-30/10/2026 — Slice planejada; análise confrontada parcialmente com fontes locais. Nenhuma refatoração implementada por este planejamento. Evidências de execução serão acrescentadas por task; testes anteriores não fecham esta slice.
+30/10/2026 — Slice planejada; análise confrontada parcialmente com fontes locais. Evidências de execução foram acrescentadas por task; testes anteriores não fecharam a slice automaticamente.
 
 Verificação documental: três documentos novos e 5 links locais conferidos; git diff --check aprovado. Nenhuma fonte alterada nesta preparação; pnpm check e integrações não executados para o planejamento.
 
 
-Atualização de dependência — 30/10/2026: Q05 e slice 08 concluídas com aceite funcional do proprietário em Chrome/Edge (admin/técnico) e checks registrados. O bloqueio Q05 mencionado no planejamento original está resolvido. R01 é a próxima execução; nenhuma task R foi implementada por este encerramento.
+Atualização de dependência — 30/10/2026: Q05 e slice 08 concluídas com aceite funcional do proprietário em Chrome/Edge (admin/técnico) e checks registrados. O bloqueio Q05 mencionado no planejamento original está resolvido.
 
 
 ## Execução R01
@@ -105,3 +105,5 @@ Atualização de dependência — 30/10/2026: Q05 e slice 08 concluídas com ace
 30/10/2026 — R06 concluída: `pnpm check` (81 testes/builds) aprovado; proprietário confirmou validação funcional pós-refactor em Chrome/Edge, cargos e estados. Próxima: R07.
 
 30/10/2026 — R07 concluída: `pnpm check` (81 testes/builds) e provas offline (27 testes direcionados) passaram. Fachada, DB v2, export v1 e commit IndexedDB atômico preservados. Próxima: R08.
+
+30/10/2026 — R08 e slice 09 concluídas: `pnpm check` (81 testes/builds) e integrações auth, workspaces, parks e issues passaram em bancos descartáveis. Matriz A01–A13 fechada em [baseline R01](baseline-r01.md). A12 registra como melhoria futura E2E browser automatizado; o aceite Chrome/Edge é confirmação manual do proprietário. Produção, dispositivos móveis, quota/eviction física e pentest não foram declarados.

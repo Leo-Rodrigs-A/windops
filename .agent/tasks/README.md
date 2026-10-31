@@ -8,15 +8,15 @@ Cada nova slice fica em uma pasta `NN-nome/`, com um `README.md` que define resu
 
 ## Próxima slice preparada
 
-- [ ] [09 — Revisão técnica e confiabilidade](09-revisao-confiabilidade/README.md): auditoria e refactors graduais. Q05 e R01–R07 concluídas; R08 é a próxima execução.
-
 - [ ] [10 — Cadastro e identidade](10-cadastro-identidade/README.md): O01–O03 implementadas; O04 aguarda ensaio manual do fluxo email/Google no browser.
 
-## Última slice concluída
+## Slices concluídas mais recentes
+
+- [x] [09 — Revisão técnica e confiabilidade](09-revisao-confiabilidade/README.md): R01–R08 concluídas; matriz A01–A13 fechada com evidências e limites registrados.
 
 - [x] [08 — Filtros e histórico de consulta](08-consultas-historico/README.md): filtros P/T nas três listas, paginação por demanda, projeção e retenção segura de histórico.
 
-Próxima execução: [R08 — Aceite integrado](09-revisao-confiabilidade/08-aceite-integrado.md). R01A removeu query e fragmento dos logs automáticos; R02 atualizou documentação e tornou explícita a composição de auditoria/notificações; R03 centralizou transações em issues/parks e classificou erros por constraint; R04 segregou interfaces de workspaces e fortaleceu as fronteiras de módulos; R05 extraiu policies de Issues e preservou receipts; R06 separou módulos e rotas por feature com aceite manual confirmado; R07 separou a persistência, reconciliação e fila offline mantendo a transação. Consulte o índice da slice 09 para o plano R08.
+Última slice concluída: [09 — Revisão técnica e confiabilidade](09-revisao-confiabilidade/README.md). R01A removeu query e fragmento dos logs automáticos; R02 atualizou documentação e tornou explícita a composição de auditoria/notificações; R03 centralizou transações em issues/parks e classificou erros por constraint; R04 segregou interfaces de workspaces e fortaleceu as fronteiras de módulos; R05 extraiu policies de Issues e preservou receipts; R06 separou módulos e rotas por feature com aceite manual confirmado; R07 separou a persistência, reconciliação e fila offline mantendo a transação; R08 revalidou os fluxos e fechou a matriz A01–A13. Limites de produção continuam explícitos.
 
 - [x] [07 — Campainha e Web Push](07-notificacoes/README.md): N01–N06 concluídas em 28/10/2026; outbox, campainha, worker, interface/PWA, push real confirmado pelo proprietário e validação integrada. Android/iPhone instalados e produção permanecem no roadmap 11.
 

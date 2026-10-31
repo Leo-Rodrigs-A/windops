@@ -84,3 +84,23 @@ Segredos operacionais não foram lidos/impressos. A01 foi resolvido na R01A com 
 ## Recomendações da análise externa reavaliadas
 
 Aceitar extração gradual de transações, interfaces menores, frontend por feature, injeção explícita e atualização documental. Qualificar tabela de transições/repositories: extrair onde esclarece regras, sem substituir PostgreSQL ou locks por fakes. Manter composição explícita app.ts, sem registro dinâmico de módulos. SOLID/Liskov não exige criar herança. Corrigir contagens do zip: interface workspace tem 12 métodos e há 15 BEGIN no recorte atual; números são inventário, não meta. Repositórios podem depender de PoolClient para manter fronteiras atômicas. Prioridade revisada: R01A → R02 → R03–R08; R03 será detalhada após R02 conforme convenção.
+
+## Fechamento R08 da matriz A01–A13 — 30/10/2026
+
+| ID | Estado final | Evidência de correção/aceite |
+| --- | --- | --- |
+| A01 | Corrigido em R01A | `apps/api/src/app.test.ts`; `pnpm test:auth-integration` nesta R08 passou. O logger remove query/fragmento e mantém path/requestId; teste usa marcadores sintéticos. Logs históricos não foram varridos. |
+| A02 | Corrigido em R02 | README, `.agent/architecture.md` e `.agent/memory.md` atualizados; `.agent/architeture.md` é ponte explícita. Setup/estado atual e limites de produção estão separados do histórico. |
+| A03 | Corrigido em R02 | `NotificationsService` injetado explicitamente em auditoria; integração de issues passou em R08 com audit/outbox transacional. |
+| A04 | Corrigido conforme escopo em R03 | Executor PostgreSQL comum para issues/parks e testes de `platform/database/transaction.test.ts`; integrações issues, parks e workspaces desta R08 passaram. Workspaces, identity e notifications mantêm transações próprias inventariadas por protocolos distintos. |
+| A05 | Corrigido em R03 | Mapeamento de constraints limitado a SQLSTATE/nome conhecidos; typecheck, testes e integrações issues/parks/workspaces passaram. Erros desconhecidos continuam internos. |
+| A06 | Corrigido em R04 | Interfaces por capacidade e facade pública preservada; `scripts/check-boundaries.test.mjs` e integração workspaces passaram. |
+| A07 | Corrigido em R05 | Policies puras em `issues/domain.ts`, cobertas por `domain.test.ts`; integração issues validou transições, autorização, hora, lifecycle e corridas. |
+| A08 | Corrigido em R05 | Hash canônico compartilhado com vetores dourados; integração issues/parks validou recibos e idempotência. Sem mudança de normalização/contrato. |
+| A09 | Corrigido em R03 | Helper de resposta de acesso comum; testes da API e integrações issues/parks passaram sem alteração dos códigos HTTP públicos. |
+| A10 | Corrigido em R06 | Features/hooks e rotas lazy separados; `pnpm check` passou em R08. Aceite Chrome/Edge pós-refactor reportado pelo proprietário em R06/Q05; não foi observação direta nesta execução. |
+| A11 | Corrigido em R07 | Facade, journal v2/export v1 e commit atômico preservados; 27 testes offline direcionados passaram após a extração. Quota e eviction físicas seguem não comprovadas. |
+| A12 | Mitigado com limite explícito | `pnpm check` passou com 81 testes; quatro integrações PostgreSQL passaram; R03–R07 acrescentaram testes de transação, domínio, fronteira, projeção/fila e retenção. Browser real foi validado pelo proprietário em Chrome/Edge, porém o repo não possui Playwright/E2E automatizado. Automação real fica como melhoria futura, sem defeito funcional conhecido em aberto; nenhuma certificação de acessibilidade é alegada. |
+| A13 | Corrigido em R04 | Scanner de fronteiras resolve aliases e imports estáticos/dinâmicos/type-only/require; testes positivos/negativos passaram no `pnpm check` de R08. |
+
+As integrações de auth, workspaces, parks e issues executadas em R08 usaram bancos descartáveis e scripts com remoção em `finally`; todas terminaram com sucesso. Os cenários negativos de bootstrap e a advertência de usuário ausente em recuperação de senha foram resultados esperados, não falhas da suíte. A integração Google usa provider simulado; não foi executado OAuth real, inspeção de produção, scanner de histórico Git ou pentest. A confirmação funcional Chrome/Edge é do proprietário. Quota física, eviction real, aparelhos móveis e HTTPS de produção seguem no roadmap 11.
