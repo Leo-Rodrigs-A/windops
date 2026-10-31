@@ -2,9 +2,9 @@
 
 ## Status
 
-Planejada; depende de R05.
+- Concluída em 30/10/2026; aceite manual Chrome/Edge confirmado pelo proprietário.
 
-- [ ] Task concluída
+- [x] Task concluída
 
 ## Objetivo
 
@@ -26,13 +26,13 @@ R05 concluída; Q05 concluída. Usar comportamento existente como baseline.
 
 ## Plano
 
-- [ ] Mapear cada rota/componente, estado, query/cache, mutation, permissão e navegação de teclado antes da extração.
-- [ ] Extrair por fluxo pequeno: consultas, ações/hooks e componentes de apresentação, preservando loaders/guards e fronteiras API.
-- [ ] Migrar issues primeiro; depois equipe e parques com diffs independentes e builds intermediários.
-- [ ] Preservar geração contra respostas tardias, cursor/filtros, offline/parcial, foco, tema, responsividade e acessibilidade existentes.
-- [ ] Ampliar testes de unidade/harness somente onde comportamento mudou de fronteira; evitar teste que espelha implementação.
-- [ ] Executar `pnpm check` e validar browser Chrome/Edge, cargos e estados; registrar o que foi automatizado e o que foi aceito manualmente.
-- [ ] Atualizar mapa de módulos e detalhar R07 com dependências de LocalIssueStore.
+- [x] Mapear cada rota/componente, estado, query/cache, mutation, permissão e navegação de teclado antes da extração.
+- [x] Extrair por fluxo pequeno: consultas, ações/hooks e componentes de apresentação, preservando loaders/guards e fronteiras API.
+- [x] Migrar issues primeiro; depois equipe e parques com diffs independentes e builds intermediários.
+- [x] Preservar geração contra respostas tardias, cursor/filtros, offline/parcial, foco, tema, responsividade e acessibilidade existentes.
+- [x] Ampliar testes de unidade/harness somente onde comportamento mudou de fronteira; evitar teste que espelha implementação.
+- [x] Executar `pnpm check` e validar browser Chrome/Edge, cargos e estados; registrar o que foi automatizado e o que foi aceito manualmente.
+- [x] Atualizar mapa de módulos e detalhar R07 com dependências de LocalIssueStore.
 
 ## Contratos e dados afetados
 
@@ -44,4 +44,8 @@ Rotas e ações iguais antes/depois; estados de loading/erro/parcial/offline pre
 
 ## Evidências
 
-Plano criado para A10/A12; implementação não iniciada.
+30/10/2026 — Refatoração por feature entregue. `issues-pages.tsx` agora é facade de compatibilidade; `main.tsx` carrega chunks por lista, detalhe, histórico, conta, equipe e parques. `features/issues` reúne `issue-list-pages`, detalhe, histórico, conta, `components` e `model`; projeções offline e snapshots ficam no model, componentes de filtros/lista/eventos ficam isolados. `TeamManagementPage` migrou para `features/workspaces`; catálogo de parques migrou para `features/parks` e o hook `useParksCatalog` concentra carregamento paginado, cache/fallback offline, debounce e invalidação por geração.
+
+O estado compartilhado permanece no `AuthProvider` e `OfflineWorkspaceProvider`; mutations continuam nos clients `lib/issues-api.ts`/`lib/workspace-api.ts`. Filtros/cursors continuam locais à página e a store/journal continua a fonte dos comandos pendentes. Nenhuma API, permissão, layout, tecla, theme token ou persistência foi alterada. Testes de view model cobrem projeção de edição pendente, resolução de labels do catálogo, sequência de códigos e mensagens de erro. `pnpm check` passou com 81 testes, lint/boundaries, typechecks e builds; o build produz chunks lazy separados por rota.
+
+Aceite manual pós-refactor: o proprietário confirmou que validou os fluxos e que tudo está funcionando. Registro como validação do proprietário; não como observação direta do agente. Sem mudança em layout ou comportamento intencional.

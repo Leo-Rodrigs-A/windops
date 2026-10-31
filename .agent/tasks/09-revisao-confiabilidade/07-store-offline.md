@@ -18,6 +18,8 @@ Mapear `LocalIssueStore` em persistência, projeções/reconciliação e fila/co
 
 Baseline A11/A12 descreve store com cerca de 1.210 linhas e `commitRows` combinando projeção e retenção transacional. Já existem provas IndexedDB, tests de quota, retry, conflito e exportação.
 
+Consumidores da store após R06: `features/issues/issue-list-pages.tsx`, `issue-detail-page.tsx` e `issue-history-page.tsx` leem projeções/replicas e comandos; `features/issues/model.ts` monta a projeção para a interface; `features/parks/use-parks-catalog.ts` valida e lê réplicas de parks/turbines. `OfflineWorkspaceProvider` continua dono do lifecycle e facade compartilhada. Preservar assinaturas públicas desses callers enquanto a store for extraída; não mover comandos ou estado entre conta/workspace.
+
 ## Dependências
 
 R06 concluída; regressão atual de Q03/S09 como baseline.

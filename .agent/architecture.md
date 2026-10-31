@@ -69,6 +69,8 @@ R04 divide a API interna de workspaces em interfaces de identidade, autorizaçã
 
 R05 separa decisões puras de transição/lifecycle em `issues/domain.ts`; SQL continua coordenando autorização tenant, ordem de locks, receipts, audit e atualização na mesma transação. Issues e Parks compartilham `platform/idempotency/command-hash.ts`; vetores dourados fixam compatibilidade dos payload hashes persistidos. `clock_timestamp()` segue no PostgreSQL como autoridade para elegibilidade temporal.
 
+R06 organiza a UI em módulos de feature e rotas lazy por lista/detalhe/histórico/conta, equipe e parques. `AuthProvider` e `OfflineWorkspaceProvider` seguem como estado compartilhado; consultas de catálogo usam `useParksCatalog`, mantendo cache replica e proteção contra respostas atrasadas. `pages/issues-pages.tsx` e `pages/parks-page.tsx` preservam reexports legados. A extração não altera contratos, autorização ou layout; proprietário confirmou o aceite funcional pós-refactor em Chrome/Edge.
+
 Leitura: Electric -> proxy Fastify autenticado -> coleção local. O servidor escolhe tabela, filtro de workspace e campos permitidos; nunca encaminhar table/where arbitrários. Segredo Electric nunca chega ao navegador.
 
 Cache obrigatório: issues Pendentes/Em andamento, histórico dessas issues e cadastros necessários. Concluídas são consultadas online ou pelo cache já existente. A conclusão criada offline permanece local, com relato editável somente enquanto offline e antes do envio. Preservar registros e dependências com comandos pendentes, mesmo que saiam de um shape de issues abertas.

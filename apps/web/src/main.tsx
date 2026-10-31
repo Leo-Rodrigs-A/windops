@@ -29,7 +29,6 @@ function RootLayout() {
 const rootRoute = createRootRoute({ component: RootLayout });
 const accessPages = () => import('./pages/access-pages');
 const workspacePages = () => import('./pages/workspace-pages');
-const issuePages = () => import('./pages/issues-pages');
 const indexRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/',
@@ -83,37 +82,58 @@ const noWorkspaceRoute = createRoute({
 const appRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/app',
-  component: lazyRouteComponent(issuePages, 'WorkspaceHomePage'),
+  component: lazyRouteComponent(
+    () => import('./features/issues/issue-list-pages'),
+    'WorkspaceHomePage',
+  ),
 });
 const issueDetailRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/chamados/$issueId',
-  component: lazyRouteComponent(issuePages, 'IssueDetailPage'),
+  component: lazyRouteComponent(
+    () => import('./features/issues/issue-detail-page'),
+    'IssueDetailPage',
+  ),
 });
 const issueHistoryRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/historico',
-  component: lazyRouteComponent(issuePages, 'IssueHistoryPage'),
+  component: lazyRouteComponent(
+    () => import('./features/issues/issue-history-page'),
+    'IssueHistoryPage',
+  ),
 });
 const archivedIssuesRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/arquivados',
-  component: lazyRouteComponent(issuePages, 'ArchivedIssuesPage'),
+  component: lazyRouteComponent(
+    () => import('./features/issues/issue-list-pages'),
+    'ArchivedIssuesPage',
+  ),
 });
 const accountRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/conta',
-  component: lazyRouteComponent(issuePages, 'AccountSettingsPage'),
+  component: lazyRouteComponent(
+    () => import('./features/issues/account-settings-page'),
+    'AccountSettingsPage',
+  ),
 });
 const teamRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/equipe',
-  component: lazyRouteComponent(workspacePages, 'TeamManagementPage'),
+  component: lazyRouteComponent(
+    () => import('./features/workspaces/team-management-page'),
+    'TeamManagementPage',
+  ),
 });
 const parksRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/parques',
-  component: lazyRouteComponent(() => import('./pages/parks-page'), 'ParksCatalogPage'),
+  component: lazyRouteComponent(
+    () => import('./features/parks/parks-catalog-page'),
+    'ParksCatalogPage',
+  ),
 });
 const invitationAcceptRoute = createRoute({
   getParentRoute: () => rootRoute,
