@@ -2,17 +2,17 @@
 
 ## Status
 
-Planejada em 30/10/2026, a pedido do proprietário. Próxima tarefa: D01.
+Em andamento. D01 concluída em 31/10/2026; próxima tarefa: D02 — escolha da hospedagem.
 
 - [ ] Slice concluída
 
 ## Resultado esperado
 
-Wind Ops disponível em HTTPS para o piloto, com desenvolvimento reproduzível, implantação rastreável, recuperação exercitada e manual que permita ao desenvolvedor trabalhar e operar a aplicação. A primeira entrega é atualizar o README; este planejamento não executa essa atualização nem implanta o app.
+Wind Ops disponível em HTTPS para o piloto, com desenvolvimento reproduzível, implantação rastreável, recuperação exercitada e manual que permita ao desenvolvedor trabalhar e operar a aplicação. D01 entregou o README e o guia de produção, com setup local ensaiado. Implantação remota continua nas próximas tarefas.
 
 ## Base existente e lacunas
 
-Slices 01–09 entregaram produto e revisão no escopo documentado. A slice 10 tem cadastro implementado; o proprietário confirmou nesta conversa o funcionamento do Google. Os demais itens de aceite da O04 permanecem conforme seu checklist, sem presumir confirmação de e-mail/conta existente.
+Slices 01–09 entregaram produto e revisão no escopo documentado. A slice 10 está concluída: O04 encerrada por aceite do proprietário em 31/10/2026, com validações automatizadas já registradas e Google real confirmado. Não houve novo ensaio manual pelo agente.
 
 Há Dockerfiles API/web, Compose de produção, Caddy, CI, GHCR/deploy por SHA, migrações, roles locais e scripts SSH restritos. Esses arquivos são ponto de partida: produção/Neon, execução remota dos workflows, restore no destino, alertas e validação móvel ainda precisam de evidências. O exemplo de ambiente contém comentários antigos e a CI não chama explicitamente parks/issues. A ordem de provisionamento inicial de roles/schema/publicação/Electric precisa ser ensaiada.
 
@@ -28,20 +28,20 @@ Há Dockerfiles API/web, Compose de produção, Caddy, CI, GHCR/deploy por SHA, 
 
 ## Ordem e responsabilidades
 
-| Task | Entrega | Responsável | Dependências |
-| --- | --- | --- | --- |
-| [ ] [D01](01-readme-manual.md) | README como manual do desenvolvedor | Codex | Nenhuma; primeira tarefa da slice. |
-| [ ] [D02](02-escolha-hospedagem.md) | Escolher hospedagem e parâmetros do piloto | Proprietário decide; Codex prepara comparação | D01. |
-| [ ] [D03](03-preparacao-app.md) | Preparar aplicação e artefatos de produção | Codex | D01; D02 para adaptações específicas do destino. |
-| [ ] [D04](04-contas-acessos.md) | Criar ambientes, contas e fornecer acessos | Proprietário; Codex fornece instruções e confere | D02; pode ocorrer junto de D03. |
-| [ ] [D05](05-infra-banco.md) | Provisionar runtime, banco e rede | Codex; proprietário executa ações de console sem acesso delegado | D03 e D04. |
-| [ ] [D06](06-ci-cd.md) | Validar fluxo de entrega e deploy | Codex; proprietário configura restrições do GitHub quando necessário | D03; D04/D05 para execução remota. |
-| [ ] [D07](07-operacao-recuperacao.md) | Backups, recuperação e monitoramento | Codex; proprietário confirma metas e recebe alertas | D05 e D06 para ensaiar recuperação de release. |
-| [ ] [D08](08-primeiro-deploy.md) | Primeiro deploy e bootstrap do piloto | Codex; proprietário identifica admin e acompanha login real | D05, D06, D07 e O04 da slice 10 concluída. |
-| [ ] [D09](09-validacao-campo.md) | Validar aparelhos e fluxo de campo | Proprietário executa em aparelhos; Codex prepara roteiro, acompanha e corrige | D08. |
-| [ ] [D10](10-liberacao-piloto.md) | Liberar piloto e entregar rotina de operação | Proprietário confirma liberação; Codex executa e registra | D01–D09 concluídas e O04 encerrada; escopo móvel explicitamente registrado. |
+| Task                                 | Entrega                                      | Responsável                                                                   | Dependências                                                                |
+| ------------------------------------ | -------------------------------------------- | ----------------------------------------------------------------------------- | --------------------------------------------------------------------------- |
+| [x] [D01](01-readme-manual.md)       | README como manual do desenvolvedor          | Codex                                                                         | Nenhuma; primeira tarefa da slice.                                          |
+| [] [D02](02-escolha-hospedagem.md)   | Escolher hospedagem e parâmetros do piloto   | Proprietário decide; Codex prepara comparação                                 | D01.                                                                        |
+| [] [D03](03-preparacao-app.md)       | Preparar aplicação e artefatos de produção   | Codex                                                                         | D01; D02 para adaptações específicas do destino.                            |
+| [] [D04](04-contas-acessos.md)       | Criar ambientes, contas e fornecer acessos   | Proprietário; Codex fornece instruções e confere                              | D02; pode ocorrer junto de D03.                                             |
+| [] [D05](05-infra-banco.md)          | Provisionar runtime, banco e rede            | Codex; proprietário executa ações de console sem acesso delegado              | D03 e D04.                                                                  |
+| [] [D06](06-ci-cd.md)                | Validar fluxo de entrega e deploy            | Codex; proprietário configura restrições do GitHub quando necessário          | D03; D04/D05 para execução remota.                                          |
+| [] [D07](07-operacao-recuperacao.md) | Backups, recuperação e monitoramento         | Codex; proprietário confirma metas e recebe alertas                           | D05 e D06 para ensaiar recuperação de release.                              |
+| [] [D08](08-primeiro-deploy.md)      | Primeiro deploy e bootstrap do piloto        | Codex; proprietário identifica admin e acompanha login real                   | D05, D06, D07 e O04 da slice 10 concluída.                                  |
+| [] [D09](09-validacao-campo.md)      | Validar aparelhos e fluxo de campo           | Proprietário executa em aparelhos; Codex prepara roteiro, acompanha e corrige | D08.                                                                        |
+| [] [D10](10-liberacao-piloto.md)     | Liberar piloto e entregar rotina de operação | Proprietário confirma liberação; Codex executa e registra                     | D01–D09 concluídas e O04 encerrada; escopo móvel explicitamente registrado. |
 
-D01 começa sem aguardar contas. Após D02, D03 e D04 podem avançar independentemente. D05 prepara o destino; D06 prova a entrega; D07 prova recuperação/operação; D08 instala o candidato; D09 testa o uso real; D10 abre o piloto. O04 deve estar encerrada antes de D08. O Google já aceito em dev não dispensa validar callback/origem no domínio final.
+D01 começa sem aguardar contas. Após D02, D03 e D04 podem avançar independentemente. D05 prepara o destino; D06 prova a entrega; D07 prova recuperação/operação; D08 instala o candidato; D09 testa o uso real; D10 abre o piloto. A dependência O04 está satisfeita pelo encerramento da slice 10. O Google já aceito em dev não dispensa validar callback/origem no domínio final.
 
 ## Critérios de encerramento
 
@@ -61,3 +61,5 @@ Consulta oficial em 30/10/2026: [Hetzner Cloud](https://docs.hetzner.com/cloud/)
 ## Evidências do planejamento
 
 30/10/2026 — Dez tasks executáveis criadas com responsáveis, dependências, checklists e aceite. Nenhuma task de implementação marcada concluída. Verificação documental registrada na memória; sem mudança de fonte/infra, contratação ou deploy nesta etapa.
+
+31/10/2026 — D01 concluída: manual/guia entregues e setup isolado, reaplicação, permissões, auth/workspaces, build, restore e dev/Preview HTTP validados. `pnpm check` encontrou formatação preexistente; detalhes e limites em D01. D02 é a próxima tarefa; nenhum deploy remoto executado.

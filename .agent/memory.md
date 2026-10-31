@@ -362,3 +362,19 @@ Responsabilidades: Codex prepara aplicação, infraestrutura, CI/CD, recuperaç�
 O proprietário confirmou nesta conversa: Google validado e funcionando perfeitamente. Item de Google real da O04 marcado concluído por aceite informado, não por observação direta do agente. Demais itens de e-mail/vínculo/conta existente permanecem abertos; O04 deve encerrar antes de D08. Referências históricas à pendência de Google real em dev ficam superadas. Callback/origem/segundo passo no domínio de produção ainda serão validados.
 
 Evidência documental: arquivos e links locais conferidos, dez tasks com seções obrigatórias, responsáveis, dependências e checklists abertos; git diff --check aprovado. Somente planos/índices e registro do aceite alterados; pnpm check e testes da aplicação não executados. Produção, restore no destino, CI remoto e aparelhos não validados por este planejamento.
+
+
+## Encerramento O04 e slice 10 — 31/10/2026
+
+O proprietário apontou que O04 seguia desmarcada após seu aceite, esclarecendo a intenção de concluir a task. O04 e slice 10 marcadas concluídas com base no aceite do proprietário e nas evidências automatizadas já registradas. Os itens manuais restantes foram encerrados por aceite geral, sem novo ensaio pelo agente ou relato individual adicional de cada percurso. Pendências históricas da O04 ficam superadas. Índices e dependência da produção atualizados; próxima tarefa continua D01. Validação do domínio de produção permanece na slice 11.
+
+Alteração somente documental; links locais e git diff --check conferidos. pnpm check e testes da aplicação não repetidos.
+
+
+## D01 — Manual do desenvolvedor — 31/10/2026
+
+[D01](tasks/11-producao/01-readme-manual.md) concluída. README agora explica projeto/problema, setup Linux/WSL2 do zero, auth/Mailpit/Google/VAPID/bootstrap, rotina diária, checks/migrations, Preview/PWA e diagnóstico. `docs/producao.md` documenta VPS e alternativa Render, contas/acessos, banco/roles/publicação, domínio/segredos, deploy/atualização e recuperação. Render ainda exige adaptação; provisionamento Neon, CI remoto e implantação pertencem às próximas tasks. Próxima task: D02.
+
+Ensaio em cópia `/tmp/windops-d01-setup`, sem .env real, com projeto/volumes/portas separados: instalação frozen, setup vazio/repetido, permissões, auth e workspaces (incluindo bootstrap), build, restore descartável e dev/Preview por HTTP passaram. Segredos de teste gerados sem impressão; processos e containers temporários encerrados, volumes de ensaio removidos e dev preservado. Node host 24.13.1; não houve reinstalação de OS/ferramentas ou ensaio com Node 22.22.2 nesta task.
+
+pnpm check não passou por formatação de duas tabelas Markdown preexistentes na cópia isolada (baseline R01 e índice slice 11); este índice foi formatado, baseline fora do escopo. Não declarar check completo aprovado. Novos documentos, links/âncoras, exemplos Bash, scripts pnpm e diff-check conferidos. Sem fonte/infra versionada alterada; sem novo teste interativo, produção, OAuth/Resend reais ou aparelho físico.

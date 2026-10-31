@@ -2,9 +2,9 @@
 
 ## Status
 
-Em andamento; fluxo implementado em 31/10/2026. Google real aceito pelo proprietário nesta conversa; os demais itens manuais da O04 permanecem abertos.
+Concluída em 31/10/2026; O01–O04 entregues, com validações automatizadas registradas e aceite final do proprietário.
 
-- [ ] Slice concluída
+- [x] Slice concluída
 
 ## Resultado esperado
 
@@ -23,7 +23,7 @@ Cadastro com Google ou e-mail em passos explícitos. E-mail só cria identidade 
 - [x] [O01 — Intenção de cadastro e prova de e-mail](01-intencao-cadastro.md): migration, token único e criação pós-confirmação.
 - [x] [O02 — Cadastro Google e onboarding](02-google-onboarding.md): callback signup e perfil/senha sob sessão pendente.
 - [x] [O03 — Interface de cadastro em etapas](03-interface-cadastro.md): Google/e-mail, confirmação de link e definição de credenciais.
-- [ ] [O04 — Validação integrada e aceite manual](04-validacao.md): testes passaram e Google real foi aceito; faltam os demais itens manuais de e-mail/vínculo da O04.
+- [x] [O04 — Validação integrada e aceite manual](04-validacao.md): validações automatizadas registradas e encerramento por aceite do proprietário.
 
 ## Evidências
 
@@ -34,3 +34,5 @@ Cadastro com Google ou e-mail em passos explícitos. E-mail só cria identidade 
 31/10/2026 — Requisito adicional: toda conta Google sem nome ou password conclui onboarding antes de usar o produto, independentemente de workspace ou estado da segunda etapa. O endpoint de status não depende de workspace; AuthProvider redireciona estados autenticados e órfãos. A integração verifica os estados antes e após setup. `pnpm check` (61 testes/builds) e `pnpm test:auth-integration` passaram; callback real ainda depende de ensaio manual.
 
 30/10/2026 — Aceite posterior nesta conversa: proprietário confirmou Google validado e funcionando perfeitamente. O item Google real da O04 foi concluído. Demais itens continuam abertos; não inferir aceite do cadastro por e-mail a partir dessa confirmação. Esta atualização supera referências históricas ao Google aguardando teste.
+
+31/10/2026 — O proprietário esclareceu que a O04 deveria estar concluída. O04 e slice 10 encerradas por seu aceite; referências históricas a pendências ficam superadas. Sem novos testes pelo agente. Integração no domínio de produção segue na slice 11.

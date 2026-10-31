@@ -2,7 +2,7 @@
 
 ## Status
 
-Planejada; execução detalhada na [slice 11 — Preparação e entrada em produção](../11-producao/README.md). D01–D10 permanecem abertas.
+Planejada; execução detalhada na [slice 11 — Preparação e entrada em produção](../11-producao/README.md). D01 concluída como manual e ensaio local; D02–D10 permanecem abertas.
 
 Follow-up registrado em 28/10/2026: a S09 foi concluída para browser/desktop. O proprietário transferiu validação Android/iPhone, restart físico e HTTPS em aparelho para esta etapa. Não declarar suporte móvel antes dessas evidências.
 
@@ -27,3 +27,7 @@ Android/iPhone, suspensão/retomada, expiração, conflito e remoção; deploy c
 Seguir [memória](../../memory.md) e [arquitetura](../../architeture.md). Este arquivo descreve uma etapa do roadmap; a execução é detalhada nas slices de [tasks](../README.md). Atualizar status e registrar evidência ao concluir. Não marcar integração pronta apenas por instalar dependências.
 
 30/10/2026 — Slice executável preparada: README/manual primeiro, escolha de VPS ou PaaS pelo proprietário, contas/acessos, preparação do app/runtime/banco, CI/CD, recuperação/alertas, deploy candidato, aparelhos e abertura do piloto. A escolha reavalia a referência anterior Hostinger + Neon; não há contratação ou deploy nesta etapa. Aceite do Google em desenvolvimento confirmado pelo proprietário; demais itens O04 e integração real no domínio final continuam como dependências.
+
+31/10/2026 — O04 e slice 10 encerradas por aceite do proprietário. Dependência de cadastro satisfeita; integração real no domínio final continua na slice 11.
+
+31/10/2026 — D01 entregou README/manual e guia VPS/Render com validação local isolada. Produção, recuperação no destino e aparelhos continuam sem validação nesta task. Próxima execução: D02.
