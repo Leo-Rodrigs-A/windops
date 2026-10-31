@@ -2,9 +2,9 @@
 
 ## Status
 
-Planejada; depende de R04.
+- Concluída em 30/10/2026.
 
-- [ ] Task concluída
+- [x] Task concluída
 
 ## Objetivo
 
@@ -24,14 +24,14 @@ R04 concluída; regressão PostgreSQL issues e parks aprovada em R03.
 
 ## Plano
 
-- [ ] Catalogar transições e respostas atuais por estado, ator, cargo, autoria, arquivo e elegibilidade de uma hora.
-- [ ] Registrar vetores de hash/replay para comandos atuais antes de mover serialização.
-- [ ] Extrair políticas puras para decisões demonstradas; manter timestamps e autoridade final do PostgreSQL onde requeridos.
-- [ ] Separar orquestração de persistência somente quando a transação e a sequência de locks permanecerem explícitas.
-- [ ] Avaliar compartilhamento de hash com Parks; compartilhar apenas se equivalência de serialização for provada por vetores anteriores.
-- [ ] Adicionar regressões de policy, idempotência, conflito de revisão, auditoria/notificação atômicas, race de equipamento e revogação.
-- [ ] Executar `pnpm check`, integração issues e parks; comparar DTOs/recibos pré e pós-refactor.
-- [ ] Detalhar R06 mapeando telas, hooks e estado compartilhado afetado.
+- [x] Catalogar transições e respostas atuais por estado, ator, cargo, autoria, arquivo e elegibilidade de uma hora.
+- [x] Registrar vetores de hash/replay para comandos atuais antes de mover serialização.
+- [x] Extrair políticas puras para decisões demonstradas; manter timestamps e autoridade final do PostgreSQL onde requeridos.
+- [x] Avaliar separação entre orquestração e persistência; manter os fluxos juntos no serviço porque locks, autorização, recibos e audit precisam continuar visivelmente na mesma transação.
+- [x] Avaliar compartilhamento de hash com Parks e unificar após provar serialização equivalente com vetores anteriores.
+- [x] Adicionar regressões de policy, idempotência, conflito de revisão, auditoria/notificação atômicas, race de equipamento e revogação.
+- [x] Executar `pnpm check`, integração issues e parks; comparar DTOs/recibos pré e pós-refactor.
+- [x] Detalhar R06 mapeando telas, hooks e estado compartilhado afetado.
 
 ## Contratos e dados afetados
 
@@ -43,7 +43,11 @@ Matriz de transições e hashes permanece equivalente; rollback e locks passam n
 
 ## Evidências
 
-Plano criado para A07/A08 e lacuna A12; implementação não iniciada.
+R05 extraiu decisões de transição e lifecycle para `issues/domain.ts`. A camada SQL continua responsável por autorização dentro da transação, replay de recibo, leitura/locks de localização e issue, atualização, audit, recibo Sync e notificação; não foi criado repository genérico nem movido o `clock_timestamp()` autoritativo. A ordem e o comportamento dos retornos foram cobertos por matriz pura de policies. A verificação antecipada de arquivo foi mantida na orquestração porque precede conflito de revisão na resposta atual. A permissão `release` de admin permanece aplicada pela autorização transacional.
+
+Issues e Parks agora usam `platform/idempotency/command-hash.ts`. Os dois algoritmos anteriores eram SHA-256 de JSON recursivamente ordenado; vetores dourados preservam bytes/hex de comandos de Issue e lifecycle de Park, inclusive equivalência sob ordem diferente das chaves. Os recibos e DTOs persistidos não mudaram.
+
+Validação: `pnpm check` passou com 76 testes, typechecks, lint/boundaries e builds. `pnpm test:issues-integration` e `pnpm test:parks-integration` passaram em bancos descartáveis: replay e divergência idempotente, conflitos de revisão, auditoria/recibos/notificações atômicos, elegibilidade de uma hora calculada pelo PostgreSQL, isolamento tenant, revogação e races de equipamento. Integração confirmou os DTOs/replays existentes após a extração. Nenhum contrato HTTP, schema, regra ou payload persistido mudou.
 
 ## Refinamento pela R04
 

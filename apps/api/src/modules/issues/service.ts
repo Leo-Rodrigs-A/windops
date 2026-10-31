@@ -1,4 +1,4 @@
-import { createHash, randomUUID } from 'node:crypto';
+import { randomUUID } from 'node:crypto';
 import type { IncomingHttpHeaders } from 'node:http';
 import type {
   AuthenticatedUser,
@@ -24,6 +24,7 @@ import {
   isPostgresConstraintError,
   withPostgresTransaction,
 } from '../../platform/database/transaction.js';
+import { commandHash } from '../../platform/idempotency/command-hash.js';
 import type { AuditService } from '../audit/index.js';
 import type { IdentityService } from '../identity/index.js';
 import type { ParksCatalogService } from '../parks/index.js';
@@ -32,6 +33,7 @@ import type {
   AuthorizedWorkspacePrincipal,
   WorkspaceTransactionalAccessService,
 } from '../workspaces/index.js';
+import { decideIssueLifecycle, decideIssueTransition } from './domain.js';
 
 export type IssuesQueryExecutor = Pick<PoolClient, 'query'>;
 export type IssueReadResult<T> =
@@ -217,22 +219,6 @@ function toIssueEvent(row: IssueEventRow): IssueEvent {
   };
 }
 
-function canonicalize(value: unknown): unknown {
-  if (Array.isArray(value)) return value.map(canonicalize);
-  if (!value || typeof value !== 'object') return value;
-  return Object.fromEntries(
-    Object.entries(value)
-      .sort(([left], [right]) => left.localeCompare(right))
-      .map(([key, entry]) => [key, canonicalize(entry)]),
-  );
-}
-
-function commandHash(value: unknown): Buffer {
-  return createHash('sha256')
-    .update(JSON.stringify(canonicalize(value)))
-    .digest();
-}
-
 function issueSnapshot(issue: Issue): Record<string, unknown> {
   return {
     text: issue.text,
@@ -353,39 +339,29 @@ export function createIssuesService(
       )
         return { status: 'revision_conflict' };
       if (currentRow.revision !== input.expectedRevision) return { status: 'revision_conflict' };
-      if (operation === 'start' && currentRow.status !== 'pending')
-        return { status: 'state_conflict' };
-      if (operation !== 'start' && currentRow.status !== 'in_progress')
-        return { status: 'state_conflict' };
-      if (
-        operation === 'start' &&
-        currentRow.creatorUserId === principal.user.id &&
-        currentRow.ownerWaitElapsed !== true
-      )
-        return { status: 'creator_wait' };
-      if (
-        operation === 'return' &&
-        (currentRow.handlerUserId !== principal.user.id ||
-          currentRow.handlerMembershipId !== principal.membershipId)
-      )
-        return { status: 'action_forbidden' };
-      if (operation === 'release' && currentRow.handlerUserId === principal.user.id)
-        return { status: 'action_forbidden' };
-      if (
-        operation === 'complete' &&
-        (currentRow.handlerUserId !== principal.user.id ||
-          currentRow.handlerMembershipId !== principal.membershipId)
-      )
-        return { status: 'action_forbidden' };
+      const decision = decideIssueTransition(
+        operation,
+        {
+          status: currentRow.status,
+          archived: currentRow.archivedAt !== null,
+          creatorUserId: currentRow.creatorUserId,
+          handlerUserId: currentRow.handlerUserId,
+          handlerMembershipId: currentRow.handlerMembershipId,
+          ownerWaitElapsed: currentRow.ownerWaitElapsed === true,
+        },
+        {
+          userId: principal.user.id,
+          membershipId: principal.membershipId,
+          role: principal.workspace.role,
+        },
+      );
+      if (decision.status !== 'ok') return decision;
 
       const currentUsers = await getUsers(identity, [currentRow]);
       const before = toIssue(currentRow, currentUsers);
-      const nextStatus: IssueStatus =
-        operation === 'start' ? 'in_progress' : operation === 'complete' ? 'completed' : 'pending';
-      const nextHandlerMembershipId =
-        operation === 'start' || operation === 'complete' ? principal.membershipId : null;
-      const nextHandlerUserId =
-        operation === 'start' || operation === 'complete' ? principal.user.id : null;
+      const nextStatus = decision.nextStatus;
+      const nextHandlerMembershipId = decision.keepsHandler ? principal.membershipId : null;
+      const nextHandlerUserId = decision.keepsHandler ? principal.user.id : null;
       const updatedResult = await client.query<IssueRow>(
         `UPDATE public.issues i
          SET status = $3, handler_membership_id = $4, handler_user_id = $5,
@@ -475,20 +451,21 @@ export function createIssuesService(
           current.turbineId !== observedRow.turbineId
         )
           return { status: 'revision_conflict' };
-        if (operation === 'reopen' && (current.status !== 'completed' || current.archivedAt))
-          return { status: 'state_conflict' };
-        if (operation === 'archive' && (current.status === 'completed' || current.archivedAt))
-          return { status: 'state_conflict' };
-        if (
-          operation === 'archive' &&
-          principal.workspace.role !== 'admin' &&
-          (current.creatorUserId !== principal.user.id || current.status !== 'pending')
-        )
-          return { status: 'action_forbidden' };
-        if (operation === 'reactivate' && (!current.archivedAt || current.status === 'completed'))
-          return { status: 'state_conflict' };
-        if (operation !== 'archive' && !location?.active)
-          return { status: 'equipment_unavailable' };
+        const decision = decideIssueLifecycle(
+          operation,
+          {
+            status: current.status,
+            archived: current.archivedAt !== null,
+            creatorUserId: current.creatorUserId,
+            locationActive: location?.active === true,
+          },
+          {
+            userId: principal.user.id,
+            membershipId: principal.membershipId,
+            role: principal.workspace.role,
+          },
+        );
+        if (decision.status !== 'ok') return decision;
 
         const before = toIssue(current, await getUsers(identity, [current]));
         const update = await client.query<IssueRow>(

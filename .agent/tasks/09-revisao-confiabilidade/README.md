@@ -2,7 +2,7 @@
 
 ## Status
 
-Em andamento; R01, R01A, R02, R03 e R04 concluídas em 30/10/2026. Próxima execução: R05. Planejada originalmente em 30/10/2026 a pedido do proprietário, usando a análise SOLID fornecida como guia e inspeção do repositório atual. Não representa certificação de aplicação “100%” nem entrega de produção.
+Em andamento; R01, R01A, R02, R03, R04 e R05 concluídas em 30/10/2026. Próxima execução: R06. Planejada originalmente em 30/10/2026 a pedido do proprietário, usando a análise SOLID fornecida como guia e inspeção do repositório atual. Não representa certificação de aplicação “100%” nem entrega de produção.
 
 - [ ] Slice concluída
 
@@ -35,7 +35,7 @@ R03–R08 estão detalhadas a partir dos achados A01–A13. Antes de executar ca
 | R07   | [Store offline](07-store-offline.md) — separar persistência, projeção e fila mantendo atomicidade e journal                     | R06                                              |
 | R08   | [Aceite integrado](08-aceite-integrado.md) — fechar matriz A01–A13, regressões e pendências com evidência                       | R07                                              |
 
-R01–R04 concluídas. R05–R08 detalhadas conforme o inventário A01–A13. O plano cobre os achados conhecidos da baseline e não equivale a garantia absoluta de ausência de defeitos.
+R01–R05 concluídas. R06–R08 detalhadas conforme o inventário A01–A13. O plano cobre os achados conhecidos da baseline e não equivale a garantia absoluta de ausência de defeitos.
 
 ## Invariantes obrigatórios
 
@@ -90,9 +90,12 @@ Atualização de dependência — 30/10/2026: Q05 e slice 08 concluídas com ace
 - [x] [R02 — Documentação e composição da auditoria](02-documentacao-composicao.md): README/arquitetura alinhados e `NotificationsService` injetado explicitamente.
 - [x] [R03 — Transações e erros PostgreSQL](03-transacoes-erros.md): executor compartilhado em issues/parks, mapeamento por constraint e regressão de falhas transacionais.
 - [x] [R04 — Interfaces Workspaces](04-interfaces-workspaces.md): interfaces por capacidade, consumidores mínimos e verificador de fronteiras com cobertura de aliases/imports dinâmicos.
+- [x] [R05 — Domínio e orquestração de Issues](05-dominio-issues.md): policies puras extraídas, hash compartilhado com vetores de compatibilidade e integrações issues/parks aprovadas.
 
 30/10/2026 — R02 concluída: `pnpm check` (61 testes/builds), `pnpm test:issues-integration` e links passaram. Próxima: R03.
 
 30/10/2026 — R03 concluída: `pnpm check` (68 testes/builds), `pnpm test:issues-integration`, `pnpm test:parks-integration` e `pnpm test:workspaces-integration` passaram. Próxima: R04.
 
 30/10/2026 — R04 concluída: `pnpm check` (71 testes/builds) e integrações auth/workspaces/issues/parks passaram. Próxima: R05.
+
+30/10/2026 — R05 concluída: `pnpm check` (76 testes/builds), integrações issues/parks aprovadas. Policies fora da orquestração SQL; hash canônico comum preservando vetores de receipt. Próxima: R06.

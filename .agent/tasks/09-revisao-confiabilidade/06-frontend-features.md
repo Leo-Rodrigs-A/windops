@@ -18,6 +18,8 @@ Começar por issues e seguir para equipe/parques conforme dependências; manter 
 
 Baseline A10/A12 identificou `issues-pages.tsx`, `workspace-pages.tsx` e `parks-page.tsx` concentrando consultas, ações e componentes. Q05 e R01 registram aceite funcional Chrome/Edge, mas não substituem regressão dos módulos movidos.
 
+Mapa confirmado para execução: `main.tsx` liga `/app`, `/chamados/$issueId`, `/historico` e `/arquivados` ao fluxo de issues, e `/equipe`/aceite de convite às páginas de workspace; `/parques` usa `ParksCatalogPage`. `issues-pages.tsx` reúne home, listas arquivadas, detalhe, histórico e conta; `workspace-pages.tsx` reúne home, gestão de equipe e convite; `parks-page.tsx` contém catálogo. Estado/capacidades transversais estão em `auth/auth-context.tsx`, `offline/offline-workspace-context.tsx`, cliente API em `lib`/`api` e componentes compartilhados `components/ui`. Antes de mover, mapear por página query keys/cache, mutations e guards; preservar cursores/filtros e estados offline/parciais. Não extrair AccountSettingsPage para equipe sem confirmar seus vínculos reais.
+
 ## Dependências
 
 R05 concluída; Q05 concluída. Usar comportamento existente como baseline.

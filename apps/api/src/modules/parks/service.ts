@@ -1,4 +1,3 @@
-import { createHash } from 'node:crypto';
 import type { IncomingHttpHeaders } from 'node:http';
 import type {
   CreatePark,
@@ -21,6 +20,7 @@ import {
   isPostgresConstraintError,
   withPostgresTransaction,
 } from '../../platform/database/transaction.js';
+import { commandHash } from '../../platform/idempotency/command-hash.js';
 import type { SyncService } from '../sync/index.js';
 import type {
   AuthorizedWorkspacePrincipal,
@@ -233,21 +233,6 @@ export function createParksCatalogService(
     }
   }
 
-  function hashCommand(value: unknown): Buffer {
-    const normalize = (entry: unknown): unknown => {
-      if (Array.isArray(entry)) return entry.map(normalize);
-      if (!entry || typeof entry !== 'object') return entry;
-      return Object.fromEntries(
-        Object.entries(entry)
-          .sort(([left], [right]) => left.localeCompare(right))
-          .map(([key, nested]) => [key, normalize(nested)]),
-      );
-    };
-    return createHash('sha256')
-      .update(JSON.stringify(normalize(value)))
-      .digest();
-  }
-
   async function getLifecycleReplay<T>(
     client: PoolClient,
     workspaceId: string,
@@ -435,7 +420,7 @@ export function createParksCatalogService(
 
     deletePark(headers, workspaceId, parkId, input, issues) {
       return withAdminTransaction(headers, workspaceId, async (client, principal) => {
-        const hash = hashCommand({
+        const hash = commandHash({
           operation: 'deletePark',
           parkId,
           expectedRevision: input.expectedRevision,
@@ -514,7 +499,7 @@ export function createParksCatalogService(
 
     restorePark(headers, workspaceId, parkId, input) {
       return withAdminTransaction(headers, workspaceId, async (client, principal) => {
-        const hash = hashCommand({
+        const hash = commandHash({
           operation: 'restorePark',
           parkId,
           expectedRevision: input.expectedRevision,
@@ -568,7 +553,7 @@ export function createParksCatalogService(
 
     deleteTurbine(headers, workspaceId, parkId, turbineId, input, issues) {
       return withAdminTransaction(headers, workspaceId, async (client, principal) => {
-        const hash = hashCommand({
+        const hash = commandHash({
           operation: 'deleteTurbine',
           parkId,
           turbineId,
@@ -651,7 +636,7 @@ export function createParksCatalogService(
 
     restoreTurbine(headers, workspaceId, parkId, turbineId, input) {
       return withAdminTransaction(headers, workspaceId, async (client, principal) => {
-        const hash = hashCommand({
+        const hash = commandHash({
           operation: 'restoreTurbine',
           parkId,
           turbineId,
