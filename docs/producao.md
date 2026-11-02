@@ -1,6 +1,6 @@
 # Produção — Wind Ops
 
-> Decisão D02 concluída em 02/11/2026: Hostinger KVM1 no Brasil, Ubuntu 24.04.5, 1 vCPU/4 GB + Neon Free. VPS ativa; Docker Engine 29.9.2/Compose 5.6.1. Proprietário reporta pagamento único ~R$600 e pouco por 24 meses (~R$27/mês), sem valor/renovação conferidos. Sem despesas extras planejadas nem homologação permanente. KVM2 fica como possível upgrade após medir carga. DNS A `windops.devleonardo.com.br` criado na Vercel e resolução ao IP da VPS confirmada pelo proprietário; HTTPS ainda pendente. Política de backup/RPO/RTO aceita está abaixo. Scale-to-zero noturno na janela desejada 06h–18h ainda não implementado.
+> Decisão D02 concluída em 02/11/2026: Hostinger KVM1 no Brasil, Ubuntu 24.04.5, 1 vCPU/4 GB + Neon Free. VPS ativa; Docker Engine 29.9.2/Compose 5.6.1. Proprietário reporta pagamento único ~R$600 e pouco por 24 meses (~R$27/mês), sem valor/renovação conferidos. Sem despesas extras planejadas nem homologação permanente. KVM2 fica como possível upgrade após medir carga. DNS A `windops.devleonardo.com.br` criado na Vercel e resolução ao IP da VPS confirmada pelo proprietário; HTTPS ainda pendente. Política confirmada: API/Caddy ficam ligados e Electric pausa das 18h às 06h diariamente em `America/Sao_Paulo`; implementação local preparada, instalação e suspensão real do Neon pendentes.
 
 [Voltar ao manual](../README.md#colocar-em-produção).
 
@@ -45,7 +45,7 @@ A ordem da **primeira instalação** é:
 1. Administrador do banco cria roles e permissões iniciais de conexão/schema.
 2. Migrador aplica as migrações versionadas.
 3. Administrador reconcilia grants e publicação manual.
-4. Electric conecta e fica saudável; depois sobem API e web.
+4. Aplique migrações e grants/publicação antes de iniciar Electric; API e web podem operar enquanto Electric estiver pausado.
 
 A allowlist atual contém `workspaces`, `parks`, `turbines`, `issue_sync_rows` e `issue_sync_events`, com `REPLICA IDENTITY FULL`. Não publique tabelas brutas de identidade, memberships, `issues`, `issue_events` ou receipts. Projeções sanitizadas e proxy autenticado protegem os dados.
 
@@ -83,10 +83,16 @@ PostgreSQL é externo; não há serviço de banco nesse Compose. Os containers d
 A partir de um checkout do commit revisado **no servidor**, execute como administrador:
 
 ```bash
-sudo install -d -o root -g root -m 0755 /opt/windops/infra /etc/windops
+sudo install -d -o root -g root -m 0755 /opt/windops/infra /etc/windops /usr/local/sbin
 sudo install -o root -g root -m 0644 infra/compose.production.yml /opt/windops/infra/compose.production.yml
 sudo install -o root -g root -m 0755 scripts/deploy.sh /usr/local/sbin/windops-deploy
 sudo install -o root -g root -m 0755 scripts/deploy-ssh-entrypoint.sh /usr/local/sbin/windops-deploy-ssh
+sudo install -o root -g root -m 0755 scripts/electric-window.sh /usr/local/sbin/windops-electric-window
+sudo install -o root -g root -m 0644 infra/systemd/windops-electric-window.service /etc/systemd/system/
+sudo install -o root -g root -m 0644 infra/systemd/windops-electric-window.timer /etc/systemd/system/
+sudo systemctl daemon-reload
+sudo systemctl enable --now windops-electric-window.timer
+sudo systemctl start windops-electric-window.service
 ```
 
 Na primeira instalação, crie o arquivo protegido a partir do exemplo. Não execute este passo sobre configuração já preenchida:
@@ -152,13 +158,13 @@ docker compose --env-file infra/.env.production --env-file .release.bootstrap.en
   -f infra/compose.production.yml run --rm --no-deps migrate
 ```
 
-Agora execute/confira a reconciliação de grants/publicação definida em D05. **Ainda não existe um comando de provisionamento Neon pronto no repositório.** O script de deploy inicia Electric antes de rodar o migrador; por isso essa preparação inicial é necessária. Depois, o administrador executa:
+Agora execute/confira a reconciliação de grants/publicação definida em D05. **Ainda não existe um comando de provisionamento Neon pronto no repositório.** O deploy migra primeiro e só então liga API/web; Electric é reconciliado de acordo com a janela, por isso a publicação precisa estar pronta antes da abertura da replicação. Depois, o administrador executa:
 
 ```bash
 sudo /usr/local/sbin/windops-deploy 'SHA_APROVADO_DE_40_CARACTERES'
 ```
 
-O script faz pull, fixa digests, valida Compose, aguarda Electric, roda migration sob lock de deploy e sobe API/web com health checks. Ao ter sucesso grava `.release.env`, guardando o release anterior quando existir. Migração repetida aplica apenas mudanças ainda não registradas.
+O script faz pull, fixa digests, valida Compose, roda migration sob lock de deploy e sobe API/web com health checks de liveness. Ao ter sucesso grava `.release.env`, guardando o release anterior quando existir, e reconcilia Electric conforme a janela. Migração repetida aplica apenas mudanças ainda não registradas. O timer também reconcilia no boot e às 06h/18h; não remove o volume Electric ao parar o container.
 
 Verifique o domínio:
 
@@ -247,4 +253,4 @@ A [slice 11](../.agent/tasks/11-producao/README.md) separa execução e responsa
 
 ## Janela desejada para VPS + Neon Free
 
-O proprietário deseja que o Neon opere aproximadamente das 06h às 18h e escale a zero à noite, sem custo além do plano Free. Cálculo a 0,25 CU: 90 CU-horas em 30 dias com 12 horas ativas/dia; com 5 minutos para suspensão por dia, cerca de 90,63. Em 31 dias, cerca de 93,65 CU-horas, deixando margem pequena para picos, testes e despertares extras diante da franquia de 100 indicada no console do projeto. Consideramos provisoriamente todos os dias em America/Sao_Paulo; confirmar. O consumidor de logical replication (Electric), API e worker/readiness devem parar fora da janela para permitir scale-to-zero. Isso deixa sync/ações online indisponíveis à noite; a fila permanece no aparelho e só retoma quando o app voltar e o servidor estiver ativo. Nada disso está implementado ou medido; D03/D05 devem programar o ciclo e provar suspensão/retomada sem perder comandos.
+O proprietário confirmou operação diária do Electric das 06h às 18h e pausa das 18h às 06h em `America/Sao_Paulo`, mantendo API/Caddy em execução. A API pode acordar Neon sob demanda e terá latência de cold-start; a réplica local para de receber atualizações quando Electric está pausado. O worker de push não faz polling: outbox fica persistida e tenta novamente após atividade posterior da API. Healthchecks usam liveness sem banco; readiness consulta PostgreSQL apenas quando chamada explicitamente. O timer systemd aplica a janela no boot e nos dois limites horários. Instalação e confirmação de scale-to-zero/cold-start na VPS ainda são pendentes; qualquer cálculo de CU-horas depende do uso real e despertares.

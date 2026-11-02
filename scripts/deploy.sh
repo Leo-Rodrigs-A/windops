@@ -21,17 +21,19 @@ printf 'API_IMAGE=%s\nWEB_IMAGE=%s\n' \
   "$(docker image inspect --format '{{index .RepoDigests 0}}' "$web")" > "$candidate"
 compose=(docker compose --env-file infra/.env.production --env-file "$candidate" -f infra/compose.production.yml)
 "${compose[@]}" config --quiet
-"${compose[@]}" up -d --wait --wait-timeout 180 electric
 # A failure here stops rollout. Migration rollback is deliberately not automated.
 "${compose[@]}" run --rm --no-deps migrate
-if "${compose[@]}" up -d --wait --wait-timeout 180; then
+if "${compose[@]}" up -d --wait --wait-timeout 180 api web; then
   if [[ -f .release.env ]]; then cp .release.env .release.previous.env; fi
   mv "$candidate" .release.env
+  if ! scripts/electric-window.sh; then
+    echo "Electric window reconciliation failed; the systemd timer will retry." >&2
+  fi
   echo "Deployment healthy: $sha"
 else
   echo "Health checks failed. Restoring previous images if available." >&2
   if [[ -f .release.env ]]; then
-    docker compose --env-file infra/.env.production --env-file .release.env -f infra/compose.production.yml up -d --wait --wait-timeout 180
+    docker compose --env-file infra/.env.production --env-file .release.env -f infra/compose.production.yml up -d --wait --wait-timeout 180 api web
   fi
   exit 1
 fi

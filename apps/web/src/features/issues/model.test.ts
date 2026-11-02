@@ -5,8 +5,10 @@ import type {
   LocalIssueStore,
 } from '../../offline/local-issue-store';
 import {
+  compareIssuesByRecency,
   localIssueListEntries,
   localLocations,
+  offlineIssueListEntries,
   pendingLocalEntries,
   type StatusFilter,
 } from './model';
@@ -77,5 +79,124 @@ describe('issue feature view model', () => {
     expect(localLocations(store)).toEqual({
       'park-1:turbine-1': { park: 'P001', turbine: 'T001' },
     });
+  });
+
+  it('keeps a newly created offline issue ahead of older cached issues', () => {
+    const serverIssue = projection.serverIssue;
+    if (!serverIssue) throw new Error('Fixture must contain a server issue.');
+    const olderProjection: LocalIssueProjection = {
+      ...projection,
+      id: 'issue-october',
+      createdAt: '2026-10-31T18:00:00.000Z',
+      updatedAt: '2026-10-31T18:00:00.000Z',
+      serverIssue: {
+        ...serverIssue,
+        id: 'issue-october',
+        createdAt: '2026-10-31T18:00:00.000Z',
+      },
+    };
+    const newOfflineProjection: LocalIssueProjection = {
+      ...projection,
+      id: 'issue-november',
+      createdAt: '2026-10-15T12:00:00.000Z',
+      updatedAt: '2026-10-15T12:00:00.000Z',
+      serverIssue: null,
+      local: { ...projection.local, status: 'local', text: 'Criada sem conexão' },
+    };
+    const createCommand: LocalIssueCommand = {
+      ...command,
+      id: 'command-create-november',
+      issueId: 'issue-november',
+      kind: 'create',
+      status: 'pending',
+      createdAt: '2026-11-02T12:00:00.000Z',
+    };
+    const store = {
+      listPendingCommands: () => [createCommand],
+      listIssues: () => [olderProjection, newOfflineProjection],
+    } as unknown as LocalIssueStore;
+
+    expect(localIssueListEntries(store, 'all').map((issue) => issue.id)).toEqual([
+      'issue-november',
+      'issue-october',
+    ]);
+    expect(localIssueListEntries(store, 'all')[0]?.createdAt).toBe(createCommand.createdAt);
+  });
+
+  it('places issues without parseable timestamps after dated issues', () => {
+    const newest = {
+      id: 'issue-november',
+      createdAt: '2026-11-02T12:00:00.000Z',
+    };
+    const older = {
+      id: 'issue-october',
+      createdAt: '2026-10-28T12:00:00.000Z',
+    };
+    const missingTime = { id: 'zz-issue-with-invalid-date', createdAt: 'unknown' };
+
+    expect([older, missingTime, newest].sort(compareIssuesByRecency)).toEqual([
+      newest,
+      older,
+      missingTime,
+    ]);
+  });
+
+  it('preserves chronological order when offline filtering journal insertion order', () => {
+    const serverIssue = projection.serverIssue;
+    if (!serverIssue) throw new Error('Fixture must contain a server issue.');
+    const octoberIssue: LocalIssueProjection = {
+      ...projection,
+      id: 'issue-october',
+      createdAt: '2026-10-28T12:00:00.000Z',
+      updatedAt: '2026-10-28T12:00:00.000Z',
+      serverIssue: {
+        ...serverIssue,
+        id: 'issue-october',
+        createdAt: '2026-10-28T12:00:00.000Z',
+      },
+    };
+    const novemberIssue: LocalIssueProjection = {
+      ...projection,
+      id: 'issue-november-later',
+      createdAt: '2026-11-02T12:10:00.000Z',
+      updatedAt: '2026-11-02T12:10:00.000Z',
+      serverIssue: null,
+      local: { ...projection.local, status: 'local', text: 'Primeira criada offline' },
+    };
+    const firstCreateCommand: LocalIssueCommand = {
+      ...command,
+      id: 'command-create-november-later',
+      issueId: 'issue-november-later',
+      kind: 'create',
+      status: 'pending',
+      createdAt: '2026-11-02T12:10:00.000Z',
+    };
+    const secondNovemberIssue: LocalIssueProjection = {
+      ...novemberIssue,
+      id: 'issue-november-earlier',
+      createdAt: '2026-11-02T12:00:00.000Z',
+      updatedAt: '2026-11-02T12:00:00.000Z',
+      local: { ...novemberIssue.local, text: 'Segunda criada offline' },
+    };
+    const secondCreateCommand: LocalIssueCommand = {
+      ...firstCreateCommand,
+      id: 'command-create-november-earlier',
+      issueId: 'issue-november-earlier',
+      createdAt: '2026-11-02T12:00:00.000Z',
+    };
+    const projections = new Map([
+      [octoberIssue.id, octoberIssue],
+      [novemberIssue.id, novemberIssue],
+      [secondNovemberIssue.id, secondNovemberIssue],
+    ]);
+    const store = {
+      listPendingCommands: () => [firstCreateCommand, secondCreateCommand],
+      listIssues: () => [octoberIssue, novemberIssue, secondNovemberIssue],
+      getIssue: (id: string) => projections.get(id),
+    } as unknown as LocalIssueStore;
+
+    expect(
+      offlineIssueListEntries(store, 'all', { status: 'active' }).map((issue) => issue.id),
+    ).toEqual(['issue-november-later', 'issue-november-earlier', 'issue-october']);
   });
 });

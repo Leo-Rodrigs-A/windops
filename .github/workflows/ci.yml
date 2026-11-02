@@ -39,7 +39,7 @@ jobs:
       - run: pnpm test:issues-read-integration
       - run: pnpm test:integration
       - run: pnpm db:permissions
-      - run: bash -n scripts/deploy.sh scripts/deploy-ssh-entrypoint.sh
+      - run: bash -n scripts/deploy.sh scripts/deploy-ssh-entrypoint.sh scripts/electric-window.sh
       - run: docker build -f infra/Dockerfile.api -t windops-api:ci .
       - run: docker build -f infra/Dockerfile.web -t windops-web:ci .
       - name: Verify migration packaged in runtime image

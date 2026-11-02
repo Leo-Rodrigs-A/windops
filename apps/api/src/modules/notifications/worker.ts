@@ -24,17 +24,14 @@ export function createNotificationWorker(
   pool: Pool,
   sender: PushSender,
   options?: {
-    intervalMs?: number;
     batchSize?: number;
     leaseSeconds?: number;
     onError?: (errorCode: string) => void;
   },
 ) {
-  const intervalMs = options?.intervalMs ?? 5_000;
   const batchSize = options?.batchSize ?? 25;
   const leaseSeconds = options?.leaseSeconds ?? 60;
-  let timer: ReturnType<typeof setTimeout> | undefined;
-  let stopped = true;
+  let started = false;
   let running: Promise<void> | undefined;
 
   async function claim(): Promise<ClaimedDelivery[]> {
@@ -173,29 +170,23 @@ export function createNotificationWorker(
     }
   }
 
-  function schedule() {
-    if (stopped) return;
-    timer = setTimeout(() => {
+  return {
+    runOnce,
+    start() {
+      started = true;
+    },
+    wake() {
+      if (!started) return Promise.resolve();
+      if (running) return running;
       running = runOnce()
         .catch(() => options?.onError?.('worker_error'))
         .finally(() => {
           running = undefined;
-          schedule();
         });
-    }, intervalMs);
-    timer.unref?.();
-  }
-
-  return {
-    runOnce,
-    start() {
-      if (!stopped) return;
-      stopped = false;
-      schedule();
+      return running;
     },
     async stop() {
-      stopped = true;
-      if (timer) clearTimeout(timer);
+      started = false;
       await running;
     },
   };

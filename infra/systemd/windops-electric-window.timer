@@ -1,0 +1,12 @@
+[Unit]
+Description=Start and stop Wind Ops Electric on the local sync window
+
+[Timer]
+OnBootSec=2min
+OnCalendar=*-*-* 06:00:00 America/Sao_Paulo
+OnCalendar=*-*-* 18:00:00 America/Sao_Paulo
+Persistent=true
+Unit=windops-electric-window.service
+
+[Install]
+WantedBy=timers.target

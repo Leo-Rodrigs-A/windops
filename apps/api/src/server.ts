@@ -82,13 +82,19 @@ const app = buildApp({
   authOrigin: env.APP_ORIGIN,
   ready: async () => {
     await pool.query('SELECT 1');
-    const response = await fetch(new URL('/v1/health', env.ELECTRIC_URL), {
-      signal: AbortSignal.timeout(5000),
-    });
-    if (response.status !== 200) throw new Error('Electric unavailable');
   },
 });
 app.addHook('onReady', async () => notificationWorker?.start());
+app.addHook('onResponse', async (request, reply) => {
+  if (
+    reply.statusCode >= 200 &&
+    reply.statusCode < 400 &&
+    !request.url.startsWith('/api/health/') &&
+    !request.url.startsWith('/api/sync/')
+  ) {
+    void notificationWorker?.wake();
+  }
+});
 app.addHook('onClose', async () => {
   await notificationWorker?.stop();
   await pool.end();

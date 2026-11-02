@@ -29,7 +29,6 @@ import { WorkspaceSidebarLayout } from '../../components/ui/workspace-sidebar';
 import { ApiRequestError } from '../../lib/auth-api';
 import { getIssues, lifecycleIssue } from '../../lib/issues-api';
 import { getPark, getParks, getParkTurbines, getTurbine } from '../../lib/workspace-api';
-import { selectIssueProjection } from '../../offline/issue-query';
 import type { LocalIssueStore } from '../../offline/local-issue-store';
 import { useOfflineWorkspace } from '../../offline/offline-workspace-context';
 import { AppPageHeader, IssueListItem, IssueLocationFilters } from './components';
@@ -40,6 +39,7 @@ import {
   issueListEntry,
   localIssueListEntries,
   localLocations,
+  offlineIssueListEntries,
   pendingLocalEntries,
   reconcileVisibleIssuesFromJournal,
   type StatusFilter,
@@ -92,22 +92,10 @@ export function WorkspaceHomePage() {
           setIssueLoading(false);
           return;
         }
-        const commands = offlineWorkspace.store.listPendingCommands();
-        const local = offlineWorkspace.store.listIssues().flatMap((projection) => {
-          const selected = selectIssueProjection(
-            projection,
-            commands.filter((command) => command.issueId === projection.id),
-            {
-              status: statusFilter === 'all' ? 'active' : statusFilter,
-              ...(queryParkId ? { parkId: queryParkId } : {}),
-              ...(queryTurbineId ? { turbineId: queryTurbineId } : {}),
-            },
-          );
-          return selected
-            ? localIssueListEntries(offlineWorkspace.store as LocalIssueStore, statusFilter).filter(
-                (item) => item.id === projection.id,
-              )
-            : [];
+        const local = offlineIssueListEntries(offlineWorkspace.store, statusFilter, {
+          status: statusFilter === 'all' ? 'active' : statusFilter,
+          ...(queryParkId ? { parkId: queryParkId } : {}),
+          ...(queryTurbineId ? { turbineId: queryTurbineId } : {}),
         });
         if (!offlineWorkspace.store.hasReplicaSnapshot('issues'))
           setIssueCacheNotice(

@@ -147,8 +147,19 @@ export function compareIssuesByRecency(
   left: Pick<IssueListEntry, 'createdAt' | 'id'> & { updatedAt?: string },
   right: Pick<IssueListEntry, 'createdAt' | 'id'> & { updatedAt?: string },
 ) {
-  const recency = Date.parse(right.createdAt) - Date.parse(left.createdAt);
-  return Number.isFinite(recency) && recency !== 0 ? recency : right.id.localeCompare(left.id);
+  const timestamp = (issue: typeof left) => {
+    const createdAt = Date.parse(issue.createdAt);
+    if (Number.isFinite(createdAt)) return createdAt;
+    const updatedAt = issue.updatedAt ? Date.parse(issue.updatedAt) : Number.NaN;
+    return Number.isFinite(updatedAt) ? updatedAt : null;
+  };
+  const leftTime = timestamp(left);
+  const rightTime = timestamp(right);
+  if (leftTime === null && rightTime !== null) return 1;
+  if (leftTime !== null && rightTime === null) return -1;
+  if (leftTime !== null && rightTime !== null && leftTime !== rightTime)
+    return rightTime - leftTime;
+  return right.id.localeCompare(left.id);
 }
 
 export function projectionStatus(projection: LocalIssueProjection, commands: LocalIssueCommand[]) {
@@ -184,6 +195,7 @@ export function localIssueListEntries(
     .filter((projection) => projection.serverActive !== false || pendingIssueIds.has(projection.id))
     .map((projection) => {
       const issueCommands = commandsByIssue.get(projection.id) ?? [];
+      const localCreateCommand = issueCommands.find((command) => command.kind === 'create');
       const pendingTextChange = issueCommands.some(
         (command) =>
           ['create', 'update'].includes(command.kind) &&
@@ -210,11 +222,32 @@ export function localIssueListEntries(
           (projection.serverIssue ? 'Registrado no servidor' : 'Novo neste aparelho'),
         handlerLabel: projection.localIdentity?.handlerName ?? null,
         createdAt:
-          projection.serverIssue?.createdAt ?? projection.createdAt ?? projection.updatedAt,
+          (projection.serverIssue ? undefined : localCreateCommand?.createdAt) ??
+          projection.serverIssue?.createdAt ??
+          projection.createdAt ??
+          projection.updatedAt,
       };
     })
     .filter((issue) => filter === 'all' || issue.status === filter)
     .sort(compareIssuesByRecency);
+}
+
+export function offlineIssueListEntries(
+  store: LocalIssueStore,
+  filter: StatusFilter,
+  query: {
+    status: 'active' | 'pending' | 'in_progress' | 'completed' | 'archived';
+    parkId?: string;
+    turbineId?: string;
+  },
+) {
+  const commands = store.listPendingCommands();
+  return localIssueListEntries(store, filter).filter((issue) => {
+    const projection = store.getIssue(issue.id);
+    if (!projection) return false;
+    const issueCommands = commands.filter((command) => command.issueId === issue.id);
+    return selectIssueProjection(projection, issueCommands, query) !== null;
+  });
 }
 
 export function localLocations(store: LocalIssueStore) {
