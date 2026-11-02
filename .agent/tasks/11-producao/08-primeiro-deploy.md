@@ -33,6 +33,7 @@ D05, D06, D07 e O04 da slice 10 concluída.
 - [ ] Proprietário cadastrar/verificar a conta identificada; Codex executar bootstrap idempotente usando UUIDs explícitos de conta/workspace e dados aprovados. Nunca promover o primeiro usuário encontrado.
 - [ ] Validar admin e técnico por convite real, remetente/links e permissões. Criar somente inventário do piloto aprovado pelo proprietário; identificar dados de ensaio e sua destinação.
 - [ ] Percorrer issues, histórico, réplica entre contas, campainha/push e reconexão com dados de teste identificados; conferir logs sanitizados e alertas.
+- [ ] Após o release estar ativo, medir CPU/RAM no KVM1; ensaiar pausa noturna com API/Caddy disponíveis, Neon scale-to-zero/cold-start, wake/retry da outbox, reconciliação após reboot e retomada/resnapshot do Electric sem perda de comandos.
 - [ ] Registrar execução e manter uso restrito aos validadores até D09/D10; atualizar passos do README a partir do que foi executado.
 
 ## Contratos e dados afetados

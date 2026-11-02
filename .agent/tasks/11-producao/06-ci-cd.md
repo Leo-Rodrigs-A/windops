@@ -20,7 +20,7 @@ Workflows, scripts e artefatos de deploy; nenhum acesso administrativo irrestrit
 
 ## Estado atual
 
-CI/deploy e scripts SSH existem; deploy depende de `DEPLOY_ENABLED`. O fluxo atual valida CI, publica imagens API/web imutáveis por SHA no GHCR e chama por SSH restrito o deploy root-owned da VPS, que aplica migração e faz health check/rollback de imagem. Ele lê `/opt/windops/infra/.env.production` no host. Após comparar as opções, o proprietário escolheu guardar variáveis nesse arquivo protegido na VPS, sem usar o Docker Manager para secrets. Execução remota, proteção de branch e recuperação precisam de evidência atual.
+CI/deploy e scripts SSH existem; deploy depende de `DEPLOY_ENABLED`. O workflow tem `packages: write` e publica API/web imutáveis por SHA usando `GITHUB_TOKEN`; o package GHCR é criado no primeiro push, sem cadastro prévio manual. Em seguida o job `deploy` usa Environment `production` e chama por SSH o deploy root-owned da VPS, que aplica migração e health checks. O host lê `/opt/windops/infra/.env.production`, onde o proprietário já informou que guardou os segredos de runtime. Execução remota, proteção de branch, vars/secrets de deploy e recuperação ainda precisam de evidência atual.
 
 ## Revisão das recomendações externas — 01/11/2026
 
