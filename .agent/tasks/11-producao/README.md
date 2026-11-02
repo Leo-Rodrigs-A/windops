@@ -2,7 +2,7 @@
 
 ## Status
 
-Em andamento. D01 concluída em 31/10/2026; D02 concluída em 02/11/2026; D03 parcialmente executada em 02/11/2026. Destino: Hostinger KVM1 no Brasil, Ubuntu 24.04.5, Docker/Compose instalados, Neon Free. Custo informado ~R$600 e pouco por 24 meses; sem despesas adicionais planejadas nem homologação permanente. Backup semanal Hostinger e meta de recuperação aceitos, sem restore ensaiado. Janela Neon desejada 06h–18h com scale-to-zero noturno ainda não implementada. Oracle A1 não foi criada por falta de capacidade em São Paulo/AD-1. Próximas: concluir gates locais da D03 e avançar D04.
+Em andamento. D01 concluída em 31/10/2026; D02, D03 (preparação local) e D04 (contas/acessos) concluídas em 02/11/2026. Destino: Hostinger KVM1 no Brasil, Ubuntu 24.04.5, Docker/Compose instalados, Neon Free. Custo informado: R$625 por 24 meses; sem despesas adicionais planejadas nem homologação permanente. Backup semanal Hostinger e meta de recuperação aceitos, sem restore ensaiado. A janela Neon diária 06h–18h está preparada em código; timer/scale-to-zero serão instalados e testados em D05/D08 após a infraestrutura e o primeiro deploy. Oracle A1 não foi criada por falta de capacidade em São Paulo/AD-1. Próxima: D05.
 
 - [ ] Slice concluída
 
@@ -32,8 +32,8 @@ Há Dockerfiles API/web, Compose de produção, Caddy, CI, GHCR/deploy por SHA, 
 | ------------------------------------ | -------------------------------------------- | ----------------------------------------------------------------------------- | --------------------------------------------------------------------------- |
 | [x] [D01](01-readme-manual.md)       | README como manual do desenvolvedor          | Codex                                                                         | Nenhuma; primeira tarefa da slice.                                          |
 | [x] [D02](02-escolha-hospedagem.md)  | Escolher hospedagem e parâmetros do piloto   | Proprietário decide; Codex prepara comparação                                 | D01.                                                                        |
-| [] [D03](03-preparacao-app.md)       | Preparar aplicação e artefatos de produção   | Codex                                                                         | D01; D02 para adaptações específicas do destino.                            |
-| [] [D04](04-contas-acessos.md)       | Criar ambientes, contas e fornecer acessos   | Proprietário; Codex fornece instruções e confere                              | D02; pode ocorrer junto de D03.                                             |
+| [x] [D03](03-preparacao-app.md)      | Preparar aplicação e artefatos de produção   | Codex                                                                         | D01; D02 para adaptações específicas do destino.                            |
+| [x] [D04](04-contas-acessos.md)      | Criar ambientes, contas e fornecer acessos   | Proprietário; Codex fornece instruções e confere                              | D02; pode ocorrer junto de D03.                                             |
 | [] [D05](05-infra-banco.md)          | Provisionar runtime, banco e rede            | Codex; proprietário executa ações de console sem acesso delegado              | D03 e D04.                                                                  |
 | [] [D06](06-ci-cd.md)                | Validar fluxo de entrega e deploy            | Codex; proprietário configura restrições do GitHub quando necessário          | D03; D04/D05 para execução remota.                                          |
 | [] [D07](07-operacao-recuperacao.md) | Backups, recuperação e monitoramento         | Codex; proprietário confirma metas e recebe alertas                           | D05 e D06 para ensaiar recuperação de release.                              |
@@ -41,7 +41,7 @@ Há Dockerfiles API/web, Compose de produção, Caddy, CI, GHCR/deploy por SHA, 
 | [] [D09](09-validacao-campo.md)      | Validar aparelhos e fluxo de campo           | Proprietário executa em aparelhos; Codex prepara roteiro, acompanha e corrige | D08.                                                                        |
 | [] [D10](10-liberacao-piloto.md)     | Liberar piloto e entregar rotina de operação | Proprietário confirma liberação; Codex executa e registra                     | D01–D09 concluídas e O04 encerrada; escopo móvel explicitamente registrado. |
 
-D01 começa sem aguardar contas. Após D02, D03 e D04 podem avançar independentemente. D05 prepara o destino; D06 prova a entrega; D07 prova recuperação/operação; D08 instala o candidato; D09 testa o uso real; D10 abre o piloto. A dependência O04 está satisfeita pelo encerramento da slice 10. O Google já aceito em dev não dispensa validar callback/origem no domínio final.
+D01 começa sem aguardar contas. D03 e D04 avançaram em paralelo após D02; D03 prepara artefatos locais e está concluída. D05 prepara o destino; D06 prova a entrega; D07 prova recuperação/operação; D08 instala o candidato e executa ensaios que requerem o primeiro deploy; D09 testa o uso real; D10 abre o piloto. A dependência O04 está satisfeita pelo encerramento da slice 10. O Google já aceito em dev não dispensa validar callback/origem no domínio final.
 
 ## Critérios de encerramento
 
@@ -63,3 +63,7 @@ Consulta oficial em 30/10/2026: [Hetzner Cloud](https://docs.hetzner.com/cloud/)
 30/10/2026 — Dez tasks executáveis criadas com responsáveis, dependências, checklists e aceite. Nenhuma task de implementação marcada concluída. Verificação documental registrada na memória; sem mudança de fonte/infra, contratação ou deploy nesta etapa.
 
 31/10/2026 — D01 concluída: manual/guia entregues e setup isolado, reaplicação, permissões, auth/workspaces, build, restore e dev/Preview HTTP validados. `pnpm check` encontrou formatação preexistente; detalhes e limites em D01. D02 é a próxima tarefa; nenhum deploy remoto executado.
+
+02/11/2026 — D03 concluída no escopo de preparação local. `pnpm check` passou com 86 testes; produção Compose sintética, Dockerfile API, units/calendar systemd, scripts e documentação passaram validações. Janela diária do Electric foi confirmada/preparada. Arquitetura/carga do host, instalação efetiva do timer, scale-to-zero, cold-start e sync real foram realocados para D05/D08 porque dependem de infraestrutura provisionada e release implantado; não são declarados comprovados.
+
+02/11/2026 — D04 concluída por confirmações do proprietário: OAuth Google de produção configurado; environment `production` com entradas de deploy e variável do repositório `DEPLOY_ENABLED=false`; usuário SSH restrito testado com comando inválido rejeitado; scripts de deploy instalados na VPS; ruleset ativo da `main` reportado; metadados Neon identificados; conta pessoal escolhida como admin e workspace nomeado `Elevadores`. O nome/e-mail da conta não foi repetido nos artefatos por o repositório ser público, e nenhuma senha foi registrada. Cadastro/verificação da conta, bootstrap efetivo, roles/grants/TLS, GHCR e deploy continuam em D05/D06/D08. Não houve deploy nem teste OAuth/e-mail de produção.

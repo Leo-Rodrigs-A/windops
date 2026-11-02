@@ -29,6 +29,7 @@ D03 e D04.
 ## Plano
 
 - [ ] Para VPS: preparar Docker/Compose, atualizações, firewall, chaves, usuário de deploy restrito e diretórios operacionais. Para PaaS: criar serviços privados/públicos, discos e ingress conforme D02. Implementar só o destino escolhido.
+- [ ] Confirmar arquitetura x86_64 do host e instalar/ativar as units systemd da janela Electric; o script deve permanecer no-op até existir `.release.env` e ambiente production configurado.
 - [ ] Configurar DNS e HTTPS com renovação e uma origem pública; publicar somente entrada web e acesso administrativo restrito. Confirmar externamente que Electric, banco e portas internas não estão expostos.
 - [ ] Provisionar banco com papéis runtime/migrador/replicação separados, TLS verificado e conexões diretas onde exigidas; habilitar logical replication e validar privilégios efetivos no provedor.
 - [ ] Definir ordem explícita roles→migrações→grants/publicação→Electric→API/web, ajustando scripts existentes quando necessário. Validar instalação vazia e repetição; não presumir que o deploy atual cria roles ou publicação.

@@ -20,7 +20,7 @@ Decisão de infraestrutura; preserva monólito modular e uma origem pública. N�
 
 ## Estado atual
 
-Destino escolhido e provisionado pelo proprietário: VPS Hostinger KVM1 no Brasil, Ubuntu 24.04.5 LTS, 1 vCPU/4 GB, com Docker Engine 29.9.2 e Compose 5.6.1 instalados; Neon Free em São Paulo. Proprietário confirma pagamento à vista por 24 meses, aproximadamente R$600 e pouco no total (~R$27/mês); recibo e valor exato não foram conferidos. Não haverá homologação permanente nem despesas adicionais planejadas. O hostname `windops.devleonardo.com.br` tem registro A criado na Vercel e o proprietário confirmou que resolve para o IPv4 da VPS. KVM2 continua como opção de upgrade após medir carga, sujeito a preço/condições então vigentes. A tentativa anterior de criar Oracle A1 em São Paulo/AD-1 falhou por falta de capacidade; não foi criada VM.
+Destino escolhido e provisionado pelo proprietário: VPS Hostinger KVM1 no Brasil, Ubuntu 24.04.5 LTS, 1 vCPU/4 GB, com Docker Engine 29.9.2 e Compose 5.6.1 instalados; Neon Free em São Paulo. Proprietário confirma pagamento à vista de R$625 por 24 meses; renovação/condições após o prazo não informadas. Não haverá homologação permanente nem despesas adicionais planejadas. O hostname `windops.devleonardo.com.br` tem registro A criado na Vercel e o proprietário confirmou que resolve para o IPv4 da VPS. KVM2 continua como opção de upgrade após medir carga, sujeito a preço/condições então vigentes. A tentativa anterior de criar Oracle A1 em São Paulo/AD-1 falhou por falta de capacidade; não foi criada VM.
 
 ## Dependências
 
@@ -30,7 +30,7 @@ D01.
 
 - [x] Codex comparar VPS (Hetzner/Hostinger) e um PaaS candidato (Render), consultando documentação/preços oficiais atuais; registrar custo total estimado de compute, banco, storage, backups e tráfego sem pressupor gratuidade.
 - [x] Avaliar a viabilidade por documentação do provedor e inspeção da topologia existente: VPS Linux com Docker/Compose; Caddy como única entrada pública; API/worker e Electric em rede interna, com volume persistente para Electric; long polling configurado; migração em job separado e deploy por SHA com health check. Neon oferece logical replication. As condições ainda não comprovadas no destino — privilégios/publicação/TLS/slots, comportamento scale-to-zero, carga no KVM1, firewall/HTTPS e execução do primeiro deploy — foram transferidas explicitamente para D03/D05/D06/D08. Não declarar aptidão de carga nem operação validada por esta análise.
-- [x] Proprietário escolher e pagar Hostinger KVM1 Brasil (Ubuntu 24.04, 24 meses pré-pagos, ~R$600 e pouco segundo proprietário) e confirmar Neon Free; não quer despesas adicionais e não haverá homologação permanente. Registro A `windops.devleonardo.com.br` criado na Vercel e resolução ao IPv4 da VPS confirmada pelo proprietário. Valor exato conforme recibo e renovação não conferidos. Não substituir o banco silenciosamente.
+- [x] Proprietário escolher e pagar Hostinger KVM1 Brasil (Ubuntu 24.04, 24 meses pré-pagos, R$625 segundo proprietário) e confirmar Neon Free; não quer despesas adicionais e não haverá homologação permanente. Registro A `windops.devleonardo.com.br` criado na Vercel e resolução ao IPv4 da VPS confirmada pelo proprietário. Renovação após o período não informada. Não substituir o banco silenciosamente.
 - [x] Definir política sem custo adicional: manter backup automático semanal Hostinger e usar a janela de restauração instantânea de 6 horas do Neon Free. Limites/RPO operacional e meta de RTO aceitos pelo proprietário em 02/11/2026 e detalhados abaixo; não são SLA nem restore exercitado.
 - [x] Registrar decisão, topologia, parâmetros, limites e recursos/acessos de D04 nos documentos de operação, arquitetura e memória. Nenhuma contratação adicional.
 
@@ -52,7 +52,7 @@ Destino e orçamento escolhidos pelo proprietário, adequação condicional docu
 
 ## Evidências — 02/11/2026
 
-O proprietário confirmou a VPS ativa e acessível por SSH como root, Ubuntu 24.04.5 LTS, Docker 29.9.2 e Docker Compose 5.6.1. Confirmou DNS A de `windops.devleonardo.com.br` na Vercel resolvendo para o IPv4 da VPS. Confirmou backup semanal Hostinger ativo e aceitou a política acima. O Neon Free e PostgreSQL 18 em São Paulo, roles separados e URLs pooled/direct foram configurados pelo proprietário. E-mail transacional Resend foi configurado pelo proprietário e as variáveis foram inseridas no arquivo root-owned da VPS (modo 0600); envio real ainda não foi comprovado.
+O proprietário confirmou a VPS ativa e acessível por SSH como root, Ubuntu 24.04.5 LTS, Docker 29.9.2 e Docker Compose 5.6.1. Confirmou DNS A de `windops.devleonardo.com.br` na Vercel resolvendo para o IPv4 da VPS. Confirmou backup semanal Hostinger ativo e aceitou a política acima. O Neon Free e PostgreSQL 18 em São Paulo, roles separados e URLs pooled/direct foram configurados pelo proprietário. O custo foi atualizado pelo proprietário para R$625 por 24 meses; renovação não informada. Resend está totalmente configurado e as variáveis foram inseridas no arquivo root-owned da VPS (modo 0600); envio real ainda não foi testado.
 
 Inspeção da configuração versionada confirmou Caddy na entrada pública, API/Electric internos, volume Electric, serviço de migração, long polling e entrega por SHA. Os seguintes itens continuam para execução em D03/D05/D06/D08: confirmação do `wal_level`, grants efetivos, publicação/slots e TLS no Neon; HTTPS/certificado, firewall e portas externos; ordem segura da instalação inicial (migrações/grants antes de iniciar Electric); ensaio de containers, carga/folga do KVM1, escala noturna, deploy e recuperação. Nenhum runtime da aplicação foi implantado ou testado nesta task.
 
@@ -81,7 +81,7 @@ Subtotal ilustrativo com banco mínimo: Hetzner **€5,99 + US$19,90**, Hostinge
 
 ### Decisões registradas do proprietário
 
-1. Hostinger KVM1 no Brasil, pré-paga por 24 meses; proprietário reporta aproximadamente R$600 e pouco (~R$27/mês). Sem novas despesas planejadas; Neon Free. Valor exato e renovação não conferidos.
+1. Hostinger KVM1 no Brasil, pré-paga por 24 meses por R$625 segundo o proprietário. Sem novas despesas planejadas; Neon Free. Renovação não informada.
 2. Domínio `windops.devleonardo.com.br`, DNS na Vercel; proprietário confirmou que resolve para o IPv4 da VPS. O proprietário é responsável operacional. Acesso SSH administrativo está funcionando; usuário/chave restritos para GitHub Actions permanecem em D05/D06.
 3. Neon Free e ausência de homologação permanente confirmados. KVM2 só será considerado após medir carga e custo.
 4. Backup automático semanal Hostinger confirmado e mantido; Neon Free possui janela de restauração de 6 horas. Proprietário aceitou meta de RTO até 1 dia útil, sem ensaio ou SLA. Para limites e exclusões, veja “Política de recuperação aceita”. A fila local não está nesses backups.
@@ -94,10 +94,10 @@ Este inventário resume a topologia escolhida e orienta a próxima etapa; não e
 - **DNS:** zona gerenciada pela Vercel; registro A de `windops.devleonardo.com.br` criado e resolução ao IPv4 confirmada pelo proprietário. HTTPS/certificado ainda não validados.
 - **Neon:** projeto de produção Free, branch `production`, PostgreSQL 18; proprietário criou `windops_app`, `windops_migrator` e `windops_replication`. Runtime usa URL pooled; migração e replicação usam URLs diretas. Segredos ficam somente no host/secret store. D05 deve confirmar grants efetivos, `wal_level`, logical replication/publicação/slots e TLS antes de iniciar Electric.
 - **Aplicação na VPS:** Docker Compose com Caddy como entrada HTTPS, web estática, API/worker e Electric privado com volume persistente. PostgreSQL permanece gerenciado pelo Neon.
-- **Operação:** sem homologação permanente; janela Neon desejada 06h–18h, provisoriamente todos os dias em America/Sao_Paulo. Para scale-to-zero noturno, agendar pausa do Electric, API e worker; retomar antes do início da janela. Isso ainda precisa ser implementado e ensaiado.
+- **Operação:** sem homologação permanente; proprietário confirmou janela diária 06h–18h em `America/Sao_Paulo`, mantendo API/Caddy disponíveis e pausando somente Electric. Código/timer preparados em D03; instalar em D05 e medir scale-to-zero/cold-start, carga e retomada em D08. Outbox push aguarda atividade posterior da API.
 - **Acessos restantes:** usuário/chave restritos e GHCR read-only para GitHub Actions; vars/secrets do Environment `production`; configuração OAuth e teste real de e-mail; nenhum segredo deve ser enviado ao chat.
 
-Este inventário é o resumo operacional mencionado na conversa. Não substitui a validação no servidor real, que ficará para D03/D05/D08.
+Este inventário é o resumo operacional mencionado na conversa. Não substitui a validação no servidor real, que ficará para D05/D06/D08.
 
 ### Fontes oficiais consultadas
 

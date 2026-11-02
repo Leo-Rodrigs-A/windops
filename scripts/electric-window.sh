@@ -2,6 +2,7 @@
 set -euo pipefail
 
 cd /opt/windops
+[[ -f .release.env && -f infra/.env.production ]] || exit 0
 compose=(docker compose --env-file infra/.env.production --env-file .release.env -f infra/compose.production.yml)
 hour=$(TZ=America/Sao_Paulo date +%H)
 
