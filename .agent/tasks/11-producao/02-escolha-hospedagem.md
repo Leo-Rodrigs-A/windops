@@ -62,11 +62,11 @@ Comparação de provedores e alternativas permanece registrada acima. Custos exa
 
 Pesquisa documental; nenhum serviço contratado ou runtime remoto testado. Recomendação inicial: VPS + Neon, aproveitando Compose, Caddy e deploy SSH existentes. Provedor e região dependem do orçamento e dos acessos do proprietário.
 
-| Candidato | Estimativa mensal inicial | Limites e adaptação |
-| --- | --- | --- |
-| Hetzner CX23 europeu | €5,49 compute + €0,50 IPv4, antes de backup/impostos; acrescentar banco abaixo | Preço não garante disponibilidade. Confirmar backup/tráfego no checkout e latência Brasil–Europa. |
-| Hostinger KVM 2 | R$42,99 equivalentes/mês em contratação de 24 meses (R$1.031,76); renovação R$77,99/mês; acrescentar banco abaixo | 2 vCPU, 8 GB RAM, 100 GB NVMe, 8 TB de tráfego. Confirmar região, backup e condições no checkout. |
-| Render, três serviços pagos | Piso de compute 3 × US$7 = US$21; disco Electric de 10 GB × US$0,25 = US$2,50; acrescentar banco abaixo | 512 MB por serviço é apenas piso comercial, não dimensionamento validado. Pode exigir plano maior, workspace pago e tráfego adicional. |
+| Candidato                   | Estimativa mensal inicial                                                                                         | Limites e adaptação                                                                                                                    |
+| --------------------------- | ----------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
+| Hetzner CX23 europeu        | €5,49 compute + €0,50 IPv4, antes de backup/impostos; acrescentar banco abaixo                                    | Preço não garante disponibilidade. Confirmar backup/tráfego no checkout e latência Brasil–Europa.                                      |
+| Hostinger KVM 2             | R$42,99 equivalentes/mês em contratação de 24 meses (R$1.031,76); renovação R$77,99/mês; acrescentar banco abaixo | 2 vCPU, 8 GB RAM, 100 GB NVMe, 8 TB de tráfego. Confirmar região, backup e condições no checkout.                                      |
+| Render, três serviços pagos | Piso de compute 3 × US$7 = US$21; disco Electric de 10 GB × US$0,25 = US$2,50; acrescentar banco abaixo           | 512 MB por serviço é apenas piso comercial, não dimensionamento validado. Pode exigir plano maior, workspace pago e tráfego adicional. |
 
 Banco comum proposto: Neon Launch. Cenário conservador de 730 horas ligado, 0,25 CU, 1 GB de dados e 1 GB-mês de histórico: 730 × 0,25 × US$0,106 + US$0,35 + US$0,20 = **US$19,90/mês** aproximadamente. Carga/replicação contínua pode impedir economia por suspensão; não usar a estimativa comercial de uso intermitente como teto. A 1 CU contínua, o mesmo cenário custa aproximadamente US$77,93. Histórico é volume de mudanças, não tamanho fixo do banco.
 
