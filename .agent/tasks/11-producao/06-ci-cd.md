@@ -2,7 +2,7 @@
 
 ## Status
 
-Planejada
+Em andamento
 
 - [ ] Task concluída
 
@@ -57,3 +57,13 @@ CI e deploy observados no GitHub/destino, ensaios de falha registrados e mesmo S
 ## Evidências
 
 Planejamento em 30/10/2026. Execução pendente; preencher data, mudanças, comandos/resultados, links ou identificadores não secretos e limitações ao executar.
+
+Primeira tentativa de rollout — 02/11/2026: CI run `74` passou para SHA `c076f1d7428861d0701506ad3e47c882e37bed21`; Deploy run `67` publicou API/web, mas ficou sem deploy enquanto `DEPLOY_ENABLED=false`. Após habilitar deploy, Deploy run `68` publicou novamente e iniciou job remoto; SSH falhou em host-key verification antes de executar o wrapper. Log mostra `DEPLOY_HOST=187.41.111.202` e `No ED25519 host key is known for 187.41.111.202`; o `KNOWN_HOSTS` previamente cadastrado contém entradas hashed do hostname `windops.devleonardo.com.br`. Nenhum comando de deploy chegou à VPS. Próximo passo: alinhar `DEPLOY_HOST` no Environment `production` ao hostname fixado (ou adicionar entrada IP baseada na fingerprint já verificada) e reexecutar somente o job falho do Deploy run `68`.
+
+Rerun de Deploy run `68` — 02/11/2026, tentativa 2: com `DEPLOY_HOST=windops.devleonardo.com.br`, SSH e autenticação passaram; API/web foram baixadas, migration rodou e API ficou `Healthy`. `docker compose up --wait` falhou porque `windops-web-1` ficou `unhealthy`, e o script informou que não encontrou release anterior para restaurar. O deploy não gravou `.release.env` nem aplicou reconciliação da janela. Diagnosticar probe `/healthz` do Caddy e estado dos containers antes de qualquer rerun; se a janela continuar sem release, Electric pode permanecer ativo.
+
+Diagnóstico posterior na VPS: `windops-web-1` aparece `running/healthy`, mas os logs incluem várias linhas `exec /usr/bin/caddy: operation not permitted`; `/opt/windops/.release.env` segue ausente. Integração GitHub não tem permissão `Actions: write` para reexecutar run `68` (HTTP 403). Pode-se usar a UI **Re-run failed jobs** depois de confirmar que o web continua `healthy`; ainda não há rollout aceito.
+
+Tentativa 3 do run `68` — 02/11/2026: confirmou repetição do mesmo resultado; imagens no host, migration repetida, API saudável, web recém-iniciado e marcado `unhealthy` imediatamente. Rollout abortado, `.release.env` ausente; nenhum release aceito. Não repetir sem diagnóstico detalhado de `State.Health.Log`, healthcheck configurado, processo/args e logs Caddy; Electric não foi reconciliado.
+
+Diagnóstico do erro de execução — 02/11/2026: inspeção enviada pelo proprietário confirmou processo `caddy`, imagem web de SHA `c076f1d7428861d0701506ad3e47c882e37bed21`, usuário `10001:10001`, `cap_drop: ALL`/`no-new-privileges` no Compose e repetidos `exec /usr/bin/caddy: operation not permitted`. A imagem oficial Caddy traz `cap_net_bind_service` no binário; com todas as capabilities removidas, o kernel bloqueia a execução. Como os listeners configurados são 8080/8443 e health 8081, alterado `infra/Dockerfile.web` para remover a capability de arquivo com `setcap -r` durante o build e remover `libcap-utils` depois. `pnpm check` passou: Biome/boundaries, typechecks, 86 testes e builds API/web. Docker daemon local indisponível (`permission denied` no socket), portanto a imagem alterada ainda não foi construída nem exercitada; precisa novo SHA/CI, publicação e deploy para confirmar. Sem release de produção aceito até essa confirmação.
