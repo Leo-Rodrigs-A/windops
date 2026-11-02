@@ -18,7 +18,7 @@ Local passwords in `.env.example` are disposable development values. Change them
 
 ## Production database preparation
 
-Neon is provisioned, but production grants, TLS and publication have not yet been validated. The owner created separate runtime, migration and replication logins and stored their URLs in the protected VPS environment. Use direct connections for migration and replication; keep the API on `DATABASE_URL`, the migration task on `MIGRATION_DATABASE_URL`, and Electric on `ELECTRIC_DATABASE_URL` with manual table publishing.
+Neon is provisioned with separate runtime, migration and replication logins. Use direct connections for migration and replication; keep the API on `DATABASE_URL`, the migration task on `MIGRATION_DATABASE_URL`, and Electric on `ELECTRIC_DATABASE_URL` with manual table publishing. After migrations, run `provision-neon.sql` as `windops_migrator` to reconcile app grants and the approved publication. Do not run `provision-roles.sh` on Neon: it creates/alters roles and assumes local PostgreSQL administrator privileges.
 
 ### Neon replication privilege exception — accepted by owner 02/11/2026
 
