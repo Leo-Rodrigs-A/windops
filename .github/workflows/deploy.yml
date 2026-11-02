@@ -12,7 +12,7 @@ concurrency:
 jobs:
   publish:
     if: >-
-      vars.DEPLOY_ENABLED == 'true' &&
+      vars.PUBLISH_IMAGES == 'true' &&
       github.event.workflow_run.conclusion == 'success' &&
       github.event.workflow_run.event == 'push' &&
       github.event.workflow_run.head_repository.full_name == github.repository
@@ -49,6 +49,9 @@ jobs:
           tags: ${{ steps.image.outputs.tag }}
   deploy:
     needs: publish
+    if: >-
+      vars.DEPLOY_ENABLED == 'true' &&
+      needs.publish.result == 'success'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     environment: production

@@ -19,7 +19,7 @@ Antes de contratar, escolha com o proprietário: provedor, região, orçamento, 
 | PostgreSQL     | Criar projeto/banco separado do dev; Neon é a referência atual.                                             | Configurar migração, runtime, replicação, backup e restore.                                                                                                       |
 | Resend         | Proprietário informou conta/domínio/remetente e chave já configurados na VPS.                               | Não reproduzir a chave; D08 ainda deve testar entrega real dos fluxos de e-mail.                                                                                  |
 | Google OAuth   | Criar/ajustar cliente Web e público autorizado.                                                             | Configurar origem/callback e validar novo login/linking.                                                                                                          |
-| GitHub/GHCR    | O workflow cria o package GHCR no primeiro push; proprietário já configurou SSH e `.env.production` na VPS. | Confirmar Environment `production`, proteção da main e vars/secrets de deploy; testar publicação e pull do GHCR em D06/D08.                                       |
+| GitHub/GHCR    | Nenhum package foi encontrado pelo proprietário; workflow atualizado para separar publicação de deploy. | Habilitar `PUBLISH_IMAGES` e validar package/pull; manter `DEPLOY_ENABLED=false` até liberar rollout. |
 | Primeiro admin | Informar conta e nome do workspace explicitamente.                                                          | Fazer bootstrap após cadastro/verificação.                                                                                                                        |
 
 Cadastre credenciais em secret stores ou arquivos protegidos do servidor. Compartilhe nos registros somente nomes das variáveis, IDs dos projetos, domínio e confirmação de acesso. Não cole chaves, URLs com senha, cookies ou tokens no chat, Git, imagens ou logs.
@@ -36,7 +36,7 @@ Use um banco exclusivo para produção. Prepare três papéis com credenciais di
 | --------------------- | ------------------------ | ---------------------------------------------------------- |
 | `windops_app`         | `DATABASE_URL`           | Dados de runtime, sem criar schema/roles nem replicar.     |
 | `windops_migrator`    | `MIGRATION_DATABASE_URL` | Migrações e ownership de objetos; não é credencial da API. |
-| `windops_replication` | `ELECTRIC_DATABASE_URL`  | Replicação e leitura somente da publicação permitida.      |
+| `windops_replication` | `ELECTRIC_DATABASE_URL`  | Neon exige membership administrativa para logical replication; privilégio amplo aceito como exceção, limitado operacionalmente ao Electric privado. |
 
 No Neon, habilite logical replication no projeto e use conexão direta para migração e Electric, com TLS e certificado verificados. Confira as capacidades dos papéis no serviço, retenção de WAL/slots e política de suspensão do compute. Consulte o [guia de logical replication](https://neon.com/docs/guides/logical-replication-guide).
 
@@ -47,7 +47,7 @@ A ordem da **primeira instalação** é:
 3. Administrador reconcilia grants e publicação manual.
 4. Aplique migrações e grants/publicação antes de iniciar Electric; API e web podem operar enquanto Electric estiver pausado.
 
-A allowlist atual contém `workspaces`, `parks`, `turbines`, `issue_sync_rows` e `issue_sync_events`, com `REPLICA IDENTITY FULL`. Não publique tabelas brutas de identidade, memberships, `issues`, `issue_events` ou receipts. Projeções sanitizadas e proxy autenticado protegem os dados.
+A allowlist atual contém `workspaces`, `parks`, `turbines`, `issue_sync_rows` e `issue_sync_events`, com `REPLICA IDENTITY FULL`. Não publique tabelas brutas de identidade, memberships, `issues`, `issue_events` ou receipts. Projeções sanitizadas e proxy autenticado protegem os dados expostos no fluxo. Exceção Neon aceita pelo proprietário em 02/11/2026: a role que o Electric usa herda `neon_superuser`, portanto seus privilégios SQL não ficam limitados à publication e a credential pode ler/escrever dados amplos se comprometida. Armazenar a URL somente no env root-owned, passar apenas ao Electric, não publicar porta Electric, manter a publication manual e usar somente o proxy API autenticado para clientes. Não declarar a credencial Neon de Electric como least-privilege.
 
 **Pendente D05:** adaptar e executar o provisionamento no destino, usando [contrato de permissões](../infra/postgres/README.md) e [provisionador local](../infra/postgres/provision-roles.sh) como referências. O script local pressupõe PostgreSQL administrativo em Docker; não o execute cegamente no Neon. `pnpm db:setup` também é um comando de desenvolvimento. O serviço `migrate` da produção não cria roles nem reconcilia toda a publicação. Só prossiga ao deploy após conferir esses requisitos.
 
@@ -132,7 +132,7 @@ Confirme que o usuário não pode editar scripts, `/opt/windops`, configuração
 
 ## 4. Publicar a primeira versão na VPS
 
-Primeiro rode o CI do commit candidato. As imagens precisam conter **esse mesmo SHA**, inclusive migrations. O workflow existente publica `ghcr.io/<owner>/<repo>-api:<SHA>` e `-web:<SHA>` quando `DEPLOY_ENABLED=true`, e depois tenta fazer deploy. Não ligue essa variável apenas para publicar imagens se o host ainda não estiver pronto.
+Primeiro rode o CI do commit candidato. As imagens precisam conter **esse mesmo SHA**, inclusive migrations. O workflow publica `ghcr.io/<owner>/<repo>-api:<SHA>` e `-web:<SHA>` quando a variável de repositório `PUBLISH_IMAGES=true`. O deploy continua condicionado separadamente a `DEPLOY_ENABLED=true` e só roda após publicação bem-sucedida. Para publicar sem rollout, mantenha `DEPLOY_ENABLED=false`.
 
 Para uma primeira publicação controlada, uma máquina autorizada pode construir/enviar as imagens do checkout exato que passou no CI. Substitua prefixo/SHA, faça login no GHCR pelo mecanismo seguro escolhido e confira a arquitetura de CPU:
 
@@ -206,11 +206,11 @@ Cadastre no GitHub:
 
 | Local                    | Configuração                                                                                     |
 | ------------------------ | ------------------------------------------------------------------------------------------------ |
-| Variável do repositório  | `DEPLOY_ENABLED=false` durante preparação; o job `publish` lê essa variável fora do Environment. |
+| Variável do repositório  | `PUBLISH_IMAGES=false` inicialmente; habilita publicação GHCR. `DEPLOY_ENABLED=false` durante preparação impede rollout. Ambas são lidas fora do Environment. |
 | Environment `production` | Vars `DEPLOY_HOST`, `DEPLOY_USER`; secrets `DEPLOY_SSH_KEY`, `DEPLOY_KNOWN_HOSTS`.               |
 | Repositório/Environment  | Proteção da main, checks exigidos e política de acesso/liberação disponíveis no plano escolhido. |
 
-Após os ensaios e liberação D10, `DEPLOY_ENABLED=true` habilita o [workflow](../.github/workflows/deploy.yml). No CI bem-sucedido de push da main na mesma origem, a etapa `publish` usa `GITHUB_TOKEN` com `packages: write` para publicar imagens imutáveis por SHA e cria automaticamente os packages GHCR no primeiro push. Em seguida, a etapa `deploy` usa Environment `production`; se suas vars/secrets não estiverem configuradas, o package pode ser publicado, mas o deploy falhará. Não ligue `DEPLOY_ENABLED` só para criar o package. Verifique visibilidade/permissões do package após a primeira publicação; não presuma que seja público. O [CI versionado](../.github/workflows/ci.yml) já inclui integrações auth, workspaces, parks, issues e Electric; D06 ainda precisa comprovar a execução remota no GitHub e o caminho de deploy.
+`PUBLISH_IMAGES=true` habilita a publicação no [workflow](../.github/workflows/deploy.yml), após CI bem-sucedido em push da `main` na mesma origem. O job usa `GITHUB_TOKEN` com `packages: write` para publicar imagens imutáveis por SHA e cria os packages GHCR no primeiro push. `DEPLOY_ENABLED=true` é um controle separado; o deploy exige publicação bem-sucedida e usa Environment `production`. Para o ensaio de migração inicial, habilite apenas `PUBLISH_IMAGES`, mantenha `DEPLOY_ENABLED=false` e confira visibilidade/permissões do package antes do pull na VPS; não presuma que o package seja público. O [CI versionado](../.github/workflows/ci.yml) já inclui integrações auth, workspaces, parks, issues e Electric; D06 ainda precisa comprovar execução remota e o caminho de deploy.
 
 Para atualizar: submeta mudança revisada → aguarde CI/publicação/deploy → confira SHA/digests e health → faça smoke de login/sync → acompanhe erros, notificações e fila. Alterações em schema devem manter a imagem anterior compatível; clientes/PWA antigos podem continuar ativos com comandos pendentes.
 
