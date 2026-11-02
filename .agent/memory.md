@@ -452,4 +452,26 @@ Atualização D05: primeira migration isolada autenticou como `windops_migrator`
 
 CI do PR de provisionamento falhou em `db:empty-check` porque a reconciliação revogou também o SELECT do runtime em `issue_sync_rows`, necessário para o modelo de permissão validado por `permissions.mjs`. Correção aplicada nos dois provisionadores: regrantar SELECT e manter as escritas negadas. O integration script agora também testa as três negações; `pnpm check` passou, CI remoto ainda pendente.
 
-CI run `69` do PR #4 (`feat/d05-provision-neon`) passou em 02/11/2026; PR ainda aberto. Após merge, workflow principal publicará novo SHA via `PUBLISH_IMAGES`, mantendo `DEPLOY_ENABLED=false`; depois será possível aplicar `provision-neon.sql` usando somente o serviço one-off de migration.
+PR #4 (`feat/d05-provision-neon`) foi mergeado em 02/11/2026. CI run `72` passou no `main`, SHA `11c41793c7734c46b63eaf9c7232b546d61a13fc`, incluindo `db:empty-check`; Deploy workflow run `66` publicou imagens API/web para o SHA e manteve o job de deploy `skipped` (`DEPLOY_ENABLED=false`). Digests: API `sha256:4ebfdd5b3b022816865a6273b2a1fe22353f3808553e26284bdcaea4de5e5c4e`; web `sha256:aaa9588aaf94c324d8415c280c36bb43e35a48b096b767cd396a19ba180aaa3e`. Próximo passo: copiar `infra/postgres/provision-neon.sql` para a VPS e executá-lo por `migrate` isolado como `windops_migrator`; ainda não afirmar grants/publication aplicados no Neon.
+
+O proprietário executou o provisionador one-off na VPS; terminou sem erro e reportou `current_user=windops_migrator`, mas a consulta acoplada trouxe `publication_tables=0`, incompatível com a allowlist de cinco tabelas. Confirmar database atual, publicação e seus membros via catálogos PostgreSQL antes de considerar a configuração Neon aplicada ou iniciar Electric.
+
+No Neon SQL Editor, o proprietário confirmou `current_database=windops-production` com sessão `windops-production_owner`. Consultas de catálogos executaram, mas sem evidência das linhas retornadas; a publication continua não confirmada.
+
+Consulta agregada no SQL Editor retornou `publication_exists=false` e zero tabelas para `electric_publication_default`, em `windops-production`. Comparar branch/hostname do Neon SQL Editor com o destino em `MIGRATION_DATABASE_URL` da VPS antes de repetir provisionamento; não iniciar Electric.
+
+Hostname extraído da `MIGRATION_DATABASE_URL` na VPS coincide com endpoint de produção informado anteriormente (`ep-blue-mud-b601ar3h.c-2.sa-east-1.aws.neon.tech`). A publicação permanece ausente; verificar tamanho/conteúdo do arquivo `provision-neon.sql` no host e branch selecionada no Editor antes de repetir.
+
+Diagnóstico: `/opt/windops/provision-neon.sql` tinha zero bytes. O job anterior autenticou corretamente, mas executou SQL vazio e a consulta posterior mostrou zero publicações; não alterou grants/publication. Recopiar conteúdo de `origin/main`, conferir e executar provisionador idempotente.
+
+Na VPS, o clone fica em `/tmp/windops-f5395bba` e `/opt/windops` não é repositório. `origin/main` foi atualizado para `11c4179`; provisionador agora copiado em `/opt/windops/provision-neon.sql` (4.159 bytes, instruções de publication presentes). Falta executar de novo o job isolado no Neon.
+
+Repetição parou com `EACCES` ao abrir `/provision-neon.sql` no container, pois o host instalou o arquivo em `0600` e o processo do container é não-root. SQL não chegou a ser executado e não alterou banco. Arquivo não contém segredos; mudar modo para `0644` antes de repetir.
+
+Provisionador aplicado no Neon em 02/11/2026 via job isolado: banco `windops-production`, `current_user=windops_migrator`; publication contém exatamente `workspaces`, `parks`, `turbines`, `issue_sync_rows` e `issue_sync_events`. Próximas verificações: REPLICA IDENTITY FULL nas cinco e grants efetivos/negações de escrita do runtime `windops_app`. Não iniciar Electric ainda.
+
+Verificação SQL Editor confirmou REPLICA IDENTITY FULL nas cinco tabelas da publication; `windops_app` pode SELECT em `issue_sync_rows`, mas não INSERT/UPDATE/DELETE; também não tem UPDATE/DELETE em `issue_sync_events`. Provisionamento Neon de grants/publication validado. Electric segue sem iniciar; executar teste de conectividade/replicação dentro da janela 06h–18h SP acordada.
+
+O proprietário autorizou exceção da janela para ensaio noturno de 02/11. Electric `1.8.1` subiu e Compose reportou `Up (healthy)`; API/web seguem desligadas. Saúde local não comprova replicação Neon; coletar logs/estado do slot. Timer não foi desabilitado e manterá fechamento normal às 18h do dia seguinte.
+
+Logs Electric: pools `admin`/`snapshot` conectaram ao Neon, lock `electric_slot_default` adquirido, PostgreSQL 18.6/timeline 1 reconhecidos e pipeline iniciado. Zero shapes existentes; sem API/clientes, ainda não houve validação de streaming de uma tabela. Warning libsctp não impediu o start. Helper de janela faz no-op se `.release.env` faltar; o proprietário pretende implantar hoje. Deploy escreve `.release.env` e reconcilia Electric após health checks, então o timer regular deverá aplicar pausa às 18h do dia seguinte. Não agendar stop one-off; verificar slot lógico.
