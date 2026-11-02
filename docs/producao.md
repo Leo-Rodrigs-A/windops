@@ -1,10 +1,12 @@
 # Produção — Wind Ops
 
+> Decisão D02 concluída em 02/11/2026: Hostinger KVM1 no Brasil, Ubuntu 24.04.5, 1 vCPU/4 GB + Neon Free. VPS ativa; Docker Engine 29.9.2/Compose 5.6.1. Proprietário reporta pagamento único ~R$600 e pouco por 24 meses (~R$27/mês), sem valor/renovação conferidos. Sem despesas extras planejadas nem homologação permanente. KVM2 fica como possível upgrade após medir carga. DNS A `windops.devleonardo.com.br` criado na Vercel e resolução ao IP da VPS confirmada pelo proprietário; HTTPS ainda pendente. Política de backup/RPO/RTO aceita está abaixo. Scale-to-zero noturno na janela desejada 06h–18h ainda não implementado.
+
 [Voltar ao manual](../README.md#colocar-em-produção).
 
 Este guia explica a primeira instalação e as atualizações. Há dois caminhos: **VPS com Docker Compose**, para a qual já existem artefatos no repositório, ou **PaaS Render**, que requer adaptações descritas abaixo. Hetzner Cloud fornece máquinas virtuais e entra no primeiro caminho. Veja a [criação de servidor na Hetzner](https://docs.hetzner.com/cloud/servers/getting-started/creating-a-server/).
 
-**Estado em 31/10/2026:** documentação e ensaio local da D01; nenhum ambiente remoto foi implantado por esta tarefa. Os passos dependentes de D02–D10 são o roteiro de execução dessas tasks. Não existe comando único que provisione hoje todas as contas, roles Neon, rede, certificados e pipeline.
+**Estado em 02/11/2026:** D01 (manual) e D02 (decisão/adequação condicional) concluídas. VPS e serviços externos existem, mas a aplicação ainda não foi implantada; HTTPS, permissões Neon, deploy remoto, restore, alertas e testes reais seguem em D03–D10. Não existe comando único que provisione todas as contas, roles Neon, rede, certificados e pipeline.
 
 ## 1. Decidir destino e reunir acessos
 
@@ -49,7 +51,7 @@ A allowlist atual contém `workspaces`, `parks`, `turbines`, `issue_sync_rows` e
 
 **Pendente D05:** adaptar e executar o provisionamento no destino, usando [contrato de permissões](../infra/postgres/README.md) e [provisionador local](../infra/postgres/provision-roles.sh) como referências. O script local pressupõe PostgreSQL administrativo em Docker; não o execute cegamente no Neon. `pnpm db:setup` também é um comando de desenvolvimento. O serviço `migrate` da produção não cria roles nem reconcilia toda a publicação. Só prossiga ao deploy após conferir esses requisitos.
 
-Configure backup automático/PITR conforme plano e restaure uma cópia isolada antes do uso real. O teste local `db:restore-check` não substitui esse exercício.
+**Política de recuperação aceita em 02/11/2026:** manter backup automático semanal Hostinger e Neon Free, sem backup pago adicional. A Hostinger informa que mantém até dois backups semanais e que a restauração pode levar de 10 minutos a algumas horas ([documentação](https://www.hostinger.com/br/support/1583232-como-fazer-backup-ou-restaurar-um-servidor-vps-hostinger/)). Para o estado da VPS, planejar possível perda de até aproximadamente 7 dias desde o último backup semanal. O Neon Free informa janela de restauração instantânea de até 6 horas ([limites do plano Free](https://neon.com/blog/neon-free-plan-1-gb-per-project)); isso é a janela de histórico disponível, não garantia de RPO: corrupção identificada após a janela pode não ter ponto anterior recuperável. Meta operacional aceita: serviço recuperado em até 1 dia útil, ainda não ensaiada e sem SLA; o tempo do provedor pode ser de minutos a horas, além da validação/reimplantação. Backups da VPS e do Neon protegem recursos diferentes. Dados de trabalho ainda não sincronizados e existentes apenas no aparelho não entram nesses backups. Faça restore isolado antes do uso real; `db:restore-check` local não substitui o ensaio de produção.
 
 ### E-mail, Google e VAPID
 
@@ -242,3 +244,7 @@ A versão candidata fica restrita aos validadores até D09/D10: teste admin/téc
 ## Acompanhamento deste roteiro
 
 A [slice 11](../.agent/tasks/11-producao/README.md) separa execução e responsabilidades: D02 decisão; D03 artefatos; D04 contas; D05 infraestrutura; D06 entrega; D07 recuperação; D08 candidato; D09 aparelhos; D10 liberação. Cada uma deve atualizar este guia com comandos/resultados efetivamente validados. Fontes externas acima foram consultadas em 31/10/2026; reconfira planos e capacidades ao escolher o destino.
+
+## Janela desejada para VPS + Neon Free
+
+O proprietário deseja que o Neon opere aproximadamente das 06h às 18h e escale a zero à noite, sem custo além do plano Free. Cálculo a 0,25 CU: 90 CU-horas em 30 dias com 12 horas ativas/dia; com 5 minutos para suspensão por dia, cerca de 90,63. Em 31 dias, cerca de 93,65 CU-horas, deixando margem pequena para picos, testes e despertares extras diante da franquia de 100 indicada no console do projeto. Consideramos provisoriamente todos os dias em America/Sao_Paulo; confirmar. O consumidor de logical replication (Electric), API e worker/readiness devem parar fora da janela para permitir scale-to-zero. Isso deixa sync/ações online indisponíveis à noite; a fila permanece no aparelho e só retoma quando o app voltar e o servidor estiver ativo. Nada disso está implementado ou medido; D03/D05 devem programar o ciclo e provar suspensão/retomada sem perder comandos.

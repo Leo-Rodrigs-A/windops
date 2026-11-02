@@ -2,7 +2,7 @@
 
 ## Status
 
-Em andamento. D01 concluída em 31/10/2026; próxima tarefa: D02 — escolha da hospedagem.
+Em andamento. D01 concluída em 31/10/2026; D02 concluída em 02/11/2026. Destino: Hostinger KVM1 no Brasil, Ubuntu 24.04.5, Docker/Compose instalados, Neon Free. Custo informado ~R$600 e pouco por 24 meses; sem despesas adicionais planejadas nem homologação permanente. Backup semanal Hostinger e meta de recuperação aceitos, sem restore ensaiado. Janela Neon desejada 06h–18h com scale-to-zero noturno ainda não implementada. Oracle A1 não foi criada por falta de capacidade em São Paulo/AD-1. Próximas: D03 e D04.
 
 - [ ] Slice concluída
 
@@ -19,7 +19,7 @@ Há Dockerfiles API/web, Compose de produção, Caddy, CI, GHCR/deploy por SHA, 
 ## Limites e decisões
 
 - Preservar monólito modular, serviços públicos entre módulos, autorização tenant, segundo passo obrigatório e linking verificado. Electric fica privado, acessado pelo proxy autorizado com filtros do servidor.
-- O pedido reabre a escolha de hospedagem. A referência anterior VPS Hostinger + Neon continua sendo contexto, não contratação confirmada. Hetzner Cloud entra na categoria VPS/infraestrutura; PaaS gerenciado será uma alternativa avaliada separadamente.
+- A escolha atual é Hostinger KVM1 ativo no Brasil, Ubuntu 24.04.5, 1 vCPU/4 GB + Neon Free; Docker/Compose estão instalados. Carga do KVM1 e custo/impacto de eventual upgrade para KVM2 (2 vCPU/8 GB) serão medidos antes do piloto. A tentativa Oracle A1 em São Paulo falhou por falta de capacidade na AD-1. Hetzner Cloud permanece alternativa avaliada; Render requer adaptações documentadas.
 - README deve ensinar VPS e uma alternativa PaaS concreta. Provisionar e validar um destino escolhido; não duplicar ambientes pagos para comprovar ambos. A alternativa não executada fica identificada como tal.
 - Sem homologação permanente por padrão; D02 confirma isso. Ensaios destrutivos/restore usam ambiente descartável isolado, nunca os dados operacionais.
 - O proprietário contrata/cria contas, escolhe parâmetros e disponibiliza acessos; Codex prepara instruções, configura, testa e documenta o que estiver autorizado e acessível. Credenciais ficam em secret stores/host, nunca nos planos/chat/logs/VITE_.
@@ -31,7 +31,7 @@ Há Dockerfiles API/web, Compose de produção, Caddy, CI, GHCR/deploy por SHA, 
 | Task                                 | Entrega                                      | Responsável                                                                   | Dependências                                                                |
 | ------------------------------------ | -------------------------------------------- | ----------------------------------------------------------------------------- | --------------------------------------------------------------------------- |
 | [x] [D01](01-readme-manual.md)       | README como manual do desenvolvedor          | Codex                                                                         | Nenhuma; primeira tarefa da slice.                                          |
-| [] [D02](02-escolha-hospedagem.md)   | Escolher hospedagem e parâmetros do piloto   | Proprietário decide; Codex prepara comparação                                 | D01.                                                                        |
+| [x] [D02](02-escolha-hospedagem.md) | Escolher hospedagem e parâmetros do piloto   | Proprietário decide; Codex prepara comparação                                 | D01.                                                                        |
 | [] [D03](03-preparacao-app.md)       | Preparar aplicação e artefatos de produção   | Codex                                                                         | D01; D02 para adaptações específicas do destino.                            |
 | [] [D04](04-contas-acessos.md)       | Criar ambientes, contas e fornecer acessos   | Proprietário; Codex fornece instruções e confere                              | D02; pode ocorrer junto de D03.                                             |
 | [] [D05](05-infra-banco.md)          | Provisionar runtime, banco e rede            | Codex; proprietário executa ações de console sem acesso delegado              | D03 e D04.                                                                  |

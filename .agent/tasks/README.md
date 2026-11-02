@@ -8,7 +8,7 @@ Cada nova slice fica em uma pasta `NN-nome/`, com um `README.md` que define resu
 
 ## Próxima slice preparada
 
-- [ ] [11 — Preparação e entrada em produção](11-producao/README.md): D01 concluída: README/manual e guia de produção, com ensaio isolado do setup. D02–D10 seguem abertas: escolha VPS/PaaS, contas, provisionamento, CI/CD, recuperação, aparelhos e liberação. Próxima tarefa: D02.
+- [ ] [11 — Preparação e entrada em produção](11-producao/README.md): D01 (manual) e D02 (escolha Hostinger KVM1 + Neon Free, parâmetros e política de recuperação) concluídas. D03–D10 seguem abertas: preparação/validação do app, contas e acessos, infraestrutura, CI/CD, recuperação, primeiro deploy, aparelhos e liberação. Próximas: D03 e D04.
 
 ## Slices concluídas mais recentes
 

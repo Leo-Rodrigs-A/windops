@@ -1,5 +1,7 @@
 # Arquitetura — Wind Ops
 
+> Decisão de produção registrada em 02/11/2026: Hostinger KVM1 no Brasil, Ubuntu 24.04.5, 1 vCPU/4 GB + Neon Free. Proprietário reporta pagamento único de ~R$600 e pouco por 24 meses (~R$27/mês); recibo/valor exato e renovação não conferidos. VPS ativa com Docker 29.9.2/Compose 5.6.1. Sem homologação permanente ou despesas adicionais planejadas. KVM2 (2 vCPU/8 GB) fica como possível upgrade após medição. DNS A `windops.devleonardo.com.br` na Vercel resolve para a VPS conforme proprietário; HTTPS ainda não validado. Backup semanal Hostinger e meta de RTO de até 1 dia útil aceitos, não ensaiados; Neon Free oferece janela de restauração de 6 horas, que não é garantia de RPO. A janela desejada é 06h–18h com scale-to-zero noturno; depende de parar API/worker/Electric e ainda não foi implementada. Ver [D02](tasks/11-producao/02-escolha-hospedagem.md) para limites e próximos gates.
+
 ## Objetivo e estágio
 
 Registrar problemas durante visitas sem internet e compartilhar depois sem transcrição de memória. Piloto: 12 usuários, 8 parques com 8 turbinas inicialmente; quantidade não é fixa. Escopo: elevadores, um por turbina, somente texto. PWA mobile-first Android e iPhone. A base executável antecede a implementação visual guiada pelo Pencil/pen.dev e as funcionalidades.
@@ -93,11 +95,11 @@ Desenvolvimento: PostgreSQL com wal_level=logical, Electric e Mailpit no Compose
 
 A configuração local usa `windops_app`, `windops_migrator` e `windops_replication`, com grants e publicação verificados em F02. O volume existente foi preservado e passou restart, restore e shape. A configuração equivalente no Neon continua pendente; não declarar produção pronta.
 
-Produção: uma VPS Hostinger com Docker Compose e Caddy (frontend estático + proxy HTTPS), API e Electric internos. Caddy opera sem root em portas internas altas; host publica 80/443. Caddy não pode acessar diretamente endpoints Electric públicos porque não existe rota para isso. Usuários veem uma origem única. API com usuário node, filesystem somente leitura e privilégios reduzidos. Volumes Caddy armazenam certificados; Electric precisa de armazenamento persistente explícito.
+Produção: VPS Hostinger ativa com Docker Compose e Caddy planejados (frontend estático + proxy HTTPS), API/worker e Electric internos. Docker Engine 29.9.2 e Compose 5.6.1 foram verificados pelo proprietário. Compose publicado no repositório mantém Caddy como entrada prevista em 80/443, sem publicar API/Electric, e usa volume persistente do Electric. Ainda não há deploy remoto, certificado, firewall externo ou porta validada. KVM1 tem 1 vCPU/4 GB; carga e folga não medidas.
 
-PostgreSQL no Neon. Habilitar logical replication, usar conexão direta não pooler para Electric e migrações, configurar TLS com validação de certificado. Separar papel da aplicação, papel de migração e papel de replicação com permissões mínimas. Evitar scale-to-zero durante validação de latência e replicação. Monitorar retenção de WAL/slots. Configurar backup/restauração no Neon antes do uso real.
+PostgreSQL no Neon Free, PostgreSQL 18 em São Paulo conforme proprietário. Roles separados e URLs pooled (runtime) / direct (migração e replicação) foram configurados pelo proprietário; o proprietário obteve `rolreplication=true` na consulta inicial, mas grants efetivos, `wal_level`, publicação/slots e TLS ainda devem ser conferidos em D05. A janela de restauração Free é de 6 horas; não é promessa de RPO, e restore ainda não foi ensaiado. A meta aceita é recuperar serviço em até 1 dia útil, sem garantia operacional até ensaio.
 
-O proprietário informou que as credenciais do Google OAuth já estão configuradas. A disponibilidade do login depende também de `AUTH_ENABLED=true` e das credenciais presentes no ambiente da API; as rotas permanecem desativadas por padrão. Resend, VAPID, domínio, Neon, VPS e GitHub ainda não foram provisionados para produção. Não há homologação agora.
+O proprietário informou que o Resend foi configurado e as duas variáveis de envio estão no `.env.production` da VPS, protegido com modo 0600; envio real ainda não validado. `AUTH_ENABLED=false` permanece até completar e validar configuração de produção e os fluxos obrigatórios. VPS, Neon e domínio estão provisionados; variáveis/secrets e deploy do GitHub Actions ainda pendem. Não há homologação permanente.
 
 ## CI/CD e implantação inicial
 

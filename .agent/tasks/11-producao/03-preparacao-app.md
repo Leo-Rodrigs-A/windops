@@ -35,6 +35,12 @@ D01; D02 para adaptações específicas do destino.
 - [ ] Rodar pnpm check, integrações auth/workspaces/parks/issues/Electric, build/runtime de containers e validação da configuração de produção com valores sintéticos; registrar falhas e corrigir antes do release.
 - [ ] Atualizar manual com comportamento efetivo e limitações, sem alterações de layout ou reescrita de módulos.
 
+## Adaptações do destino definidas progressivamente
+
+- [ ] Confirmar arquitetura x86_64 na VPS Hostinger e validar build/runtime das imagens API/web/Electric; medir memória e CPU do Compose no KVM1 de 4 GB e reservar folga para o SO. Definir gatilhos observáveis para upgrade a KVM2.
+- [ ] Após alinhar comportamento fora do horário na D02, implementar janela 06h–18h com timezone explícito, recuperação após reboot e encerramento gracioso; impedir consultas de health/worker/replicação durante suspensão.
+- [ ] Ensaiar pausa/retomada com commit concorrente, retries, outbox preservada, notificações e reconstrução de réplica; medir consumo real e suspensão do Neon Free.
+
 ## Contratos e dados afetados
 
 Configuração, imagens e correções pontuais de runtime. Alterações de schema/contrato somente se necessárias e acompanhadas de compatibilidade e migração explícitas.

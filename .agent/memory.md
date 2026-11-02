@@ -378,3 +378,24 @@ Alteração somente documental; links locais e git diff --check conferidos. pnpm
 Ensaio em cópia `/tmp/windops-d01-setup`, sem .env real, com projeto/volumes/portas separados: instalação frozen, setup vazio/repetido, permissões, auth e workspaces (incluindo bootstrap), build, restore descartável e dev/Preview por HTTP passaram. Segredos de teste gerados sem impressão; processos e containers temporários encerrados, volumes de ensaio removidos e dev preservado. Node host 24.13.1; não houve reinstalação de OS/ferramentas ou ensaio com Node 22.22.2 nesta task.
 
 pnpm check não passou por formatação de duas tabelas Markdown preexistentes na cópia isolada (baseline R01 e índice slice 11); este índice foi formatado, baseline fora do escopo. Não declarar check completo aprovado. Novos documentos, links/âncoras, exemplos Bash, scripts pnpm e diff-check conferidos. Sem fonte/infra versionada alterada; sem novo teste interativo, produção, OAuth/Resend reais ou aparelho físico.
+
+
+## D02 iniciada — 01/11/2026
+
+Comparação documental inicial de Hetzner/Hostinger/Render e cenário pago Neon registrada na D02. VPS + Neon é recomendação, não decisão. Custos totais, região, domínio, acessos, retenção/RPO/RTO e escolha do proprietário permanecem pendentes. Nenhuma contratação, provisionamento ou mudança de fonte/infra; testes da aplicação não executados.
+
+
+## D02 — escolha Oracle + Neon Free (decisão substituída em 01/11/2026)
+
+Proprietário escolheu Oracle Always Free A1 2 OCPUs/12 GB e Neon Free. D02 registra limites atuais, consumo contínuo incompatível com 100 CU-horas/mês a 0,25 CU e consultas periódicas de readiness/worker que também impedem suspensão. Janela ou ativação sob demanda ainda em discussão; nenhum modo degradado autorizado/implementado. ARM64 precisa de validação/publicação em D03/D06. Sem provisionamento; mudanças documentais.
+
+
+D02 — proprietário informou janela aproximada 06h–18h. Fuso America/Sao_Paulo e todos os dias são premissas ainda não confirmadas. Estimativa a 0,25 CU em 31 dias, incluindo cinco minutos diários de suspensão: 93,65 CU-horas. D03 recebeu gates de agendamento/ARM64/retomada; bloquear acesso online fora da janela ainda precisa ser alinhado. Sem implementação ou provisionamento.
+
+Atualização D02 — 01/11/2026: a tentativa OCI Resource Manager de criar A1 Flex 2 OCPU/12 GB em São Paulo/AD-1 retornou `500 InternalError: Out of host capacity`; não criou VM. Proprietário escolheu Hostinger KVM1 no Brasil, Ubuntu 24.04, + Neon Free; informa pagamento único de aproximadamente R$600 e pouco por 24 meses (~R$27/mês), sem novas despesas planejadas e sem homologação permanente. DNS A criado na Vercel. Deseja janela Neon 06h–18h e scale-to-zero noturno. Usar apenas backup semanal Hostinger e janela Neon Free de restauração de 6h, conforme disponibilidade incluída a confirmar nos painéis; não comprar backup diário. KVM1 tem 1 vCPU/4 GB; KVM2 (2 vCPU/8 GB) pode ser upgrade. Medir carga/folga de memória e CPU antes do piloto. Janela, consumidores, retomada e consumo Neon não foram implementados/medidos. D03/D06 devem mirar x86_64; hostname/IP final, valor/renovação exatos e RPO/RTO ainda pendentes. Ver plano D02.
+
+## D02 concluída — 02/11/2026
+
+Proprietário confirmou VPS Hostinger KVM1 ativa no Brasil, Ubuntu 24.04.5, Docker 29.9.2/Compose 5.6.1, acesso SSH root, DNS A `windops.devleonardo.com.br` na Vercel resolvendo ao IPv4 do host, projeto Neon Free PostgreSQL 18 em São Paulo e roles separados com URLs pooled/direct. O total informado permanece aproximadamente R$600 e pouco à vista por 24 meses; valor exato/renovação não conferidos. Sem homologação permanente ou despesas adicionais planejadas; backup semanal Hostinger será mantido. A decisão e análise de adequação condicional estão registradas em D02; a inspeção do Compose confirmou Caddy como entrada prevista, API/worker e Electric internos, volume persistente, long polling e migração/deploy controlados por artefatos versionados. Não foi alegado teste remoto de runtime.
+
+Política aceita pelo proprietário: Neon Free com janela de restauração de até 6 horas (limite de histórico, não garantia de RPO); estado da VPS possivelmente até ~7 dias atrás pelo backup semanal; meta operacional de RTO ≤1 dia útil, sem garantia e ainda não ensaiada. Dados não sincronizados e existentes somente em aparelhos ficam fora dos backups. D03/D05/D06/D08 ainda devem comprovar configuração real de logical replication, grants/publicação/TLS, firewall/HTTPS, carga/folga do KVM1, scale-to-zero, instalação inicial, CI/deploy e recuperação. Resend foi configurado pelo proprietário e variáveis informadas no arquivo privado da VPS, mas envio não foi testado. D02 fechada por escolha e análise de viabilidade com limites, não por certificação de produção; próxima execução: D03 e D04.
