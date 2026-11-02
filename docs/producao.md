@@ -12,15 +12,15 @@ Este guia explica a primeira instalação e as atualizações. Há dois caminhos
 
 Antes de contratar, escolha com o proprietário: provedor, região, orçamento, domínio, responsável operacional, retenção de backup, perda máxima aceitável de dados (RPO) e tempo máximo para recuperação (RTO). Sem homologação permanente por padrão; ensaios de restore/falha precisam de ambiente descartável isolado.
 
-| Recurso        | Ação do proprietário                                                                                        | Preparação técnica                                                                                                                                                |
-| -------------- | ----------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| VPS ou PaaS    | Criar conta/projeto, contratar plano e conceder acesso limitado.                                            | Conferir CPU/arquitetura, memória, disco, rede e suporte a serviços persistentes. O pipeline atual não configura build multiarch; conferir antes de escolher ARM. |
-| Domínio/DNS    | Disponibilizar zona e hostname, por exemplo `app.suaempresa.com`.                                           | Apontar para o destino e configurar HTTPS.                                                                                                                        |
-| PostgreSQL     | Criar projeto/banco separado do dev; Neon é a referência atual.                                             | Configurar migração, runtime, replicação, backup e restore.                                                                                                       |
-| Resend         | Proprietário informou conta/domínio/remetente e chave já configurados na VPS.                               | Não reproduzir a chave; D08 ainda deve testar entrega real dos fluxos de e-mail.                                                                                  |
-| Google OAuth   | Criar/ajustar cliente Web e público autorizado.                                                             | Configurar origem/callback e validar novo login/linking.                                                                                                          |
-| GitHub/GHCR    | Nenhum package foi encontrado pelo proprietário; workflow atualizado para separar publicação de deploy. | Habilitar `PUBLISH_IMAGES` e validar package/pull; manter `DEPLOY_ENABLED=false` até liberar rollout. |
-| Primeiro admin | Informar conta e nome do workspace explicitamente.                                                          | Fazer bootstrap após cadastro/verificação.                                                                                                                        |
+| Recurso        | Ação do proprietário                                                                                    | Preparação técnica                                                                                                                                                |
+| -------------- | ------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| VPS ou PaaS    | Criar conta/projeto, contratar plano e conceder acesso limitado.                                        | Conferir CPU/arquitetura, memória, disco, rede e suporte a serviços persistentes. O pipeline atual não configura build multiarch; conferir antes de escolher ARM. |
+| Domínio/DNS    | Disponibilizar zona e hostname, por exemplo `app.suaempresa.com`.                                       | Apontar para o destino e configurar HTTPS.                                                                                                                        |
+| PostgreSQL     | Criar projeto/banco separado do dev; Neon é a referência atual.                                         | Configurar migração, runtime, replicação, backup e restore.                                                                                                       |
+| Resend         | Proprietário informou conta/domínio/remetente e chave já configurados na VPS.                           | Não reproduzir a chave; D08 ainda deve testar entrega real dos fluxos de e-mail.                                                                                  |
+| Google OAuth   | Criar/ajustar cliente Web e público autorizado.                                                         | Configurar origem/callback e validar novo login/linking.                                                                                                          |
+| GitHub/GHCR    | Nenhum package foi encontrado pelo proprietário; workflow atualizado para separar publicação de deploy. | Habilitar `PUBLISH_IMAGES` e validar package/pull; manter `DEPLOY_ENABLED=false` até liberar rollout.                                                             |
+| Primeiro admin | Informar conta e nome do workspace explicitamente.                                                      | Fazer bootstrap após cadastro/verificação.                                                                                                                        |
 
 Cadastre credenciais em secret stores ou arquivos protegidos do servidor. Compartilhe nos registros somente nomes das variáveis, IDs dos projetos, domínio e confirmação de acesso. Não cole chaves, URLs com senha, cookies ou tokens no chat, Git, imagens ou logs.
 
@@ -32,10 +32,10 @@ Cadastre credenciais em secret stores ou arquivos protegidos do servidor. Compar
 
 Use um banco exclusivo para produção. Prepare três papéis com credenciais distintas:
 
-| Papel                 | Conexão                  | Responsabilidade                                           |
-| --------------------- | ------------------------ | ---------------------------------------------------------- |
-| `windops_app`         | `DATABASE_URL`           | Dados de runtime, sem criar schema/roles nem replicar.     |
-| `windops_migrator`    | `MIGRATION_DATABASE_URL` | Migrações e ownership de objetos; não é credencial da API. |
+| Papel                 | Conexão                  | Responsabilidade                                                                                                                                    |
+| --------------------- | ------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `windops_app`         | `DATABASE_URL`           | Dados de runtime, sem criar schema/roles nem replicar.                                                                                              |
+| `windops_migrator`    | `MIGRATION_DATABASE_URL` | Migrações e ownership de objetos; não é credencial da API.                                                                                          |
 | `windops_replication` | `ELECTRIC_DATABASE_URL`  | Neon exige membership administrativa para logical replication; privilégio amplo aceito como exceção, limitado operacionalmente ao Electric privado. |
 
 No Neon, habilite logical replication no projeto e use conexão direta para migração e Electric, com TLS e certificado verificados. Confira as capacidades dos papéis no serviço, retenção de WAL/slots e política de suspensão do compute. Consulte o [guia de logical replication](https://neon.com/docs/guides/logical-replication-guide).
@@ -204,11 +204,11 @@ Este é um roteiro **a adaptar e validar em D02/D03/D05/D06**, não um template 
 
 Cadastre no GitHub:
 
-| Local                    | Configuração                                                                                     |
-| ------------------------ | ------------------------------------------------------------------------------------------------ |
+| Local                    | Configuração                                                                                                                                                  |
+| ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Variável do repositório  | `PUBLISH_IMAGES=false` inicialmente; habilita publicação GHCR. `DEPLOY_ENABLED=false` durante preparação impede rollout. Ambas são lidas fora do Environment. |
-| Environment `production` | Vars `DEPLOY_HOST`, `DEPLOY_USER`; secrets `DEPLOY_SSH_KEY`, `DEPLOY_KNOWN_HOSTS`.               |
-| Repositório/Environment  | Proteção da main, checks exigidos e política de acesso/liberação disponíveis no plano escolhido. |
+| Environment `production` | Vars `DEPLOY_HOST`, `DEPLOY_USER`; secrets `DEPLOY_SSH_KEY`, `DEPLOY_KNOWN_HOSTS`.                                                                            |
+| Repositório/Environment  | Proteção da main, checks exigidos e política de acesso/liberação disponíveis no plano escolhido.                                                              |
 
 `PUBLISH_IMAGES=true` habilita a publicação no [workflow](../.github/workflows/deploy.yml), após CI bem-sucedido em push da `main` na mesma origem. O job usa `GITHUB_TOKEN` com `packages: write` para publicar imagens imutáveis por SHA e cria os packages GHCR no primeiro push. `DEPLOY_ENABLED=true` é um controle separado; o deploy exige publicação bem-sucedida e usa Environment `production`. Para o ensaio de migração inicial, habilite apenas `PUBLISH_IMAGES`, mantenha `DEPLOY_ENABLED=false` e confira visibilidade/permissões do package antes do pull na VPS; não presuma que o package seja público. O [CI versionado](../.github/workflows/ci.yml) já inclui integrações auth, workspaces, parks, issues e Electric; D06 ainda precisa comprovar execução remota e o caminho de deploy.
 
