@@ -22,6 +22,12 @@ jobs:
       - run: pnpm check
       - run: cp .env.example .env
       - run: docker compose -f infra/compose.dev.yml config --quiet
+      - name: Validate production Compose with synthetic image references
+        run: >-
+          API_IMAGE=ghcr.io/example/windops-api@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+          WEB_IMAGE=ghcr.io/example/windops-web@sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+          docker compose --env-file infra/.env.production.example
+          -f infra/compose.production.yml config --quiet
       - run: pnpm db:setup
       - run: pnpm db:empty-check
       - run: pnpm db:restore-check
@@ -29,6 +35,8 @@ jobs:
       - run: pnpm db:provision
       - run: pnpm test:auth-integration
       - run: pnpm test:workspaces-integration
+      - run: pnpm test:parks-integration
+      - run: pnpm test:issues-read-integration
       - run: pnpm test:integration
       - run: pnpm db:permissions
       - run: bash -n scripts/deploy.sh scripts/deploy-ssh-entrypoint.sh

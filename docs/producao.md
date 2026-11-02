@@ -97,7 +97,7 @@ sudoedit /opt/windops/infra/.env.production
 sudoedit /etc/windops/deploy.conf
 ```
 
-Preencha `.env.production` com valores reais. Os comentários do exemplo que chamam identidade/push de futuros estão desatualizados; essas funcionalidades existem. D03 atualizará o exemplo. O inventário a seguir é a referência para configuração:
+Preencha `.env.production` com valores reais. Auth deve permanecer desabilitada até habilitar após as integrações obrigatórias de segundo passo e linking verificado; Google e Push são opcionais e só ficam ativos quando suas configurações completas forem fornecidas. O exemplo usa o domínio escolhido para o piloto, mas os valores devem corresponder ao DNS configurado. O inventário a seguir é a referência para configuração:
 
 | Variável                                                 | Destino / valor esperado                                       |
 | -------------------------------------------------------- | -------------------------------------------------------------- |

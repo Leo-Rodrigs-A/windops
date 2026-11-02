@@ -2,7 +2,7 @@
 
 ## Status
 
-Em andamento. D01 concluída em 31/10/2026; D02 concluída em 02/11/2026. Destino: Hostinger KVM1 no Brasil, Ubuntu 24.04.5, Docker/Compose instalados, Neon Free. Custo informado ~R$600 e pouco por 24 meses; sem despesas adicionais planejadas nem homologação permanente. Backup semanal Hostinger e meta de recuperação aceitos, sem restore ensaiado. Janela Neon desejada 06h–18h com scale-to-zero noturno ainda não implementada. Oracle A1 não foi criada por falta de capacidade em São Paulo/AD-1. Próximas: D03 e D04.
+Em andamento. D01 concluída em 31/10/2026; D02 concluída em 02/11/2026; D03 parcialmente executada em 02/11/2026. Destino: Hostinger KVM1 no Brasil, Ubuntu 24.04.5, Docker/Compose instalados, Neon Free. Custo informado ~R$600 e pouco por 24 meses; sem despesas adicionais planejadas nem homologação permanente. Backup semanal Hostinger e meta de recuperação aceitos, sem restore ensaiado. Janela Neon desejada 06h–18h com scale-to-zero noturno ainda não implementada. Oracle A1 não foi criada por falta de capacidade em São Paulo/AD-1. Próximas: concluir gates locais da D03 e avançar D04.
 
 - [ ] Slice concluída
 
@@ -31,7 +31,7 @@ Há Dockerfiles API/web, Compose de produção, Caddy, CI, GHCR/deploy por SHA, 
 | Task                                 | Entrega                                      | Responsável                                                                   | Dependências                                                                |
 | ------------------------------------ | -------------------------------------------- | ----------------------------------------------------------------------------- | --------------------------------------------------------------------------- |
 | [x] [D01](01-readme-manual.md)       | README como manual do desenvolvedor          | Codex                                                                         | Nenhuma; primeira tarefa da slice.                                          |
-| [x] [D02](02-escolha-hospedagem.md) | Escolher hospedagem e parâmetros do piloto   | Proprietário decide; Codex prepara comparação                                 | D01.                                                                        |
+| [x] [D02](02-escolha-hospedagem.md)  | Escolher hospedagem e parâmetros do piloto   | Proprietário decide; Codex prepara comparação                                 | D01.                                                                        |
 | [] [D03](03-preparacao-app.md)       | Preparar aplicação e artefatos de produção   | Codex                                                                         | D01; D02 para adaptações específicas do destino.                            |
 | [] [D04](04-contas-acessos.md)       | Criar ambientes, contas e fornecer acessos   | Proprietário; Codex fornece instruções e confere                              | D02; pode ocorrer junto de D03.                                             |
 | [] [D05](05-infra-banco.md)          | Provisionar runtime, banco e rede            | Codex; proprietário executa ações de console sem acesso delegado              | D03 e D04.                                                                  |

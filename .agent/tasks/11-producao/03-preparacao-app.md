@@ -2,7 +2,7 @@
 
 ## Status
 
-Planejada
+Em andamento
 
 - [ ] Task concluída
 
@@ -28,12 +28,12 @@ D01; D02 para adaptações específicas do destino.
 
 ## Plano
 
-- [ ] Auditar variáveis obrigatórias/opcionais, origens/cookies/proxy, Google/Resend/VAPID, health/readiness, limites de logs e encerramento gracioso de API/worker; corrigir lacunas comprovadas.
-- [ ] Atualizar exemplos sem segredos e validar falha clara para configuração inválida; jamais levar credenciais privadas ao bundle/VITE_ ou imagens. Preservar auth desativada até testes de segundo passo e linking verificado passarem.
-- [ ] Validar imagens de runtime, migration empacotada, versões fixadas, filesystem/usuário/volumes e arquitetura de CPU do destino. Adaptar ingress/porta/TLS se PaaS escolhido, mantendo origem única e Electric privado.
+- [x] Auditar variáveis obrigatórias/opcionais, origens/cookies/proxy, Google/Resend/VAPID, health/readiness, limites de logs e encerramento gracioso de API/worker; corrigir lacunas comprovadas.
+- [x] Atualizar exemplos sem segredos e validar falha clara para configuração inválida; jamais levar credenciais privadas ao bundle/VITE_ ou imagens. Preservar auth desativada até testes de segundo passo e linking verificado passarem.
+- [x] Validar imagens de runtime, migration empacotada, versões fixadas, filesystem/usuário/volumes e arquitetura de CPU do destino. Adaptar ingress/porta/TLS se PaaS escolhido, mantendo origem única e Electric privado.
 - [ ] Ensaiar cache HTTP do shell/assets/worker, atualização do PWA, API/auth fora do cache público e preservação do journal com nova versão; manter compatibilidade de contratos e IndexedDB.
-- [ ] Rodar pnpm check, integrações auth/workspaces/parks/issues/Electric, build/runtime de containers e validação da configuração de produção com valores sintéticos; registrar falhas e corrigir antes do release.
-- [ ] Atualizar manual com comportamento efetivo e limitações, sem alterações de layout ou reescrita de módulos.
+- [ ] Fazer `pnpm check` passar, rodar integrações auth/workspaces/parks/issues/Electric, build/runtime de containers e validação da configuração de produção com valores sintéticos; registrar falhas e corrigir antes do release.
+- [x] Atualizar manual com comportamento efetivo e limitações, sem alterações de layout ou reescrita de módulos.
 
 ## Adaptações do destino definidas progressivamente
 
@@ -52,3 +52,13 @@ Artefatos reais inicializam, ficam ready com dependências e falham com configur
 ## Evidências
 
 Planejamento em 30/10/2026. Execução pendente; preencher data, mudanças, comandos/resultados, links ou identificadores não secretos e limitações ao executar.
+
+### Execução parcial — 02/11/2026
+
+Atualizado `infra/.env.production.example` para o domínio escolhido e para refletir a configuração existente de auth/Google/Push; placeholders são explicitamente sintéticos e auth permanece `false`. Adicionado `Cache-Control: private, no-store` à rota `/api/*` no Caddy. A CI agora valida `compose.production.yml` usando apenas imagens SHA sintéticas e executa integrações parks/issues, além de auth/workspaces/Electric. `docs/producao.md` esclarece que auth fica desativada até os gates de identidade passarem e que Google/Push dependem de configuração completa.
+
+Validações: `pnpm typecheck`, `pnpm test` (16 arquivos/81 testes), `pnpm build`, `pnpm test:auth-integration`, `pnpm test:workspaces-integration`, `pnpm test:parks-integration`, `pnpm test:issues-read-integration`, `pnpm test:integration` e `git diff --check` passaram. `docker compose ... config --quiet` de produção passou com valores/imagens sintéticos. Imagens `windops-api:d03` e `windops-web:d03` foram construídas; API iniciou com config sintética, readiness interno respondeu 200 e Caddy validou o Caddyfile empacotado. Não foi testada a exposição de porta do host pelo container neste ambiente. Inicialmente, o container Electric existente falhou por referência a uma rede Docker removida; foi recriado sem remover o volume e a integração passou.
+
+`pnpm check` foi executado, mas falhou no Biome por formatação preexistente em `.agent/tasks/09-revisao-confiabilidade/baseline-r01.md` e `.agent/tasks/11-producao/02-escolha-hospedagem.md`. O alinhamento do índice da slice foi corrigido durante esta task; o check continua bloqueado pelos dois arquivos fora do escopo. Equivalentes typecheck/test/build e Biome direcionado passaram. A linha da CI que valida Compose foi adicionada, mas o workflow remoto não foi executado.
+
+Pendências que impedem encerramento: ensaio browser de cache/atualização com journal; comprovação da arquitetura e carga do KVM1 real; fluxo remoto CI/deploy; escala Neon e janela fora de horário, que aguarda alinhamento explícito da política; configuração real do Neon/Resend/TLS permanece em D05/D08. Nenhum segredo ou valor operacional foi copiado para o repositório.

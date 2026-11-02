@@ -16,6 +16,7 @@ http://:8081 {
     Strict-Transport-Security "max-age=31536000"
   }
   handle /api/* {
+    header Cache-Control "private, no-store"
     reverse_proxy api:3000
   }
   handle /assets/* {
