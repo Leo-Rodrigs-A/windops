@@ -60,16 +60,32 @@ BEGIN
     SELECT tablename FROM pg_tables WHERE schemaname = 'public'
   LOOP
     EXECUTE format('ALTER TABLE public.%I OWNER TO windops_migrator', object_record.tablename);
+    EXECUTE format('REVOKE ALL PRIVILEGES ON TABLE public.%I FROM windops_app', object_record.tablename);
     IF object_record.tablename IN ('issue_events', 'issue_location_references', 'sync_commands') THEN
       EXECUTE format('GRANT SELECT, INSERT ON TABLE public.%I TO windops_app', object_record.tablename);
-      EXECUTE format('REVOKE UPDATE, DELETE ON TABLE public.%I FROM windops_app', object_record.tablename);
+    ELSIF object_record.tablename IN ('auth_signup_intents', 'notifications', 'push_subscriptions', 'notification_deliveries') THEN
+      EXECUTE format('GRANT SELECT, INSERT, UPDATE ON TABLE public.%I TO windops_app', object_record.tablename);
     ELSIF object_record.tablename = 'issue_sync_events' THEN
       GRANT SELECT, INSERT ON TABLE public.issue_sync_events TO windops_app;
-      REVOKE UPDATE, DELETE ON TABLE public.issue_sync_events FROM windops_app;
     ELSIF object_record.tablename = 'issue_sync_rows' THEN
-      REVOKE INSERT, UPDATE, DELETE ON TABLE public.issue_sync_rows FROM windops_app;
+      GRANT SELECT ON TABLE public.issue_sync_rows TO windops_app;
     ELSE
       EXECUTE format('GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.%I TO windops_app', object_record.tablename);
+    END IF;
+    IF object_record.tablename IN (
+      'issue_events', 'issue_location_references', 'sync_commands',
+      'issue_sync_events', 'auth_signup_intents', 'notifications',
+      'push_subscriptions', 'notification_deliveries'
+    ) THEN
+      EXECUTE format('REVOKE DELETE ON TABLE public.%I FROM windops_app', object_record.tablename);
+    END IF;
+    IF object_record.tablename IN (
+      'issue_events', 'issue_location_references', 'sync_commands', 'issue_sync_events'
+    ) THEN
+      EXECUTE format('REVOKE UPDATE ON TABLE public.%I FROM windops_app', object_record.tablename);
+    END IF;
+    IF object_record.tablename = 'issue_sync_rows' THEN
+      REVOKE INSERT, UPDATE, DELETE ON TABLE public.issue_sync_rows FROM windops_app;
     END IF;
     EXECUTE format('REVOKE ALL PRIVILEGES ON TABLE public.%I FROM windops_replication', object_record.tablename);
     FOR column_record IN
