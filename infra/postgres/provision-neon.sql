@@ -63,7 +63,7 @@ BEGIN
     ELSIF object_record.tablename = 'issue_sync_events' THEN
       GRANT SELECT, INSERT ON TABLE public.issue_sync_events TO windops_app;
     ELSIF object_record.tablename = 'issue_sync_rows' THEN
-      NULL;
+      GRANT SELECT ON TABLE public.issue_sync_rows TO windops_app;
     ELSE
       EXECUTE format('GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.%I TO windops_app', object_record.tablename);
     END IF;

@@ -52,6 +52,21 @@ try {
   await app.query(
     'SELECT id, text, completion_report, archived_at FROM public.issue_sync_rows LIMIT 0',
   );
+  await expectDenied(
+    app,
+    'INSERT INTO public.issue_sync_rows SELECT * FROM public.issue_sync_rows WHERE false',
+    'runtime insert of trigger-maintained issue_sync_rows',
+  );
+  await expectDenied(
+    app,
+    'UPDATE public.issue_sync_rows SET id = id WHERE false',
+    'runtime update of trigger-maintained issue_sync_rows',
+  );
+  await expectDenied(
+    app,
+    'DELETE FROM public.issue_sync_rows WHERE false',
+    'runtime delete of trigger-maintained issue_sync_rows',
+  );
   await app.query('SELECT id FROM public.issue_events LIMIT 0');
   await app.query('SELECT id, actor_label, before, after FROM public.issue_sync_events LIMIT 0');
   await app.query('SELECT event_id FROM public.issue_location_references LIMIT 0');
