@@ -41,7 +41,7 @@ Há Dockerfiles API/web, Compose de produção, Caddy, CI, GHCR/deploy por SHA, 
 | [] [D09](09-validacao-campo.md)      | Validar aparelhos e fluxo de campo           | Proprietário executa em aparelhos; Codex prepara roteiro, acompanha e corrige | D08.                                                                        |
 | [] [D10](10-liberacao-piloto.md)     | Liberar piloto e entregar rotina de operação | Proprietário confirma liberação; Codex executa e registra                     | D01–D09 concluídas e O04 encerrada; escopo móvel explicitamente registrado. |
 
-D01 começa sem aguardar contas. D03 e D04 avançaram em paralelo após D02; D03 prepara artefatos locais e está concluída. D05 prepara o destino; D06 prova a entrega; D07 prova recuperação/operação; D08 instala o candidato e executa ensaios que requerem o primeiro deploy; D09 testa o uso real; D10 abre o piloto. A dependência O04 está satisfeita pelo encerramento da slice 10. O Google já aceito em dev não dispensa validar callback/origem no domínio final.
+D01 começa sem aguardar contas. D03 e D04 avançaram em paralelo após D02; D03 prepara artefatos locais e está concluída. D05 prepara o destino e comprova banco/rede/replicação sem depender de uma conta; D06 prova a entrega; D07 prova recuperação/operação; D08 faz bootstrap e executa smoke autenticado, incluindo shape/isolamento, depois de D05–D07; D09 testa o uso real; D10 abre o piloto. O04 está satisfeita pelo encerramento da slice 10. O Google já aceito em dev não dispensa validar callback/origem no domínio final.
 
 ## Critérios de encerramento
 
