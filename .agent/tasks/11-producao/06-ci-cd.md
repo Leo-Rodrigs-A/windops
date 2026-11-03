@@ -20,7 +20,7 @@ Workflows, scripts e artefatos de deploy; nenhum acesso administrativo irrestrit
 
 ## Estado atual
 
-CI/deploy e scripts SSH existem; publicação depende de `PUBLISH_IMAGES` e deploy depende separadamente de `DEPLOY_ENABLED`, além de publicação bem-sucedida. O workflow tem `packages: write` e publica API/web imutáveis por SHA usando `GITHUB_TOKEN`; o package GHCR é criado no primeiro push, sem cadastro prévio manual. O job `deploy` usa Environment `production` e chama por SSH o deploy root-owned da VPS, que aplica migração e health checks. O host lê `/opt/windops/infra/.env.production`, onde o proprietário já informou que guardou os segredos de runtime. Execução remota, proteção de branch, vars/secrets de deploy e recuperação ainda precisam de evidência atual.
+CI/deploy e scripts SSH estão ativos. O workflow publica API/web imutáveis por SHA, serializa deploy em produção e condiciona rollout ao CI verde, push da origem e controles `PUBLISH_IMAGES`/`DEPLOY_ENABLED`. O proprietário confirmou ruleset de `main`, Environment `production`, deploy por chave com forced command, e o primeiro rollout foi observado saudável por digest na VPS; health público live/ready também passou. Migrations foram repetidas com sucesso. Ainda faltam SHA Git/run associado aos digests atuais, rollback com release anterior, testes de falhas/concorrência em destino, compatibilidade de fila PWA e recovery sem prometer rollback de schema.
 
 ## Revisão das recomendações externas — 01/11/2026
 
@@ -38,13 +38,16 @@ D03; D04/D05 para execução remota.
 
 ## Plano
 
-- [ ] Completar CI com suites relevantes inclusive parks/issues, banco descartável, migrações, grants, Electric, builds e runtime. Conferir permissões mínimas e ausência de segredos em PRs/logs.
-- [ ] Configurar proteção da main e Environment production conforme recursos disponíveis; preservar deploy somente do SHA aprovado pelo CI da mesma origem e controle de concorrência.
-- [ ] Revisar publicação GHCR por SHA/digest, permissões de leitura no destino, chave restrita/known_hosts na VPS ou credencial de projeto no PaaS. Publicação (`PUBLISH_IMAGES`) e rollout (`DEPLOY_ENABLED`) são controles separados para permitir ensaio inicial.
+- [x] Completar CI com suites relevantes de parks/issues, banco descartável, migrações, grants, integrações, builds e validação dos runtimes. CI verde é condição para publicar; workflow limita permissões e não executa deploy em PR.
+- [x] Configurar ruleset ativo da `main` exigindo PR/CI e bloqueando force push/exclusão, conforme confirmação do proprietário; configurar Environment `production` com os dados de deploy necessários.
+- [x] Preservar deploy apenas do SHA de `push` aprovado pelo CI da mesma origem e serializar produção com concurrency group; comportamento está implementado no workflow.
+- [x] Publicar imagens GHCR imutáveis por SHA/digest e confirmar pull/execução na VPS; autenticação Actions usa chave restrita, forced command e known_hosts. `PUBLISH_IMAGES` e `DEPLOY_ENABLED` são controles separados.
 - [x] Avaliar integração Hostinger Docker Manager/API: o proprietário escolheu o `.env.production` root-owned na VPS, integrado ao deploy existente. Não usar o Docker Manager como secret store do runtime; não enviar segredos da aplicação ao GitHub Actions.
-- [ ] Ensaiar migração serializada, falha antes do rollout, falha de health, repetição do mesmo SHA e prevenção de deploy concorrente/obsoleto. Adequar ordem do primeiro provisionamento a D05.
-- [ ] Garantir que rollback de imagem não prometa reversão de schema e que primeira instalação sem release anterior tenha recuperação definida. Preservar compatibilidade com clientes/PWA anteriores e fila pendente.
-- [ ] Executar pipeline remoto em destino isolado, guardar URLs/runs/SHA/digests e resultados sem segredos; manter automação de produção controlada até D10. Atualizar manual de deploy manual/automático e atualizações de scripts privilegiados.
+- [x] Aplicar migrações serializadas e repetir o migrador; execução de produção repetida retornou `MIGRATION_REPEAT_OK`. A prevenção de concorrência/obsolescência está codificada por lock/concurrency.
+- [x] Documentar que rollback de imagem não reverte schema e definir recuperação do primeiro release sem imagem anterior (corrigir candidato e reaplicar); o primeiro rollout falho foi corrigido antes de registrar release.
+- [ ] Exercitar falha antes de rollout e rollback após release anterior saudável; confirmar comportamento de release antigo e compatibilidade com fila PWA pendente. Health failure observado ocorreu sem release anterior e não provou rollback.
+- [ ] Completar rastreabilidade do deploy ativo com SHA Git e URL/run correspondentes; digests e health atuais estão registrados. O deploy ocorreu no destino de produção como candidato, sem destino isolado separado.
+- [x] Atualizar manual de deploy conforme o fluxo atual de VPS/Compose, migration, health, release env e reconciliação da janela. Manter automação restrita a validadores até D10.
 
 ## Contratos e dados afetados
 
@@ -67,3 +70,9 @@ Diagnóstico posterior na VPS: `windops-web-1` aparece `running/healthy`, mas os
 Tentativa 3 do run `68` — 02/11/2026: confirmou repetição do mesmo resultado; imagens no host, migration repetida, API saudável, web recém-iniciado e marcado `unhealthy` imediatamente. Rollout abortado, `.release.env` ausente; nenhum release aceito. Não repetir sem diagnóstico detalhado de `State.Health.Log`, healthcheck configurado, processo/args e logs Caddy; Electric não foi reconciliado.
 
 Diagnóstico do erro de execução — 02/11/2026: inspeção enviada pelo proprietário confirmou processo `caddy`, imagem web de SHA `c076f1d7428861d0701506ad3e47c882e37bed21`, usuário `10001:10001`, `cap_drop: ALL`/`no-new-privileges` no Compose e repetidos `exec /usr/bin/caddy: operation not permitted`. A imagem oficial Caddy traz `cap_net_bind_service` no binário; com todas as capabilities removidas, o kernel bloqueia a execução. Como os listeners configurados são 8080/8443 e health 8081, alterado `infra/Dockerfile.web` para remover a capability de arquivo com `setcap -r` durante o build e remover `libcap-utils` depois. `pnpm check` passou: Biome/boundaries, typechecks, 86 testes e builds API/web. Docker daemon local indisponível (`permission denied` no socket), portanto a imagem alterada ainda não foi construída nem exercitada; precisa novo SHA/CI, publicação e deploy para confirmar. Sem release de produção aceito até essa confirmação.
+
+Rollout concluído — 02/11/2026: proprietário confirmou frontend acessível por HTTPS e compartilhou `docker compose ps` com API e web `healthy` por 59 minutos. Imagens ativas: API `ghcr.io/leo-rodrigs-a/windops-api@sha256:3db6910362788788e40707c154455daddabe14869f01d6aa249f77c882a62159`; web `ghcr.io/leo-rodrigs-a/windops-web@sha256:cc53d0b36b1e7728b6ecfe87c813476211f895aca46d9133bc166416e8db23c8`. Isso comprova rollout e saúde dos containers no momento da captura; teste externo confirmou HTTPS e não exposição das portas internas. Ainda faltam health endpoints públicos, teste autenticado/Google/e-mail e evidência do release SHA e timer Electric.
+
+Primeiro deploy — 02/11/2026: proprietário confirmou que o deploy funcionou e que o frontend está servindo HTTPS. Isso confirma a correção operacional do container web no destino. Ainda não foram registrados aqui SHA/digest do release, health da API após o deploy, execução da janela Electric nem validação do login/admin; manter D06 aberta até evidências do pipeline/health e encaminhar validações de bootstrap para D08.
+
+Atualização de health — 02/11/2026 America/Sao_Paulo (03/11 UTC): proprietário executou `curl.exe -i` em `/api/health/live` e `/api/health/ready`; ambos retornaram `200 OK` via Caddy/HTTPS com HSTS. `ready` executa `SELECT 1`, confirmando API conectada ao Neon. Digests atuais foram associados ao deploy na evidência de rollout. SHA Git/URL do workflow e estado do timer Electric ainda faltam.

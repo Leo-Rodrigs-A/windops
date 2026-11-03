@@ -28,13 +28,19 @@ D03 e D04.
 
 ## Plano
 
-- [ ] Para VPS: preparar Docker/Compose, atualizações, firewall, chaves, usuário de deploy restrito e diretórios operacionais. Para PaaS: criar serviços privados/públicos, discos e ingress conforme D02. Implementar só o destino escolhido.
+- [x] Preparar VPS com Docker/Compose de produção, units systemd, diretórios operacionais e usuário de deploy restrito; criar conta administrativa nominal com sudo e autenticação SSH por chave; desabilitar root e senha via SSH. Para PaaS, criar serviços/discos conforme D02. Implementar só o destino escolhido.
+- [ ] Confirmar política de atualizações de segurança do Ubuntu e registrar rotina de aplicação.
 - [x] Confirmar arquitetura x86_64 do host e instalar/ativar as units systemd da janela Electric; helper protegido retorna sucesso sem alterar containers até existir `.release.env` e `.env.production`.
-- [ ] Configurar DNS e HTTPS com renovação e uma origem pública; publicar somente entrada web e acesso administrativo restrito. Confirmar externamente que Electric, banco e portas internas não estão expostos.
-- [ ] Provisionar banco com papéis runtime/migrador/replicação separados, TLS verificado e conexões diretas onde exigidas; habilitar logical replication e validar privilégios efetivos no provedor.
-- [ ] Definir ordem explícita roles→migrações→grants/publicação→Electric→API/web, ajustando scripts existentes quando necessário. Validar instalação vazia e repetição; não presumir que o deploy atual cria roles ou publicação.
-- [ ] Conferir publicação limitada às tabelas/projeções autorizadas, slots/WAL e comportamento de suspensão do banco. Validar shape pelo proxy autenticado, isolamento tenant e rejeição de filtros arbitrários.
-- [ ] Configurar persistência e reiniciar runtime/host ou equivalente PaaS em ensaio; verificar dados, certificados e retomada da replicação. Registrar inventário sem segredos e atualizar manual.
+- [x] Configurar DNS/HTTPS e confirmar externamente a origem web nas portas 80/443; API (3000), portas internas Caddy (8080/8081/8443) e Electric não têm porta publicada/acessível pelo domínio. SSH requer chave; root e senha via SSH estão desativados, e o usuário de deploy é limitado ao wrapper.
+- [x] Configurar Caddy com HTTPS automático para `APP_DOMAIN`, persistência de `/data` e validar certificado vigente via HTTPS público; `curl` sem ignorar TLS retornou 200. A renovação futura será monitorada em D07, sem esperar um ciclo completo para concluir D05.
+- [ ] Revisar firewall do provedor e registrar quais origens podem acessar TCP/22; UFW local está inativo e SSH é necessário para owner/GitHub Actions.
+- [x] Provisionar banco com papéis runtime/migrador/replicação separados, TLS verificado e conexões diretas onde exigidas; habilitar logical replication e validar privilégios efetivos no provedor.
+- [x] Definir ordem explícita roles→migrações→grants/publicação→Electric→API/web, ajustando scripts existentes quando necessário. Validar instalação vazia e repetição; não presumir que o deploy atual cria roles ou publicação.
+- [x] Conferir publication limitada às cinco tabelas autorizadas, `REPLICA IDENTITY FULL`, `wal_level=logical` e privilégios efetivos do runtime no Neon. Testes SQL confirmaram a allowlist.
+- [x] Confirmar parada automática do Electric às 18h por timer: serviço systemd terminou `0/SUCCESS`, container Electric `Exited (0)`, API/web permaneceram `healthy`.
+- [ ] Conferir slot/WAL efetivo, suspensão Neon e retomada automática do Electric às 06h, incluindo recuperação da conexão/replicação; shape autenticado/tenant e filtros ficam na D08, após bootstrap do workspace.
+- [x] Configurar volumes persistentes no Compose para dados do Electric e estado/certificados do Caddy; registrar inventário não secreto no manual.
+- [ ] Ensaiar restart de serviços/host, confirmar persistência de dados/certificados e retomada do Electric. Nenhum restart de produção foi feito após o primeiro release.
 
 ## Contratos e dados afetados
 
@@ -42,7 +48,7 @@ Infraestrutura e provisionamento de roles/publicação; preservar ownership de m
 
 ## Testes e aceite
 
-HTTPS, isolamento externo, grants, instalação/reaplicação e restart comprovados no destino. Ready comprova dependências; smoke autenticado comprova fluxo. Executar checks de integração/container e pnpm check se fonte mudar.
+HTTPS e isolamento externo, grants, instalação/reaplicação, persistência/restart e suspensão/retomada da replicação comprovados no destino. Ready comprova dependências de runtime. Smoke de shape autenticado/tenant é aceite da D08 após bootstrap; não é dependência para encerrar infraestrutura D05. Executar checks de integração/container e pnpm check se fonte mudar.
 
 ## Evidências
 
@@ -93,6 +99,28 @@ Correção de cópia — 02/11/2026: o clone Git real na VPS fica em `/tmp/windo
 Primeira repetição após corrigir a cópia falhou antes de executar SQL: o processo não-root do container recebeu `EACCES` ao ler `/provision-neon.sql`, pois o arquivo foi instalado com modo `0600`. A conexão foi estabelecida, mas grants/publication não foram alterados. Como o arquivo contém somente SQL operacional sem segredos, ajustar leitura para o container (`0644`) e repetir.
 
 Provisionamento Neon aplicado — 02/11/2026: repetição do job isolado terminou sem erro em `windops-production`, `current_user=windops_migrator`; consulta na mesma sessão retornou exatamente cinco tabelas em `electric_publication_default`: `public.workspaces`, `public.parks`, `public.turbines`, `public.issue_sync_rows` e `public.issue_sync_events`. Ainda validar `REPLICA IDENTITY FULL` e privilégios efetivos de `windops_app` no Neon antes de iniciar Electric.
+
+Fechamento dos itens de banco e ordem operacional — 02/11/2026: Neon confirmou `wal_level=logical`, roles separadas e privilégios efetivos de app/migrator; a exceção `neon_superuser` da conexão Electric foi aceita pelo proprietário e está documentada. `MIGRATION_DATABASE_URL`/`DATABASE_URL` são conexões diretas ao Neon; execução real como `windops_migrator` concluiu, repetição retornou `MIGRATION_REPEAT_OK`, e a publication exata de cinco tabelas com `REPLICA IDENTITY FULL` e grants do runtime foi verificada. Electric conectou ao Neon e iniciou pipeline; o primeiro deploy foi concluído e o proprietário confirmou frontend HTTPS. Isso sustenta as duas etapas marcadas acima. HTTPS isoladamente não comprova retomada da replicação, persistência após restart ou comportamento de suspensão do Neon. Testes de shape autenticado e isolamento tenant foram movidos para D08, pois dependem do bootstrap nessa task.
+
+Teste externo — 02/11/2026: PowerShell do proprietário confirmou TCP acessível em 80/443 e inacessível em 3000/8080/8081/8443 para `windops.devleonardo.com.br`. Isso confirma que a API e portas internas testadas não estão expostas pelo domínio, consistente com Caddy como entrada web. Ainda falta conferir listeners/firewall no host e qualquer regra de firewall do provedor.
+
+Inspeção do runtime e listeners — 02/11/2026: proprietário informou `docker compose ps` com API e web `healthy`. API mostra somente `3000/tcp` sem publicação; Caddy publica apenas `0.0.0.0:80→8080` e `0.0.0.0:443→8443` (incluindo IPv6 em 80/443), sem publicação das portas 2019 ou 8081. `ss -lntp` mostrou host listeners em 22, 80 e 443; 80/443 pertencem ao docker-proxy e 22 ao sshd em IPv4/IPv6. UFW está `inactive`. A exposição de 3000/8080/8081/8443 foi negada externamente no teste anterior; falta confirmar firewall do provedor e alcance da porta 22. Portanto HTTPS/API saudável e isolamento das portas de aplicação foram verificados, mas a restrição do acesso administrativo segue pendente.
+
+Teste SSH externo — 02/11/2026: PowerShell do proprietário conectou ao hostname resolvido para `187.41.111.202:22` (`TcpTestSucceeded=True`). Confirma que SSH está alcançável da rede atual, mas não determina se a regra do firewall Hostinger permite somente IPs autorizados ou todas as origens. UFW permanece inativo; conferir a regra de entrada do provedor e a política `sshd` de root/senha antes de marcar acesso administrativo restrito.
+
+Health público — 02/11/2026 (respostas HTTP datadas de 03/11 UTC): proprietário executou `curl.exe -i` em `/api/health/live` e `/api/health/ready`; ambos retornaram `200 OK` por HTTPS através de Caddy, com HSTS. O readiness consulta `SELECT 1`, portanto comprova conexão de runtime ao Neon nesse momento. Não comprova comportamento cold-start/scale-to-zero após inatividade.
+
+Política SSH observada — 02/11/2026: `sshd -T` retornou `permitrootlogin yes`, `passwordauthentication yes`, `pubkeyauthentication yes`. Portanto root via senha está habilitado, além do usuário restrito `windops-deploy`; não considerar o acesso administrativo restrito. Não foi feita alteração remota. Próximo passo seguro: instalar/testar chave pública de uma conta administrativa nominal com sudo, manter a sessão/console de recuperação, e só então desabilitar login SSH de root e autenticação SSH por senha. Manter chave/forced-command de `windops-deploy` para não quebrar Actions.
+
+Conta administrativa nominal — 02/11/2026: proprietário criou `windops-admin`, instalou sua chave pública e confirmou login SSH pela chave. `sudo -v` passou; `sudo -l` retorna `(ALL : ALL) ALL`, portanto a conta pode administrar o host. A sessão root existente foi mantida durante o teste. Próxima etapa: endurecer sshd (root/senha desabilitados, chave permitida), validar `sshd -t` e configuração efetiva antes de reload, manter sessões abertas e testar novamente tanto `windops-admin` quanto o usuário forçado `windops-deploy`.
+
+Endurecimento SSH verificado — 02/11/2026: `sshd -T` após alteração retornou `permitrootlogin no`, `passwordauthentication no`, `kbdinteractiveauthentication no`, `pubkeyauthentication yes`; o proprietário confirmou reload e login novo de `windops-admin` usando a passphrase da chave privada (sem autenticação por senha do servidor). Teste da chave `windops-deploy` com comando inválido retornou `Only deploy <40-character commit SHA> is accepted.`, confirmando que a conta segue limitada ao wrapper. SSH continua alcançável na porta 22 para owner/Actions; UFW inativo. Isso confirma restrição por identidade/chave e comando, embora firewall de origem do provedor não tenha sido inspecionado.
+
+Reconexão confirmada — 03/11/2026: após erro local de passphrase na primeira tentativa, `ssh-keygen -y` conseguiu desbloquear a chave e o proprietário confirmou que o login `windops-admin` voltou a funcionar. Nenhuma alteração adicional no sshd foi necessária.
+
+Timer Electric — 02/11/2026 America/Sao_Paulo: proprietário informou `enabled` e `active`; `systemctl list-timers` mostrou última ativação segunda-feira 21:00 UTC (18:00 SP) e próxima terça-feira 09:00 UTC (06:00 SP). Isso confirma agenda diária instalada e ativa, mas não confirma o resultado do serviço nem o estado do Electric; coletar status sem pager e `docker compose ps -a` após sair do pager.
+
+Parada automática confirmada — 02/11/2026 18h America/Sao_Paulo: `windops-electric-window.service` encerrou `status=0/SUCCESS`; container `windops-electric-1` aparece `Exited (0)`, enquanto `windops-api-1` e `windops-web-1` permanecem `Up (healthy)`. A janela noturna está operando conforme esperado. Aguardar execução de 06h para confirmar start do Electric e reconexão ao Neon; depois verificar slot/WAL e saúde da replicação.
 
 Verificação Neon concluída — 02/11/2026: SQL Editor retornou `REPLICA IDENTITY FULL=true` nas cinco tabelas publicadas. `windops_app` tem SELECT em `issue_sync_rows`, sem INSERT/UPDATE/DELETE; também não tem UPDATE/DELETE em `issue_sync_events`. Isso confirma a allowlist e as restrições consultadas do runtime. Electric ainda não iniciado; seu ensaio deve ocorrer na janela permitida pelo proprietário (06h–18h `America/Sao_Paulo`).
 
