@@ -12,6 +12,8 @@ Cada nova slice fica em uma pasta `NN-nome/`, com um `README.md` que define resu
 
 ## Slices concluídas mais recentes
 
+- [x] [12 — Landing pública](12-landing-publica/README.md): landing longa e responsiva baseada na referência enviada pelo proprietário; `pnpm check` passou em 04/11/2026. Revisão visual no navegador integrado indisponível nesta sessão.
+
 - [x] [10 — Cadastro e identidade](10-cadastro-identidade/README.md): O01–O04 concluídas; validações automatizadas registradas e aceite final do proprietário em 31/10/2026.
 
 - [x] [09 — Revisão técnica e confiabilidade](09-revisao-confiabilidade/README.md): R01–R08 concluídas; matriz A01–A13 fechada com evidências e limites registrados.

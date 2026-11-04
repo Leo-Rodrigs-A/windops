@@ -296,6 +296,12 @@ Q04 concluída em 30/10/2026: filtros P/T Shadcn nas listas Home, Histórico e A
 
 Q05 — 30/10/2026: validação automatizada executada (`pnpm check`, 57 testes/builds, e integração de issues com fixture isolada de 128 registros). Aceite integrado permanece aberto: navegador MCP Pencil indisponível por aplicativo desconectado; front autenticado, perda de rede entre páginas e saída/retorno real Electric ainda precisam de ensaio. Sem alterações de fonte, schema ou infraestrutura. Ver evidências em Q05; slice 08 e roadmap 10 não concluídos.
 
+## Landing pública — 04/11/2026
+
+- A pedido do proprietário, a landing `/` foi ampliada seguindo a imagem enviada na conversa: narrativa em seções, FAQ, visualizações ilustrativas de chamados/equipe e chamadas reais de cadastro/entrada. A implementação está em `apps/web/src/pages/public-landing-page.tsx`; sem mudança de regras, contratos ou backend.
+- Exemplos de workspace e chamados são ilustrativos, não dados de visitante; controles dentro deles são somente visuais. O estado de conta sem workspace preserva o destino para `/sem-workspace`.
+- `pnpm check` passou (Biome/boundaries, typecheck, 17 arquivos/86 testes e builds). O navegador integrado não estava conectado e o Vite local encontrou restrição/conflito de porta; não se declara inspeção visual final nesta sessão. A imagem enviada bastou como referência; nenhum `.pen` ou arquivo Vectorcraft foi acessado.
+
 
 Correção durante Q05: erro de hooks reportado no Vite com hashes distintos. React/React DOM instalados em 19.3.1, hooks do ThemeProvider corretos. Hipótese: worker de Preview compartilhando origem e cacheando módulos dev. Bootstrap dev agora remove o registro do worker Wind Ops antes de importar React, sem apagar IndexedDB; registro PWA restrito a produção e cache restrito aos assets do build. Dedupe React/React DOM e meta mobile-web-app-capable adicionados. pnpm check passou (57 testes/builds); confirmação no navegador do proprietário ainda pendente, inclusive HMR.
 
