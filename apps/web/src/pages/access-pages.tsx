@@ -1,13 +1,9 @@
 import { Link, useNavigate } from '@tanstack/react-router';
-import { ArrowRight, CheckCircle2, KeyRound, Mail, ShieldCheck, Wind } from 'lucide-react';
+import { CheckCircle2, Mail, ShieldCheck } from 'lucide-react';
 import { type FormEvent, useEffect, useRef, useState } from 'react';
 import { useAuth } from '../auth/auth-context';
 import { AccessLayout } from '../components/access-layout';
-import { TowerMark } from '../components/brand/tower-mark';
-import { SignOutButton } from '../components/sign-out-button';
-import { ThemeToggle } from '../components/theme-toggle';
 import { Button } from '../components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
 import { Feedback, LoadingState } from '../components/ui/feedback';
 import { TextField } from '../components/ui/form-field';
 import {
@@ -20,6 +16,7 @@ import {
   getOnboardingStatus,
 } from '../lib/auth-api';
 import { reconnectLocalAccount } from '../offline/local-access';
+import { PublicLandingPage } from './public-landing-page';
 
 function failureMessage(error: unknown, fallback: string) {
   if (error instanceof ApiRequestError && error.status === 429) {
@@ -82,141 +79,7 @@ function GoogleMark() {
 }
 
 export function LandingPage() {
-  const { snapshot } = useAuth();
-  const orphan = snapshot.status === 'orphan';
-  const accountName = orphan ? snapshot.me.user.name.trim() || snapshot.me.user.email : '';
-
-  return (
-    <main className="relative isolate flex min-h-dvh flex-col overflow-hidden bg-background px-5 text-foreground sm:px-8">
-      <div
-        aria-hidden="true"
-        className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(ellipse_at_50%_15%,rgb(21_93_252_/_0.23),transparent_46%),radial-gradient(ellipse_at_90%_60%,rgb(6_182_212_/_0.1),transparent_36%)]"
-      />
-      <header className="mx-auto flex w-full max-w-7xl items-center justify-between py-6">
-        <Link aria-label="Wind Ops, início" className="inline-flex items-center gap-2" to="/">
-          <TowerMark className="size-6" />
-          <span className="font-semibold tracking-tight">Wind Ops</span>
-        </Link>
-        <div className="flex items-center gap-2">
-          <ThemeToggle />
-          {orphan ? (
-            <>
-              <span className="max-w-48 truncate px-2 text-sm font-medium" title={accountName}>
-                {accountName}
-              </span>
-              <SignOutButton />
-            </>
-          ) : (
-            <>
-              <Button asChild className="hidden sm:inline-flex" variant="ghost">
-                <Link to="/entrar">Entrar</Link>
-              </Button>
-              <Button asChild>
-                <Link to="/cadastro">
-                  Criar conta <ArrowRight aria-hidden="true" />
-                </Link>
-              </Button>
-            </>
-          )}
-        </div>
-      </header>
-      <section className="mx-auto grid w-full max-w-7xl flex-1 items-center gap-12 py-12 lg:grid-cols-[1.05fr_0.95fr] lg:py-20">
-        <div className="max-w-2xl space-y-7">
-          <p className="inline-flex items-center gap-2 rounded-full border border-blue-400/20 bg-blue-500/10 px-3 py-1.5 text-xs font-medium text-brand">
-            <ShieldCheck aria-hidden="true" className="size-4" /> Operação de campo, com contexto
-          </p>
-          <h1 className="text-4xl font-semibold leading-[1.08] tracking-tight sm:text-6xl">
-            O registro começa <span className="text-brand">no campo.</span>
-          </h1>
-          <p className="max-w-xl text-base leading-relaxed text-muted-foreground sm:text-lg">
-            Wind Ops organiza o registro e o acompanhamento de problemas nos elevadores de torres
-            eólicas, conectando o trabalho de campo à equipe de operação.
-          </p>
-          {orphan ? (
-            <Card className="max-w-xl bg-card/80">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-base">Sua sessão continua ativa</CardTitle>
-                <CardDescription>
-                  Esta conta ainda não está vinculada a um workspace. Você pode voltar aqui sem
-                  entrar novamente.
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="flex flex-col gap-3 sm:flex-row">
-                <Button asChild>
-                  <Link to="/sem-workspace">Ver status do acesso</Link>
-                </Button>
-              </CardContent>
-            </Card>
-          ) : (
-            <>
-              <div className="flex flex-col gap-3 sm:flex-row">
-                <Button asChild size="lg">
-                  <Link to="/cadastro">
-                    Começar <ArrowRight aria-hidden="true" />
-                  </Link>
-                </Button>
-                <Button asChild size="lg" variant="outline">
-                  <Link to="/entrar">Já tenho acesso</Link>
-                </Button>
-              </div>
-              <p className="flex items-center gap-2 text-sm text-muted-foreground">
-                <KeyRound aria-hidden="true" className="size-4 text-brand" /> Acesso protegido por
-                verificação de e-mail.
-              </p>
-            </>
-          )}
-        </div>
-        <div className="relative mx-auto w-full max-w-xl">
-          <div
-            aria-hidden="true"
-            className="absolute -inset-8 -z-10 rounded-full bg-blue-500/10 blur-3xl"
-          />
-          <Card className="overflow-hidden bg-card/90 shadow-2xl shadow-blue-950/30">
-            <CardHeader className="border-b border-border">
-              <div className="flex items-center gap-3">
-                <span className="grid size-9 place-items-center rounded-lg bg-blue-500/15 text-brand">
-                  <Wind aria-hidden="true" className="size-5" />
-                </span>
-                <div>
-                  <CardTitle className="text-base">Registro de campo</CardTitle>
-                  <CardDescription>Contexto compartilhado com a equipe</CardDescription>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent className="grid gap-4 p-5 sm:grid-cols-[0.85fr_1.15fr]">
-              <div className="space-y-3 rounded-xl border border-border bg-background/60 p-4">
-                <p className="text-xs font-medium text-muted-foreground">Fluxo de trabalho</p>
-                {['Registrar no local', 'Contextualizar a equipe', 'Acompanhar atendimento'].map(
-                  (item) => (
-                    <div className="flex items-center gap-2 text-sm" key={item}>
-                      <CheckCircle2 aria-hidden="true" className="size-4 shrink-0 text-brand" />
-                      <span>{item}</span>
-                    </div>
-                  ),
-                )}
-              </div>
-              <div
-                aria-hidden="true"
-                className="relative min-h-48 overflow-hidden rounded-xl border border-blue-300/15 bg-[radial-gradient(ellipse_at_72%_25%,rgb(37_99_235_/_0.46),transparent_44%),linear-gradient(145deg,#09090b,#18181b_65%,#082f49)]"
-              >
-                <div className="absolute inset-0 bg-[linear-gradient(rgb(255_255_255_/_0.035)_1px,transparent_1px),linear-gradient(90deg,rgb(255_255_255_/_0.035)_1px,transparent_1px)] bg-[size:26px_26px]" />
-                <div className="absolute top-[28%] left-[18%] h-px w-[64%] rotate-[-18deg] bg-gradient-to-r from-transparent via-cyan-200/70 to-transparent" />
-                <div className="absolute top-[28%] left-[46%] size-2 rounded-full bg-cyan-100 shadow-[0_0_26px_10px_rgb(34_211_238_/_0.3)]" />
-                <div className="absolute right-4 bottom-4 left-4 rounded-lg border border-white/10 bg-black/25 p-3 backdrop-blur">
-                  <div className="mb-2 h-2 w-1/3 rounded bg-blue-200/60" />
-                  <div className="h-2 w-4/5 rounded bg-white/20" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      </section>
-      <footer className="mx-auto flex w-full max-w-7xl items-center justify-between border-t border-border py-5 text-xs text-muted-foreground">
-        <span>Wind Ops · Operação em campo</span>
-        <span>Desenvolvido para equipes de manutenção eólica</span>
-      </footer>
-    </main>
-  );
+  return <PublicLandingPage />;
 }
 
 export function SignInPage() {
