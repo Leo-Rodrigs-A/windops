@@ -302,6 +302,11 @@ Q05 — 30/10/2026: validação automatizada executada (`pnpm check`, 57 testes/
 - Exemplos de workspace e chamados são ilustrativos, não dados de visitante; controles dentro deles são somente visuais. O estado de conta sem workspace preserva o destino para `/sem-workspace`.
 - `pnpm check` passou (Biome/boundaries, typecheck, 17 arquivos/86 testes e builds). O navegador integrado não estava conectado e o Vite local encontrou restrição/conflito de porta; não se declara inspeção visual final nesta sessão. A imagem enviada bastou como referência; nenhum `.pen` ou arquivo Vectorcraft foi acessado.
 
+## Superfícies do tema escuro — 04/11/2026
+
+- Em branch dedicada `feat/dark-surface-palette`, os tokens dark de fundo, superfícies/card, popover, muted/accent, bordas/input e sidebar usam a escala zinc do Tailwind: zinc-950 no fundo, zinc-900 nas superfícies/card e zinc-800 nos níveis elevados/bordas. Texto, primário, estados semânticos, botão secundário e tema claro preservaram seus valores.
+- `pnpm check` passou (Biome/boundaries, typecheck, 17 arquivos/86 testes e builds); o CSS compilado inclui as variáveis zinc-800/900/950. Sem commit ou push. Evidência em [T01](tasks/13-superficies-dark/01-tokens-superficies.md).
+
 
 Correção durante Q05: erro de hooks reportado no Vite com hashes distintos. React/React DOM instalados em 19.3.1, hooks do ThemeProvider corretos. Hipótese: worker de Preview compartilhando origem e cacheando módulos dev. Bootstrap dev agora remove o registro do worker Wind Ops antes de importar React, sem apagar IndexedDB; registro PWA restrito a produção e cache restrito aos assets do build. Dedupe React/React DOM e meta mobile-web-app-capable adicionados. pnpm check passou (57 testes/builds); confirmação no navegador do proprietário ainda pendente, inclusive HMR.
 

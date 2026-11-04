@@ -98,15 +98,15 @@
 
 :root[data-theme="dark"] {
   color-scheme: dark;
-  --background: #09090b;
+  --background: var(--color-zinc-950);
   --foreground: #fafafa;
-  --surface: #27272a;
-  --surface-raised: #3f3f46;
+  --surface: var(--color-zinc-900);
+  --surface-raised: var(--color-zinc-800);
   --primary: var(--color-blue-600);
   --brand: var(--color-blue-300);
   --primary-foreground: #ffffff;
   --muted-foreground: #a1a1aa;
-  --border: #35353b;
+  --border: var(--color-zinc-800);
   --focus: var(--color-blue-400);
   --info: var(--color-blue-300);
   --info-subtle: var(--color-blue-950);
@@ -116,27 +116,27 @@
   --warning-subtle: var(--color-amber-950);
   --danger: var(--color-red-300);
   --danger-subtle: var(--color-red-950);
-  --card: #27272a;
+  --card: var(--color-zinc-900);
   --card-foreground: #fafafa;
-  --popover: #323239;
+  --popover: var(--color-zinc-900);
   --popover-foreground: #fafafa;
-  --muted: #27272a;
-  --accent: #27272a;
+  --muted: var(--color-zinc-800);
+  --accent: var(--color-zinc-800);
   --accent-foreground: #fafafa;
   --secondary: #3f3f46;
   --secondary-foreground: #fafafa;
-  --input: #3f3f46;
+  --input: var(--color-zinc-800);
   --scrollbar-thumb: #3f3f46;
   --scrollbar-thumb-hover: #52525b;
   --ring: var(--color-blue-400);
   --destructive: var(--color-red-400);
-  --sidebar: #09090b;
+  --sidebar: var(--color-zinc-950);
   --sidebar-foreground: #fafafa;
   --sidebar-primary: var(--color-blue-600);
   --sidebar-primary-foreground: #ffffff;
-  --sidebar-accent: #27272a;
+  --sidebar-accent: var(--color-zinc-900);
   --sidebar-accent-foreground: #fafafa;
-  --sidebar-border: #35353b;
+  --sidebar-border: var(--color-zinc-900);
   --sidebar-ring: var(--color-blue-400);
 }
 

@@ -12,6 +12,8 @@ Cada nova slice fica em uma pasta `NN-nome/`, com um `README.md` que define resu
 
 ## Slices concluídas mais recentes
 
+- [x] [13 — Superfícies do tema escuro](13-superficies-dark/README.md): tokens dark de superfície e cards mapeados para zinc do Tailwind; `pnpm check` passou em 04/11/2026.
+
 - [x] [12 — Landing pública](12-landing-publica/README.md): landing longa e responsiva baseada na referência enviada pelo proprietário; `pnpm check` passou em 04/11/2026. Revisão visual no navegador integrado indisponível nesta sessão.
 
 - [x] [10 — Cadastro e identidade](10-cadastro-identidade/README.md): O01–O04 concluídas; validações automatizadas registradas e aceite final do proprietário em 31/10/2026.
