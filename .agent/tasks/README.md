@@ -8,7 +8,12 @@ Cada nova slice fica em uma pasta `NN-nome/`, com um `README.md` que define resu
 
 ## Próxima slice preparada
 
+- [ ] [14 — Domínio principal e redirecionamento](14-dominio-principal/README.md): adicionar novo domínio à produção, torná-lo canônico e preservar o domínio antigo com redirecionamento permanente; o remetente de email permanece no domínio atual. Próxima: DOM01.
 - [ ] [11 — Preparação e entrada em produção](11-producao/README.md): D01–D04 concluídas (manual, hospedagem/parâmetros, preparação local, contas/acessos). D05–D10 seguem abertas: infraestrutura/banco, CI/CD, recuperação, primeiro deploy, aparelhos e liberação. Próxima: D05.
+
+## Slice preparada
+
+- Slice 14 planejada em 05/11/2026: domínio principal e redirecionamento do domínio antigo, com DNS, TLS, Caddy, origem/auth/OAuth, deploy e validação ponta a ponta. Troca de remetente/provedor de email excluída e reservada para slice futura.
 
 ## Slices concluídas mais recentes
 
