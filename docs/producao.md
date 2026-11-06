@@ -254,3 +254,17 @@ A [slice 11](../.agent/tasks/11-producao/README.md) separa execução e responsa
 ## Janela desejada para VPS + Neon Free
 
 O proprietário confirmou operação diária do Electric das 06h às 18h e pausa das 18h às 06h em `America/Sao_Paulo`, mantendo API/Caddy em execução. A API pode acordar Neon sob demanda e terá latência de cold-start; a réplica local para de receber atualizações quando Electric está pausado. O worker de push não faz polling: outbox fica persistida e tenta novamente após atividade posterior da API. Healthchecks usam liveness sem banco; readiness consulta PostgreSQL apenas quando chamada explicitamente. O timer systemd aplica a janela no boot e nos dois limites horários. Instalação e confirmação de scale-to-zero/cold-start na VPS ainda são pendentes; qualquer cálculo de CU-horas depende do uso real e despertares.
+
+### Acordar Electric manualmente fora da janela
+
+Quando precisar de sincronização do Electric à noite, após as 18h, inicie o serviço diretamente pelo Compose. O helper `windops-electric-window` sempre reconcilia a política atual; fora da janela ele **para** o container, portanto não use o helper para acordá-lo fora do horário. No host, em `/opt/windops`, execute:
+
+```bash
+cd /opt/windops
+sudo docker compose --env-file infra/.env.production --env-file .release.env \
+  -f infra/compose.production.yml up -d --wait electric
+sudo docker compose --env-file infra/.env.production --env-file .release.env \
+  -f infra/compose.production.yml ps electric
+```
+
+Os dois arquivos de ambiente são necessários: `infra/.env.production` contém a configuração privada do runtime e `.release.env` aponta para as imagens fixadas do release. Não exiba nem compartilhe seu conteúdo. Pode repetir a subida manual sempre que precisar durante a noite. Ela não desabilita nem altera o timer systemd: uma execução às 06h o manterá ativo, e a próxima execução das 18h o pausará. A API/Caddy não são afetados.
