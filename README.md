@@ -27,7 +27,7 @@ O piloto atende uma empresa/workspace por instalação. A referência inicial é
 
 A primeira autenticação precisa de rede. Administração de equipe/equipamentos e determinadas ações administrativas também são online. Consultas de concluídos/arquivados podem exigir rede; o histórico local é parcial. Uma sessão expirada permite continuar o trabalho local previamente habilitado, mas exige autenticação para enviar pendências. Abra ou retome o app com conexão para sincronizar; envio em segundo plano não é garantido.
 
-As slices 01–10 foram encerradas com as evidências registradas no [índice de tarefas](.agent/tasks/README.md). O proprietário confirmou testes funcionais de produção em Android, iPhone e PWA desktop; a matriz detalhada por versão/cenário, pressão física de armazenamento e métricas numéricas continuam na [slice 11](.agent/tasks/11-producao/README.md). Essa confirmação não declara suporte móvel geral além dos aparelhos e fluxos testados. Apagar os dados do site pode apagar trabalho ainda não enviado: preserve ou exporte pendências antes de limpar o navegador.
+As slices 01–10 foram encerradas com as evidências registradas no [índice de tarefas](.agent/tasks/README.md). O proprietário confirmou testes funcionais de produção em Android, iPhone e PWA desktop usando as versões mais atuais disponíveis. Simulação de quota/evicção e medição numérica p95 <2s foram retiradas do escopo D09 por decisão do proprietário; não se afirma que esses comportamentos/metas foram validados. Essa confirmação não declara suporte móvel geral além dos aparelhos e fluxos testados. Apagar os dados do site pode apagar trabalho ainda não enviado: preserve ou exporte pendências antes de limpar o navegador.
 
 O backend é um monólito modular Fastify. O frontend usa React/Vite, TanStack e Shadcn/Tailwind; PostgreSQL guarda os dados, Electric entrega a réplica e IndexedDB mantém o estado local. O navegador acessa Electric **somente pelo proxy autenticado da API**. Mesmo no piloto com uma empresa, cada operação valida o acesso ao workspace no servidor.
 
@@ -277,7 +277,7 @@ O roteiro completo está no [guia de produção](docs/producao.md). Ele começa 
 
 A sequência é **escolher destino → criar contas/acessos → preparar app/banco/rede → validar entrega e recuperação → publicar candidato → testar aparelhos → liberar piloto**. O proprietário define orçamento, região, domínio e administrador; Codex prepara e valida as configurações com os acessos fornecidos. Não é preciso criar uma hospedagem em cada provedor.
 
-O README ensina o caminho e os comandos existentes. A [D01](.agent/tasks/11-producao/01-readme-manual.md) registra o ensaio local deste manual. O deploy candidato e os fluxos funcionais de produção foram confirmados pelo proprietário em D08; testes de restore foram excluídos do escopo. Matriz detalhada de aparelhos e liberação do piloto permanecem em D09/D10.
+O README ensina o caminho e os comandos existentes. A [D01](.agent/tasks/11-producao/01-readme-manual.md) registra o ensaio local deste manual. O deploy candidato e os fluxos funcionais de produção foram confirmados pelo proprietário em D08/D09; testes de restore foram excluídos do escopo. A [D10](.agent/tasks/11-producao/10-liberacao-piloto.md) registra a liberação do piloto, ainda dependente de aceite explícito do proprietário.
 
 ## Encontrar código e documentação
 
