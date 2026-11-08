@@ -2,7 +2,7 @@
 
 ## Status
 
-Planejada
+Em andamento — smoke público de domínio/health/redirect passou; fluxos autenticados e aparelhos na nova origem pendentes (08/11/2026).
 
 - [ ] Task concluída
 
@@ -24,7 +24,7 @@ DOM04 concluída; conta de teste/admin e credenciais externas disponíveis no co
 
 ## Plano
 
-- [ ] Testar homepage, assets, `/api/health/live` e `/api/health/ready` no novo host, com HTTPS validado.
+- [x] Testar homepage, `/api/health/live` e `/api/health/ready` no novo host, com HTTPS validado. Assets específicos e browser ficam para ensaio de navegador.
 - [ ] Testar em navegador limpo cadastro/login de validação, sessão Secure/HttpOnly, segunda etapa real por email, OAuth Google/callback e linking já cobertos/necessários; nunca capturar cookie, code ou token.
 - [ ] Testar criação de convite e recuperação; links recém-gerados devem usar novo domínio. Confirmar mensagem chega do mesmo remetente/provedor anterior.
 - [ ] Testar API sync autenticada e shape autorizado; provar isolamento por tenant e rejeição de filtros arbitrários, sem expor Electric.
@@ -50,4 +50,6 @@ DNS, certificado, roteamento, origem de auth/OAuth e documentação de operaçã
 
 ## Evidências
 
-Execução pendente. Preencher data, ambientes/navegadores, rotas/status, resultados de autenticação/redirect, logs sanitizados e limitações. Associar release por SHA/digest. Não gravar mensagens privadas, cookies, tokens, OTP, URLs sensíveis ou secrets.
+Asset principal `https://windreport.com.br/assets/index-DQ5fxvA_.js` consultado em 08/11/2026: HTTP 200, `text/javascript`.
+
+08/11/2026 — SHA `94780287bde78c87bc93845a66feaf751e0df0a7`: homepage, live e ready no novo domínio retornaram HTTP 200 com TLS validado. `/api/auth/providers` retornou `google:true`. Em HTTPS, legado `/app?probe=dom14` e `/api/health/ready?probe=dom14` deram 308 para o host novo preservando URI; em HTTP, `/app?probe=dom14` chegou à URL HTTPS nova após dois redirects, também preservando a URI. Login Google, OTP/email, linking, convites, recuperação, sync, assets/PWA e validação em aparelhos ainda não foram testados nesta origem. O proprietário precisa validar esses fluxos em Android e dispositivos disponíveis, especialmente reautenticação e instalação PWA na origem nova. Não registrar cookies, tokens ou OTP.

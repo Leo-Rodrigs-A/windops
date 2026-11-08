@@ -8,7 +8,7 @@ Cada nova slice fica em uma pasta `NN-nome/`, com um `README.md` que define resu
 
 ## Próxima slice preparada
 
-- [ ] [14 — Domínio principal e redirecionamento](14-dominio-principal/README.md): `windreport.com.br` definido como novo domínio canônico; ambos A apontam à VPS. DOM01/DOM02 concluídas localmente; OAuth foi salvo segundo relato do proprietário; DOM03 aguarda deploy para validar TLS. Cutover pedido para hoje assim que gates passarem. Nenhuma configuração de produção foi alterada. Domínio antigo será mantido com redirect permanente; email permanece inalterado. Próxima: PR/CI, depois DOM03/DOM04.
+- [ ] [14 — Domínio principal e redirecionamento](14-dominio-principal/README.md): DOM01–DOM04 concluídas; deploy do SHA `94780287bde78c87bc93845a66feaf751e0df0a7` saudável. `windreport.com.br` é canônico e o host antigo redireciona com 308 preservando URI; home/live/ready deram 200. DOM05 em andamento: testar auth/OAuth, convites, recuperação, sync e PWA na nova origem. Email permanece inalterado.
 - [x] [11 — Preparação e entrada em produção](11-producao/README.md): D01–D10 concluídas. Piloto aberto em 04/11/2026; um cliente usa Android, sem incidentes reportados desde a abertura; suporte via WhatsApp com o proprietário. Quota/evicção e medição p95 <2s foram retiradas do escopo D09 por decisão do proprietário.
 
 ## Slice preparada
