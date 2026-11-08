@@ -47,6 +47,13 @@ jobs:
           file: infra/Dockerfile.${{ matrix.service }}
           push: true
           tags: ${{ steps.image.outputs.tag }}
+          labels: |
+            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+            org.opencontainers.image.revision=${{ github.event.workflow_run.head_sha }}
+            io.windops.ci-run-id=${{ github.event.workflow_run.id }}
+            io.windops.ci-run-url=${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.event.workflow_run.id }}
+            io.windops.deploy-run-id=${{ github.run_id }}
+            io.windops.deploy-run-url=${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
   deploy:
     needs: publish
     if: >-

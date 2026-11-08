@@ -2,9 +2,9 @@
 
 ## Status
 
-Em andamento
+Concluída em 08/11/2026
 
-- [ ] Task concluída
+- [x] Task concluída
 
 ## Responsável
 
@@ -29,18 +29,18 @@ D03 e D04.
 ## Plano
 
 - [x] Preparar VPS com Docker/Compose de produção, units systemd, diretórios operacionais e usuário de deploy restrito; criar conta administrativa nominal com sudo e autenticação SSH por chave; desabilitar root e senha via SSH. Para PaaS, criar serviços/discos conforme D02. Implementar só o destino escolhido.
-- [ ] Confirmar política de atualizações de segurança do Ubuntu e registrar rotina de aplicação.
+- [x] Confirmar política de atualizações de segurança do Ubuntu e registrar rotina de aplicação. Política escolhida pelo proprietário em 08/11/2026: aplicar atualizações de segurança automaticamente; não reiniciar a VPS automaticamente; verificar atualizações/serviços que exigem restart e combinar uma janela de manutenção para reboot. Saída enviada pelo proprietário em 08/11/2026 confirma `APT::Periodic::Update-Package-Lists "1"`, `APT::Periodic::Unattended-Upgrade "1"`, pacote `unattended-upgrades` instalado e `apt-daily.timer`/`apt-daily-upgrade.timer` habilitados; a opção de reboot automático está comentada.
 - [x] Confirmar arquitetura x86_64 do host e instalar/ativar as units systemd da janela Electric; helper protegido retorna sucesso sem alterar containers até existir `.release.env` e `.env.production`.
 - [x] Configurar DNS/HTTPS e confirmar externamente a origem web nas portas 80/443; API (3000), portas internas Caddy (8080/8081/8443) e Electric não têm porta publicada/acessível pelo domínio. SSH requer chave; root e senha via SSH estão desativados, e o usuário de deploy é limitado ao wrapper.
 - [x] Configurar Caddy com HTTPS automático para `APP_DOMAIN`, persistência de `/data` e validar certificado vigente via HTTPS público; `curl` sem ignorar TLS retornou 200. A renovação futura será monitorada em D07, sem esperar um ciclo completo para concluir D05.
-- [ ] Revisar firewall do provedor e registrar quais origens podem acessar TCP/22; UFW local está inativo e SSH é necessário para owner/GitHub Actions.
+- [x] Revisar firewall do provedor e registrar quais origens podem acessar TCP/22; UFW local está inativo e SSH é necessário para owner/GitHub Actions. Tela Firewall da Hostinger enviada pelo proprietário em 08/11/2026 mostra a opção de criar firewall, sem grupo/regra configurado ou associado. Com UFW inativo e TCP/22 alcançável no teste externo anterior, não há allowlist de origem observada: tentativas SSH podem chegar de qualquer origem com rota até a VPS. Autenticação SSH segue restrita a chaves; root e senha estão desabilitados, e `windops-deploy` aceita somente o wrapper. Recomenda-se criar grupo com regras explícitas antes de considerar a filtragem de rede ativa; grupo vazio bloqueia todo tráfego segundo a [documentação Hostinger](https://www.hostinger.com/support/8172641-how-to-use-a-managed-vps-firewall-at-hostinger/).
 - [x] Provisionar banco com papéis runtime/migrador/replicação separados, TLS verificado e conexões diretas onde exigidas; habilitar logical replication e validar privilégios efetivos no provedor.
 - [x] Definir ordem explícita roles→migrações→grants/publicação→Electric→API/web, ajustando scripts existentes quando necessário. Validar instalação vazia e repetição; não presumir que o deploy atual cria roles ou publicação.
 - [x] Conferir publication limitada às cinco tabelas autorizadas, `REPLICA IDENTITY FULL`, `wal_level=logical` e privilégios efetivos do runtime no Neon. Testes SQL confirmaram a allowlist.
 - [x] Confirmar parada automática do Electric às 18h por timer: serviço systemd terminou `0/SUCCESS`, container Electric `Exited (0)`, API/web permaneceram `healthy`.
-- [ ] Conferir slot/WAL efetivo, suspensão Neon e retomada automática do Electric às 06h, incluindo recuperação da conexão/replicação; shape autenticado/tenant e filtros ficam na D08, após bootstrap do workspace.
+- [x] Conferir slot/WAL efetivo, suspensão Neon e retomada automática do Electric às 06h, incluindo recuperação da conexão/replicação; shape autenticado/tenant e filtros ficam na D08, após bootstrap do workspace. Em 08/11/2026, o proprietário confirmou que o gráfico de compute Neon chega a zero durante a pausa noturna há quatro dias. `journalctl` mostrou o serviço iniciar Electric às 09:00 no relógio do host, container iniciado e `Healthy` dez segundos depois (execução agendada para 06h America/Sao_Paulo). Consulta subsequente no Neon confirmou `wal_level=logical` e `electric_slot_default` ativo com plugin `pgoutput`, `restart_lsn=0/2F99C50`, `confirmed_flush_lsn=0/2F99C51` e 904 bytes de WAL retido, comprovando retomada da conexão de replicação. Latência de cold-start não foi medida.
 - [x] Configurar volumes persistentes no Compose para dados do Electric e estado/certificados do Caddy; registrar inventário não secreto no manual.
-- [ ] Ensaiar restart de serviços/host, confirmar persistência de dados/certificados e retomada do Electric. Nenhum restart de produção foi feito após o primeiro release.
+- [x] Ensaiar restart de serviços/host, confirmar persistência de dados/certificados e retomada do Electric. Em 08/11/2026, o proprietário reiniciou o serviço `electric` via Compose; voltou `healthy` em 55 segundos e o slot Neon permaneceu ativo. Após reboot da VPS, verificou os mesmos volumes montados: `windops_electric_data` em `/var/lib/electric`, `windops_caddy_config` em `/config` e `windops_caddy_data` em `/data`. Docker e timer estão `active`; logs do boot mostram Electric `Healthy`; API/web estão `healthy`; `curl` com TLS validado retornou `status=ok` em live/ready. Consulta Neon após o reboot confirmou `electric_slot_default` ativo (`restart_lsn=0/2FA4990`, `confirmed_flush_lsn=0/2FA4991`).
 
 ## Contratos e dados afetados
 
@@ -53,6 +53,8 @@ HTTPS e isolamento externo, grants, instalação/reaplicação, persistência/re
 ## Evidências
 
 Planejamento em 30/10/2026. Execução iniciada em 02/11/2026; progresso e limites registrados abaixo.
+
+Encerramento D05 — 08/11/2026: updates de segurança diários via APT e sem reboot automático confirmados; firewall gerenciado revisado (nenhum grupo/regra configurado; TCP/22 alcançável sem allowlist de origem, SSH somente por chave); Neon suspende compute na pausa noturna conforme gráfico por quatro dias; timer iniciou Electric às 06h SP e o slot lógico permaneceu ativo com baixo WAL retido. Restart do Electric e reboot da VPS foram ensaiados; volumes Electric/Caddy permaneceram montados, API/web/Electric ficaram saudáveis, live/ready responderam `ok` com TLS validado e `electric_slot_default` permaneceu `active=true` após reboot (`restart_lsn=0/2FA4990`, `confirmed_flush_lsn=0/2FA4991`). Cold-start não foi medido. Smoke autenticado de shapes/tenant continua em D08. Sem mudanças de fonte; `git diff --check` passou.
 
 ### Preparação da VPS e Neon — 02/11/2026
 

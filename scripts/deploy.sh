@@ -16,7 +16,8 @@ docker pull "$web"
 umask 077
 candidate=$(mktemp /opt/windops/.release.XXXXXX)
 trap 'rm -f -- "$candidate"' EXIT
-printf 'API_IMAGE=%s\nWEB_IMAGE=%s\n' \
+printf 'RELEASE_SHA=%s\nAPI_IMAGE=%s\nWEB_IMAGE=%s\n' \
+  "$sha" \
   "$(docker image inspect --format '{{index .RepoDigests 0}}' "$api")" \
   "$(docker image inspect --format '{{index .RepoDigests 0}}' "$web")" > "$candidate"
 compose=(docker compose --env-file infra/.env.production --env-file "$candidate" -f infra/compose.production.yml)

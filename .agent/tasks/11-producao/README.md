@@ -2,7 +2,7 @@
 
 ## Status
 
-Em andamento. D01 concluída em 31/10/2026; D02, D03 (preparação local) e D04 (contas/acessos) concluídas em 02/11/2026. Destino: Hostinger KVM1 no Brasil, Ubuntu 24.04.5, Docker/Compose instalados, Neon Free. Custo informado: R$625 por 24 meses; sem despesas adicionais planejadas nem homologação permanente. Backup semanal Hostinger e meta de recuperação aceitos, sem restore ensaiado. A janela Neon diária 06h–18h está preparada em código; timer/scale-to-zero serão instalados e testados em D05/D08 após a infraestrutura e o primeiro deploy. Oracle A1 não foi criada por falta de capacidade em São Paulo/AD-1. Próxima: D05.
+Em andamento. D01–D05 concluídas; D05 encerrada em 08/11/2026 com provisionamento Neon, firewall/SSH documentados, pausa/retomada do Electric e restart/reboot verificados. Destino: Hostinger KVM1 no Brasil, Ubuntu 24.04.5, Docker/Compose e Neon Free. Custo informado: R$625 por 24 meses; sem despesas adicionais planejadas nem homologação permanente. Backup semanal Hostinger e meta de recuperação aceitos, sem restore ensaiado. Pausa de Neon observada; latência de cold-start não medida. Oracle A1 não foi criada por falta de capacidade em São Paulo/AD-1. Próxima: D06.
 
 - [ ] Slice concluída
 
@@ -34,14 +34,14 @@ Há Dockerfiles API/web, Compose de produção, Caddy, CI, GHCR/deploy por SHA, 
 | [x] [D02](02-escolha-hospedagem.md)  | Escolher hospedagem e parâmetros do piloto   | Proprietário decide; Codex prepara comparação                                 | D01.                                                                        |
 | [x] [D03](03-preparacao-app.md)      | Preparar aplicação e artefatos de produção   | Codex                                                                         | D01; D02 para adaptações específicas do destino.                            |
 | [x] [D04](04-contas-acessos.md)      | Criar ambientes, contas e fornecer acessos   | Proprietário; Codex fornece instruções e confere                              | D02; pode ocorrer junto de D03.                                             |
-| [] [D05](05-infra-banco.md)          | Provisionar runtime, banco e rede            | Codex; proprietário executa ações de console sem acesso delegado              | D03 e D04.                                                                  |
+| [x] [D05](05-infra-banco.md)          | Provisionar runtime, banco e rede            | Codex; proprietário executa ações de console sem acesso delegado              | D03 e D04.                                                                  |
 | [] [D06](06-ci-cd.md)                | Validar fluxo de entrega e deploy            | Codex; proprietário configura restrições do GitHub quando necessário          | D03; D04/D05 para execução remota.                                          |
 | [] [D07](07-operacao-recuperacao.md) | Backups, recuperação e monitoramento         | Codex; proprietário confirma metas e recebe alertas                           | D05 e D06 para ensaiar recuperação de release.                              |
 | [] [D08](08-primeiro-deploy.md)      | Primeiro deploy e bootstrap do piloto        | Codex; proprietário identifica admin e acompanha login real                   | D05, D06, D07 e O04 da slice 10 concluída.                                  |
 | [] [D09](09-validacao-campo.md)      | Validar aparelhos e fluxo de campo           | Proprietário executa em aparelhos; Codex prepara roteiro, acompanha e corrige | D08.                                                                        |
 | [] [D10](10-liberacao-piloto.md)     | Liberar piloto e entregar rotina de operação | Proprietário confirma liberação; Codex executa e registra                     | D01–D09 concluídas e O04 encerrada; escopo móvel explicitamente registrado. |
 
-D01 começa sem aguardar contas. D03 e D04 avançaram em paralelo após D02; D03 prepara artefatos locais e está concluída. D05 prepara o destino e comprova banco/rede/replicação sem depender de uma conta; D06 prova a entrega; D07 prova recuperação/operação; D08 faz bootstrap e executa smoke autenticado, incluindo shape/isolamento, depois de D05–D07; D09 testa o uso real; D10 abre o piloto. O04 está satisfeita pelo encerramento da slice 10. O Google já aceito em dev não dispensa validar callback/origem no domínio final.
+D01 começa sem aguardar contas. D03 e D04 avançaram em paralelo após D02; D03 prepara artefatos locais e está concluída. D05 comprovou banco/rede/replicação e reinício no destino sem depender de bootstrap; D06 prova a entrega; D07 prova recuperação/operação; D08 faz bootstrap e executa smoke autenticado, incluindo shape/isolamento, depois de D05–D07; D09 testa o uso real; D10 abre o piloto. O04 está satisfeita pelo encerramento da slice 10. O Google já aceito em dev não dispensa validar callback/origem no domínio final.
 
 ## Critérios de encerramento
 
