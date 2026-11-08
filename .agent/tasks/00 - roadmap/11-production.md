@@ -2,7 +2,7 @@
 
 ## Status
 
-Parcial; execução detalhada na [slice 11 — Preparação e entrada em produção](../11-producao/README.md). D01–D07 concluídas; D08–D10 permanecem abertas, com evidências parciais registradas.
+Parcial; execução detalhada na [slice 11 — Preparação e entrada em produção](../11-producao/README.md). D01–D08 concluídas; D09–D10 permanecem abertas, com evidências parciais registradas.
 
 Follow-up registrado em 28/10/2026: a S09 foi concluída para browser/desktop. O proprietário transferiu validação Android/iPhone, restart físico e HTTPS em aparelho para esta etapa. Não declarar suporte móvel antes dessas evidências.
 
@@ -33,3 +33,5 @@ Seguir [memória](../../memory.md) e [arquitetura](../../architeture.md). Este a
 31/10/2026 — D01 entregou README/manual e guia VPS/Render com validação local isolada. Produção, recuperação no destino e aparelhos continuam sem validação nesta task. Próxima execução: D02.
 
 08/11/2026 — Auditoria da evolução registrou política semanal Hostinger/RTO aceitos e ensaios D05/D06 de retomada, saúde, rollback de imagem e fila offline preservada. Em D08 foram associados os SHA/runs atuais e reconhecidos os ensaios da janela/reboot. D09 recebeu baseline anterior de desenvolvimento/desktop/Preview; D10 recebeu consolidação parcial do release. Restore real, alertas, login/bootstrap/tenant em produção, matriz de aparelhos em produção e aceite do piloto continuam pendentes; veja os checklists D07–D10 para o detalhe e as limitações.
+
+Atualização 08/11/2026: D07 e D08 concluídas. O proprietário confirmou política de monitoramento, bootstrap e fluxos funcionais de produção em Android, iPhone e PWA desktop. D09 segue aberta para matriz detalhada por versão/cenário, quota/evicção física e registro de métricas; D10 ainda depende da liberação explícita do piloto.
