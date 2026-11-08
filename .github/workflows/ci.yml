@@ -49,6 +49,6 @@ jobs:
           -e ELECTRIC_URL=http://electric:3000
           windops-api:ci node dist/platform/database/migrate.js
       - name: Validate Caddy runtime image
-        run: docker run --rm -e APP_DOMAIN=localhost windops-web:ci caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile
+        run: docker run --rm -e APP_DOMAIN=localhost -e LEGACY_DOMAIN=legacy.localhost windops-web:ci caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile
       - if: always()
         run: docker compose -f infra/compose.dev.yml down -v
