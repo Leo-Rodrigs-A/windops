@@ -2,7 +2,7 @@
 
 ## Status
 
-Planejada
+Em andamento
 
 - [ ] Task concluída
 
@@ -28,6 +28,8 @@ D08.
 
 ## Plano
 
+- [x] Registrar evidências anteriores que servem como baseline: Android físico em desenvolvimento (login/OTP, home e logout, [F08](../01-fundacao/08-validacao-integrada.md)), fluxos offline/restart/update em browser/desktop ([S09](../05-offline-sincronizacao/09-validacao-integrada.md)), push real em Preview ([N06](../07-notificacoes/06-validacao-integrada.md)) e fila offline preservada no rollback de produção ([D06](06-ci-cd.md)). Elas não substituem a matriz de aparelhos/fluxos em produção desta task.
+
 - [ ] Proprietário disponibilizar Android e iPhone, informar versões/navegadores e instalar PWA por HTTPS; Codex preparar roteiro com contas admin/técnico e dados de teste.
 - [ ] Testar login/Google/e-mail/OTP, convite, permissões, catálogo e issues; em modo avião criar/editar/iniciar/concluir dentro das regras, fechar/reabrir app e reiniciar aparelho verificando fila durável.
 - [ ] Reconectar, repetir requests/ACK e verificar ausência de duplicação; testar conflito entre aparelhos, expiração/reauth e revogação com exportação das pendências preservadas.
@@ -46,4 +48,4 @@ Matriz por plataforma preenchida com resultado, versão e origem da evidência; 
 
 ## Evidências
 
-Planejamento em 30/10/2026. Execução pendente; preencher data, mudanças, comandos/resultados, links ou identificadores não secretos e limitações ao executar.
+Planejamento em 30/10/2026. Auditoria em 08/11/2026: foram localizadas as evidências anteriores listadas acima em F08, S09, N06 e D06. Android/iPhone em produção, restart físico em produção, autenticação/invites, quota física, conflitos interaparelhos e medição de carregamento seguem pendentes; iPhone não foi disponibilizado nas validações anteriores.
