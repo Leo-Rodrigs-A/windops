@@ -8,7 +8,7 @@ Cada nova slice fica em uma pasta `NN-nome/`, com um `README.md` que define resu
 
 ## Próxima slice preparada
 
-Nenhuma slice nova foi detalhada.
+- [x] [15 — Identidade visual](15-identidade-visual/README.md): BR01 concluída em 08/11/2026; novo símbolo Brisa aplicado ao site, favicon e PWA.
 
 - [x] [14 — Domínio principal e redirecionamento](14-dominio-principal/README.md): DOM01–DOM05 concluídas em 08/11/2026. Deploy do SHA `94780287bde78c87bc83845a66feaf751e0df0a7` saudável; domínio canônico e redirects validados; proprietário confirmou os fluxos autenticados, OAuth/email, convites, sync e PWA nos dispositivos disponíveis. Email permanece inalterado.
 - [x] [11 — Preparação e entrada em produção](11-producao/README.md): D01–D10 concluídas. Piloto aberto em 04/11/2026; um cliente usa Android, sem incidentes reportados desde a abertura; suporte via WhatsApp com o proprietário. Quota/evicção e medição p95 <2s foram retiradas do escopo D09 por decisão do proprietário.
@@ -16,8 +16,11 @@ Nenhuma slice nova foi detalhada.
 ## Slice preparada
 
 - Slice 14 planejada em 05/11/2026: domínio principal e redirecionamento do domínio antigo, com DNS, TLS, Caddy, origem/auth/OAuth, deploy e validação ponta a ponta. Troca de remetente/provedor de email excluída e reservada para slice futura.
+- Slice 15 concluída em 08/11/2026: substituir a turbina outlined pela Brisa filled em todos os pontos da marca; ver [BR01](15-identidade-visual/01-icone-brisa.md).
 
 ## Slices concluídas mais recentes
+
+- [x] [15 — Identidade visual](15-identidade-visual/README.md): símbolo Brisa filled adaptado às cores do sistema e aplicado aos usos do site, favicon, PWA e Apple touch icon; `pnpm check` passou em 08/11/2026.
 
 - [x] [14 — Domínio principal e redirecionamento](14-dominio-principal/README.md): DOM01–DOM05 concluídas em 08/11/2026; domínio canônico, redirect legado e fluxos confirmados pelo proprietário. Email permaneceu inalterado.
 
@@ -31,7 +34,7 @@ Nenhuma slice nova foi detalhada.
 
 - [x] [08 — Filtros e histórico de consulta](08-consultas-historico/README.md): filtros P/T nas três listas, paginação por demanda, projeção e retenção segura de histórico.
 
-Última slice concluída: [10 — Cadastro e identidade](10-cadastro-identidade/README.md). A revisão técnica anterior entregou: R01A removeu query e fragmento dos logs automáticos; R02 atualizou documentação e tornou explícita a composição de auditoria/notificações; R03 centralizou transações em issues/parks e classificou erros por constraint; R04 segregou interfaces de workspaces e fortaleceu as fronteiras de módulos; R05 extraiu policies de Issues e preservou receipts; R06 separou módulos e rotas por feature com aceite manual confirmado; R07 separou a persistência, reconciliação e fila offline mantendo a transação; R08 revalidou os fluxos e fechou a matriz A01–A13. Limites de produção continuam explícitos.
+Última slice concluída: [15 — Identidade visual](15-identidade-visual/README.md). A revisão técnica anterior entregou: R01A removeu query e fragmento dos logs automáticos; R02 atualizou documentação e tornou explícita a composição de auditoria/notificações; R03 centralizou transações em issues/parks e classificou erros por constraint; R04 segregou interfaces de workspaces e fortaleceu as fronteiras de módulos; R05 extraiu policies de Issues e preservou receipts; R06 separou módulos e rotas por feature com aceite manual confirmado; R07 separou a persistência, reconciliação e fila offline mantendo a transação; R08 revalidou os fluxos e fechou a matriz A01–A13. Limites de produção continuam explícitos.
 
 - [x] [07 — Campainha e Web Push](07-notificacoes/README.md): N01–N06 concluídas em 28/10/2026; outbox, campainha, worker, interface/PWA, push real confirmado pelo proprietário e validação integrada. Android/iPhone instalados e produção permanecem no roadmap 11.
 
