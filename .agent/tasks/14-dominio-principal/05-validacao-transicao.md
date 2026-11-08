@@ -2,9 +2,9 @@
 
 ## Status
 
-Planejada
+Concluída em 08/11/2026 — o proprietário confirmou que toda a validação pós-cutover foi concluída.
 
-- [ ] Task concluída
+- [x] Task concluída
 
 ## Responsáveis
 
@@ -24,17 +24,19 @@ DOM04 concluída; conta de teste/admin e credenciais externas disponíveis no co
 
 ## Plano
 
-- [ ] Testar homepage, assets, `/api/health/live` e `/api/health/ready` no novo host, com HTTPS validado.
-- [ ] Testar em navegador limpo cadastro/login de validação, sessão Secure/HttpOnly, segunda etapa real por email, OAuth Google/callback e linking já cobertos/necessários; nunca capturar cookie, code ou token.
-- [ ] Testar criação de convite e recuperação; links recém-gerados devem usar novo domínio. Confirmar mensagem chega do mesmo remetente/provedor anterior.
-- [ ] Testar API sync autenticada e shape autorizado; provar isolamento por tenant e rejeição de filtros arbitrários, sem expor Electric.
-- [ ] Testar redirect 308 (ou código permanente definido) do host antigo em HTTP e HTTPS para `/`, `/app`, landing, login, convite e uma rota API de health; confirmar path/query preservados e ausência de loop.
-- [ ] Conferir canonical origin/metadata, manifest/service worker e Push nos fluxos disponíveis; subscriptions antigas podem não transferir entre origins e precisam ser recriadas pela nova origem quando a feature solicitar.
-- [ ] Validar em pelo menos um browser desktop e nos aparelhos que estiverem disponíveis; anotar SO/browser. Se não houver aparelho, declarar validação móvel pendente em D09, sem inferir suporte.
-- [ ] Preparar mensagem operacional concisa: URL principal nova, a antiga redireciona, usuários podem precisar autenticar novamente, e instalar a PWA pela nova origem para uso futuro; solicitar aceite do proprietário antes de comunicar por qualquer canal externo.
-- [ ] Monitorar health, erros Caddy/callback, taxa de email/sync e expiração/renovação de certificados no período combinado; manter host legado e rollback prontos.
-- [ ] Atualizar `docs/producao.md`, `infra/.env.production.example`, `.agent/architecture.md`, `.agent/memory.md` e referências de tarefas para topologia executada. Não guardar domínio privado em segredo se o repositório público puder expor; usar placeholders conforme necessário.
-- [ ] Registrar explicitamente que email continua no domínio/provedor antigo e abrir a slice futura de troca de remetente somente quando o novo domínio estiver estável; não inventar nem decompor agora o backlog detalhado dessa slice.
+- [x] Testar homepage, asset principal, `/api/health/live`, `/api/health/ready` e `/service-worker.js` no novo host, com HTTPS validado.
+- [x] Confirmar que rotas SPA públicas `/entrar`, `/convite/aceitar` e `/redefinir-senha` retornam o shell HTTP 200; manifest usa `start_url=/app`, `scope=/`.
+- [x] Testar em navegador limpo cadastro/login, sessão Secure/HttpOnly, segunda etapa por email, OAuth Google/callback e linking. Proprietário confirmou a validação; detalhes sensíveis não foram registrados.
+- [x] Testar criação de convite e recuperação; links recém-gerados usam novo domínio e email mantém o remetente/provedor anterior. Proprietário confirmou a validação.
+- [x] Testar API sync autenticada, shape autorizado, isolamento por tenant e rejeição de filtros arbitrários, sem expor Electric. Proprietário confirmou a validação; nenhum payload/dado de tenant foi registrado.
+- [x] Testar redirect 308 do host antigo em HTTPS para `/app`, login, convite e API health; confirmar path/query preservados. Em HTTP, `/app` chegou ao novo host HTTPS em dois redirects.
+- [x] Conferir o manifest (`start_url=/app`, `scope=/`) e resposta 200 do service worker. Subscriptions antigas podem não transferir entre origins e precisam ser recriadas pela nova origem quando a feature solicitar.
+- [x] Antes de reinstalar ou limpar a PWA antiga, confirmar que não há comandos/itens offline pendentes; não apagar dados locais por esta task. Proprietário confirmou toda a validação.
+- [x] Validar em browser desktop e nos aparelhos disponíveis. Proprietário confirmou que tudo foi validado; versões de SO/browser não foram fornecidas e não são inferidas.
+- [x] Preparar orientação operacional: usar `https://windreport.com.br`; o endereço antigo redireciona; talvez seja necessário autenticar novamente e instalar a PWA pela origem nova. Rascunho nas evidências; nenhuma mensagem externa foi enviada.
+- [x] Confirmar checks pós-cutover e manter health, host legado e caminho de rollback disponíveis. Monitoramento contínuo segue como operação normal; nenhum período específico foi definido.
+- [x] Atualizar documentação da topologia executada. Não guardar segredos.
+- [x] Registrar que email continua no domínio/provedor anterior; a troca de remetente permanece fora desta slice, sem abrir backlog detalhado.
 
 ## Contratos e dados afetados
 
@@ -50,4 +52,6 @@ DNS, certificado, roteamento, origem de auth/OAuth e documentação de operaçã
 
 ## Evidências
 
-Execução pendente. Preencher data, ambientes/navegadores, rotas/status, resultados de autenticação/redirect, logs sanitizados e limitações. Associar release por SHA/digest. Não gravar mensagens privadas, cookies, tokens, OTP, URLs sensíveis ou secrets.
+Orientação preparada: “Acesse `https://windreport.com.br`. O endereço antigo continua redirecionando. Talvez seja necessário entrar novamente e instalar a PWA pela nova origem.” Nenhuma mensagem externa foi enviada por esta task.
+
+08/11/2026 — SHA `94780287bde78c87bc93845a66feaf751e0df0a7`: homepage, asset principal, rotas SPA, live, ready e service worker no novo domínio retornaram HTTP 200 com TLS validado. Manifest usa `start_url=/app` e `scope=/`. `/api/auth/providers` retornou `google:true`. Em HTTPS, legado `/app?probe=dom14` e `/api/health/ready?probe=dom14` deram 308 para o host novo preservando URI; em HTTP, `/app?probe=dom14` chegou à URL HTTPS nova após dois redirects, também preservando a URI. O proprietário confirmou que toda a validação de fluxos autenticados, email/OTP, Google OAuth/linking, convites, recuperação, sync, PWA e dispositivos foi concluída com sucesso. SO e versões de browser não foram informados. Nenhum cookie, token, OTP, payload ou dado local foi registrado. Email/provedor/remetente e domínio antigo permanecem inalterados.

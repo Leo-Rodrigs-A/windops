@@ -8,7 +8,9 @@ Cada nova slice fica em uma pasta `NN-nome/`, com um `README.md` que define resu
 
 ## Próxima slice preparada
 
-- [ ] [14 — Domínio principal e redirecionamento](14-dominio-principal/README.md): `windreport.com.br` definido como novo domínio canônico; ambos A apontam à VPS. DOM01/DOM02 concluídas localmente; OAuth foi salvo segundo relato do proprietário; DOM03 aguarda deploy para validar TLS. Cutover pedido para hoje assim que gates passarem. Nenhuma configuração de produção foi alterada. Domínio antigo será mantido com redirect permanente; email permanece inalterado. Próxima: PR/CI, depois DOM03/DOM04.
+Nenhuma slice nova foi detalhada.
+
+- [x] [14 — Domínio principal e redirecionamento](14-dominio-principal/README.md): DOM01–DOM05 concluídas em 08/11/2026. Deploy do SHA `94780287bde78c87bc83845a66feaf751e0df0a7` saudável; domínio canônico e redirects validados; proprietário confirmou os fluxos autenticados, OAuth/email, convites, sync e PWA nos dispositivos disponíveis. Email permanece inalterado.
 - [x] [11 — Preparação e entrada em produção](11-producao/README.md): D01–D10 concluídas. Piloto aberto em 04/11/2026; um cliente usa Android, sem incidentes reportados desde a abertura; suporte via WhatsApp com o proprietário. Quota/evicção e medição p95 <2s foram retiradas do escopo D09 por decisão do proprietário.
 
 ## Slice preparada
@@ -16,6 +18,8 @@ Cada nova slice fica em uma pasta `NN-nome/`, com um `README.md` que define resu
 - Slice 14 planejada em 05/11/2026: domínio principal e redirecionamento do domínio antigo, com DNS, TLS, Caddy, origem/auth/OAuth, deploy e validação ponta a ponta. Troca de remetente/provedor de email excluída e reservada para slice futura.
 
 ## Slices concluídas mais recentes
+
+- [x] [14 — Domínio principal e redirecionamento](14-dominio-principal/README.md): DOM01–DOM05 concluídas em 08/11/2026; domínio canônico, redirect legado e fluxos confirmados pelo proprietário. Email permaneceu inalterado.
 
 - [x] [13 — Superfícies do tema escuro](13-superficies-dark/README.md): tokens dark de superfície e cards mapeados para zinc do Tailwind; `pnpm check` passou em 04/11/2026.
 

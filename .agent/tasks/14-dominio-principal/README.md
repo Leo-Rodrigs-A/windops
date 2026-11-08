@@ -2,9 +2,9 @@
 
 ## Status
 
-DOM01 e DOM02 concluídas localmente em 08/11/2026; proprietário informou que salvou o cliente Google OAuth. DOM03 aguarda PR/CI/deploy para validar TLS. Hostname canônico: `windreport.com.br` (`https://windreport.com.br`). O proprietário pediu cutover hoje, assim que os gates restantes permitirem. Nenhuma alteração de produção foi feita.
+DOM01–DOM05 e a slice concluídas em 08/11/2026; PR #14/CI passaram e o deploy do SHA `94780287bde78c87bc83845a66feaf751e0df0a7` ficou healthy após atualizar o Compose root-owned da VPS. `windreport.com.br` é canônico; `windops.devleonardo.com.br` retorna 308 preservando path/query. Smoke público passou e o proprietário confirmou os fluxos autenticados, email/OTP, OAuth, convites, recuperação, sync e PWA nos dispositivos disponíveis. SO e versões de browser não foram registrados. Email permanece inalterado.
 
-- [ ] Slice concluída
+- [x] Slice concluída
 
 ## Resultado esperado
 
@@ -36,23 +36,23 @@ O novo domínio passa a ser o endereço canônico do Wind Ops. O domínio atual 
 
 ## Ordem e dependências
 
-| Task                                  | Entrega                                                                                      | Responsável                                                               | Dependências                                                                              |
-| ------------------------------------- | -------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
-| [x] [DOM01](01-dns-e-plano.md)        | Identificar o novo hostname, mapear DNS/TTL, plano de transição e baseline do endereço atual | Proprietário fornece domínio/acessos; Codex documenta o plano             | Concluída; janela 08/11/2026 assim que gates prévios estiverem prontos                    |
-| [x] [DOM02](02-configuracao-caddy.md) | Preparar configuração e artefatos para host canônico + redirect do legado                    | Codex                                                                     | Concluída localmente; CI/produção pendentes                                               |
-| [] [DOM03](03-dns-tls-oauth.md)       | Preparar DNS, TLS e Google OAuth para o novo hostname                                        | Proprietário altera painéis; Codex fornece e verifica passos              | Em andamento; A e OAuth reportado prontos, falta TLS após deploy                          |
-| [] [DOM04](04-cutover.md)             | Atualizar origem canônica e fazer rollout controlado                                         | Codex; proprietário executa operações de console/host sem acesso delegado | DOM01–DOM03; deploy/CI D06 disponível; candidato atual identificável e rollback preparado |
-| [] [DOM05](05-validacao-transicao.md) | Validar fluxos, redirect antigo, transição de usuários e atualizar manuais/evidências        | Codex e proprietário                                                      | DOM04; depende dos testes reais do domínio e OAuth                                        |
+| Task                                   | Entrega                                                                                      | Responsável                                                               | Dependências                                                               |
+| -------------------------------------- | -------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------- | -------------------------------------------------------------------------- |
+| [x] [DOM01](01-dns-e-plano.md)         | Identificar o novo hostname, mapear DNS/TTL, plano de transição e baseline do endereço atual | Proprietário fornece domínio/acessos; Codex documenta o plano             | Concluída; janela 08/11/2026 assim que gates prévios estiverem prontos     |
+| [x] [DOM02](02-configuracao-caddy.md)  | Preparar configuração e artefatos para host canônico + redirect do legado                    | Codex                                                                     | CI e imagem validados                                                      |
+| [x] [DOM03](03-dns-tls-oauth.md)       | Preparar DNS, TLS e Google OAuth para o novo hostname                                        | Proprietário altera painéis; Codex fornece e verifica passos              | A já apontava à VPS; TLS novo/legado validado após deploy                  |
+| [x] [DOM04](04-cutover.md)             | Atualizar origem canônica e fazer rollout controlado                                         | Codex; proprietário executa operações de console/host sem acesso delegado | SHA aprovado, Compose root-owned atualizado, health e redirect confirmados |
+| [x] [DOM05](05-validacao-transicao.md) | Validar fluxos, redirect antigo, transição de usuários e atualizar manuais/evidências        | Codex e proprietário                                                      | Concluída em 08/11/2026; aceite do proprietário registrado em DOM05        |
 
 ## Critérios de encerramento
 
-- [ ] Novo hostname apontado à VPS, HTTPS válido e domínio canônico documentado.
-- [ ] Host antigo continua resolvendo com HTTPS e responde com redirect permanente ao novo host, preservando caminho e query string em rotas de landing, acesso, convite e API.
-- [ ] Novo host entrega frontend/API, health live/ready, cookies de sessão seguros, login real, segunda etapa por email, Google OAuth callback/linking e sync autorizado; nenhum endpoint interno/Electric passa a ser público.
-- [ ] Convites e recuperação novos geram links na origem nova. Email usa exatamente o remetente/provedor anterior; nenhum DNS ou configuração de envio de email foi trocado nesta slice.
-- [ ] App instalado na origem nova funciona. Orientação ao usuário informa que pode ser preciso entrar novamente e instalar a PWA pela origem nova; domínio antigo não é desligado.
-- [ ] CI/deploy, rollback e certificados são rastreáveis; volumes persistentes e release anterior não são removidos.
-- [ ] `docs/producao.md`, exemplo de ambiente, arquitetura/memória e índice de tasks descrevem a topologia real. Limites de smoke, autenticação, aparelho e DNS ficam explícitos; não declarar D08/D10 concluídas por causa desta slice.
+- [x] Novo hostname apontado à VPS, HTTPS válido e domínio canônico documentado.
+- [x] Host antigo continua resolvendo com HTTPS e responde com redirect permanente ao novo host, preservando caminho e query string em rotas de landing, acesso, convite e API.
+- [x] Novo host entrega frontend/API, health live/ready, cookies de sessão seguros, login real, segunda etapa por email, Google OAuth callback/linking e sync autorizado; nenhum endpoint interno/Electric passa a ser público.
+- [x] Convites e recuperação novos geram links na origem nova. Email usa exatamente o remetente/provedor anterior; nenhum DNS ou configuração de envio de email foi trocado nesta slice.
+- [x] App instalado na origem nova funciona. Orientação ao usuário informa que pode ser preciso entrar novamente e instalar a PWA pela origem nova; domínio antigo não é desligado.
+- [x] CI/deploy, rollback e certificados são rastreáveis; volumes persistentes e release anterior não são removidos.
+- [x] `docs/producao.md`, exemplo de ambiente, arquitetura/memória e índice de tasks descrevem a topologia real. Limites de smoke, autenticação, aparelho e DNS ficam explícitos; não declarar D08/D10 concluídas por causa desta slice.
 
 ## Evidências
 
