@@ -2,7 +2,7 @@
 
 ## Status
 
-Parcial; execução detalhada na [slice 11 — Preparação e entrada em produção](../11-producao/README.md). D01–D05 concluídas; D06–D10 permanecem abertas.
+Parcial; execução detalhada na [slice 11 — Preparação e entrada em produção](../11-producao/README.md). D01–D06 concluídas; D07–D10 permanecem abertas.
 
 Follow-up registrado em 28/10/2026: a S09 foi concluída para browser/desktop. O proprietário transferiu validação Android/iPhone, restart físico e HTTPS em aparelho para esta etapa. Não declarar suporte móvel antes dessas evidências.
 
