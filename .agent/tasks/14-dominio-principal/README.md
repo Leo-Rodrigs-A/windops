@@ -36,13 +36,13 @@ O novo domínio passa a ser o endereço canônico do Wind Ops. O domínio atual 
 
 ## Ordem e dependências
 
-| Task | Entrega | Responsável | Dependências |
-| --- | --- | --- | --- |
-| [ ] [DOM01](01-dns-e-plano.md) | Identificar o novo hostname, mapear DNS/TTL, plano de transição e baseline do endereço atual | Proprietário fornece domínio/acessos; Codex documenta o plano | Nenhuma; iniciar antes de mudar DNS/configuração |
-| [ ] [DOM02](02-configuracao-caddy.md) | Preparar configuração e artefatos para host canônico + redirect do legado | Codex | DOM01; não aplicar em produção ainda |
-| [ ] [DOM03](03-dns-tls-oauth.md) | Preparar DNS, TLS e Google OAuth para o novo hostname | Proprietário altera painéis; Codex fornece e verifica passos | DOM01–DOM02 |
-| [ ] [DOM04](04-cutover.md) | Atualizar origem canônica e fazer rollout controlado | Codex; proprietário executa operações de console/host sem acesso delegado | DOM01–DOM03; deploy/CI D06 disponível; candidato atual identificável e rollback preparado |
-| [ ] [DOM05](05-validacao-transicao.md) | Validar fluxos, redirect antigo, transição de usuários e atualizar manuais/evidências | Codex e proprietário | DOM04; depende dos testes reais do domínio e OAuth |
+| Task                                  | Entrega                                                                                      | Responsável                                                               | Dependências                                                                              |
+| ------------------------------------- | -------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
+| [] [DOM01](01-dns-e-plano.md)         | Identificar o novo hostname, mapear DNS/TTL, plano de transição e baseline do endereço atual | Proprietário fornece domínio/acessos; Codex documenta o plano             | Nenhuma; iniciar antes de mudar DNS/configuração                                          |
+| [] [DOM02](02-configuracao-caddy.md)  | Preparar configuração e artefatos para host canônico + redirect do legado                    | Codex                                                                     | DOM01; não aplicar em produção ainda                                                      |
+| [] [DOM03](03-dns-tls-oauth.md)       | Preparar DNS, TLS e Google OAuth para o novo hostname                                        | Proprietário altera painéis; Codex fornece e verifica passos              | DOM01–DOM02                                                                               |
+| [] [DOM04](04-cutover.md)             | Atualizar origem canônica e fazer rollout controlado                                         | Codex; proprietário executa operações de console/host sem acesso delegado | DOM01–DOM03; deploy/CI D06 disponível; candidato atual identificável e rollback preparado |
+| [] [DOM05](05-validacao-transicao.md) | Validar fluxos, redirect antigo, transição de usuários e atualizar manuais/evidências        | Codex e proprietário                                                      | DOM04; depende dos testes reais do domínio e OAuth                                        |
 
 ## Critérios de encerramento
 
