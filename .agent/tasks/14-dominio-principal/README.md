@@ -2,7 +2,7 @@
 
 ## Status
 
-Planejada em 05/11/2026; execução detalhada em DOM01–DOM05. Nenhuma alteração de DNS, produção, código ou credenciais foi feita nesta preparação.
+DOM01 e DOM02 concluídas localmente em 08/11/2026; proprietário informou que salvou o cliente Google OAuth. DOM03 aguarda PR/CI/deploy para validar TLS. Hostname canônico: `windreport.com.br` (`https://windreport.com.br`). O proprietário pediu cutover hoje, assim que os gates restantes permitirem. Nenhuma alteração de produção foi feita.
 
 - [ ] Slice concluída
 
@@ -13,7 +13,7 @@ O novo domínio passa a ser o endereço canônico do Wind Ops. O domínio atual 
 ## Limites e decisões
 
 - A aplicação e os serviços permanecem na VPS/Neon atuais; não migrar dados, workspace, contas nem infraestrutura.
-- O proprietário informa o novo hostname e comprova controle da zona DNS durante DOM01. Não presumir um nome.
+- Hostname fornecido pelo proprietário: `windreport.com.br`; o proprietário confirmou acesso à gestão DNS e ao Google Cloud OAuth.
 - O domínio antigo deve continuar resolvendo e com certificado válido enquanto for usado para redirecionamento. Não remover seus registros DNS, certificado ou renovação.
 - Redirecionar todas as rotas do host antigo para o novo host, preservando path e query string; usar redirecionamento permanente após validar a rota nova. Não redirecionar API de forma que cookies, CORS/origem ou callbacks permaneçam apontando ao host antigo.
 - `APP_DOMAIN` identifica o host canônico; introduzir configuração explícita para o host legado se necessária. O Caddy deve servir o novo host e redirecionar o antigo. Não deixar o hostname legado servindo uma segunda cópia independente do app.
@@ -32,15 +32,15 @@ O novo domínio passa a ser o endereço canônico do Wind Ops. O domínio atual 
 - Better Auth recebe `APP_ORIGIN` como base URL e trusted origin. O frontend usa `window.location.origin` em retornos de autenticação/cadastro/recuperação.
 - Google OAuth exige redirect URI com o domínio final. O guia atual descreve o callback `/api/auth/callback/google`.
 - Caddy usa armazenamento persistente para certificados; não remover volumes nem recriar a instalação.
-- O release atual é candidato de produção; primeiro bootstrap e alguns smokes de autenticação/sync permanecem pendentes em D08. A migração de hostname não libera o piloto nem encerra D08–D10.
+- O release de produção está em uso pelo cliente desde 04/11/2026 e D10 foi concluída. A migração de hostname não altera o escopo do piloto nem reabre D08–D10.
 
 ## Ordem e dependências
 
 | Task                                  | Entrega                                                                                      | Responsável                                                               | Dependências                                                                              |
 | ------------------------------------- | -------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
-| [] [DOM01](01-dns-e-plano.md)         | Identificar o novo hostname, mapear DNS/TTL, plano de transição e baseline do endereço atual | Proprietário fornece domínio/acessos; Codex documenta o plano             | Nenhuma; iniciar antes de mudar DNS/configuração                                          |
-| [] [DOM02](02-configuracao-caddy.md)  | Preparar configuração e artefatos para host canônico + redirect do legado                    | Codex                                                                     | DOM01; não aplicar em produção ainda                                                      |
-| [] [DOM03](03-dns-tls-oauth.md)       | Preparar DNS, TLS e Google OAuth para o novo hostname                                        | Proprietário altera painéis; Codex fornece e verifica passos              | DOM01–DOM02                                                                               |
+| [x] [DOM01](01-dns-e-plano.md)        | Identificar o novo hostname, mapear DNS/TTL, plano de transição e baseline do endereço atual | Proprietário fornece domínio/acessos; Codex documenta o plano             | Concluída; janela 08/11/2026 assim que gates prévios estiverem prontos                    |
+| [x] [DOM02](02-configuracao-caddy.md) | Preparar configuração e artefatos para host canônico + redirect do legado                    | Codex                                                                     | Concluída localmente; CI/produção pendentes                                               |
+| [] [DOM03](03-dns-tls-oauth.md)       | Preparar DNS, TLS e Google OAuth para o novo hostname                                        | Proprietário altera painéis; Codex fornece e verifica passos              | Em andamento; A e OAuth reportado prontos, falta TLS após deploy                          |
 | [] [DOM04](04-cutover.md)             | Atualizar origem canônica e fazer rollout controlado                                         | Codex; proprietário executa operações de console/host sem acesso delegado | DOM01–DOM03; deploy/CI D06 disponível; candidato atual identificável e rollback preparado |
 | [] [DOM05](05-validacao-transicao.md) | Validar fluxos, redirect antigo, transição de usuários e atualizar manuais/evidências        | Codex e proprietário                                                      | DOM04; depende dos testes reais do domínio e OAuth                                        |
 

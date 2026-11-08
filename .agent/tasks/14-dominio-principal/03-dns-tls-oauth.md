@@ -2,7 +2,7 @@
 
 ## Status
 
-Planejada
+Em andamento — DNS observado pronto; alteração OAuth do proprietário pendente (08/11/2026).
 
 - [ ] Task concluída
 
@@ -24,11 +24,11 @@ DOM01 e DOM02 concluídas; artefato candidato com configuração revisada dispon
 
 ## Plano
 
-- [ ] Reduzir TTL do novo hostname com antecedência razoável, caso o provedor permita, e aguardar a janela TTL anterior antes do corte.
-- [ ] Criar A do novo host para o IPv4 da VPS; configurar AAAA somente após comprovar conectividade IPv6 externa. Definir CNAME apenas quando apropriado e sem conflito com o A/AAAA.
-- [ ] Não alterar/remover registros do hostname antigo; confirmar que ele ainda resolve para a VPS.
+- [x] Não é necessário reduzir TTL nem aguardar propagação de novo endereço: os A dos dois hostnames já apontam ao mesmo IP da VPS (`187.41.111.202`); o TTL recursivo observado para o novo apex foi 3600s.
+- [x] A do novo host já aponta ao IPv4 da VPS. Não há AAAA; não publicar IPv6 sem comprovar conectividade IPv6 externa. Não há CNAME necessário.
+- [x] Não alterar/remover registros do hostname antigo; a consulta observou o host antigo resolvendo para a VPS.
 - [ ] Aguardar propagação e confirmar respostas DNS em mais de uma consulta/resolvedor, registrando hostname, tipo e resultado sem dados de acesso.
-- [ ] Atualizar a origem autorizada do cliente OAuth Google para `https://NOVO_HOST` e adicionar redirect URI exato `https://NOVO_HOST/api/auth/callback/google`; manter temporariamente host antigo permitido se necessário para rollback, sem usá-lo como origem canônica.
+- [x] Proprietário informou que salvou o cliente Google OAuth após receber os valores: origem `https://windreport.com.br` e redirect URI `https://windreport.com.br/api/auth/callback/google`; considerar mantidos os valores antigos para rollback conforme instruído, ainda sem inspeção independente no console.
 - [ ] Confirmar que o candidato Caddy consegue emitir certificado para novo e antigo host e que `/data` e `/config` persistem; fazer a validação dentro da janela operacional aprovada.
 - [ ] Testar TLS público no novo host antes do cutover final, usando só health/rota de teste que não exige nova origem de autenticação.
 - [ ] Conferir que nenhuma mudança tocou registros de email nem o valor de `EMAIL_FROM`/Resend.
@@ -46,4 +46,4 @@ DNS público de web, certificados TLS e lista de origens/redirect URIs do OAuth.
 
 ## Evidências
 
-Execução pendente. Registrar data, tipos de registro, respostas DNS e resultado TLS, além da confirmação dos URIs OAuth sem client secret. Não registrar screenshots que revelem credenciais ou dados pessoais.
+DNS read-only em 08/11/2026 encontrou ambos os A para `187.41.111.202` e nenhum AAAA; não foi necessário mudar registros web. Em 08/11/2026 o proprietário informou que salvou o cliente OAuth após receber a origem e callback novos; a configuração não foi inspecionada diretamente. TLS do novo host só poderá ser validado após CI/deploy de DOM02. DNS e runtime de produção permanecem inalterados. Registrar validação TLS e DNS sem client secret ou dados pessoais.

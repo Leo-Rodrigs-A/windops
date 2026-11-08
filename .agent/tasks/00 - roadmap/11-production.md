@@ -2,7 +2,7 @@
 
 ## Status
 
-Parcial; execução detalhada na [slice 11 — Preparação e entrada em produção](../11-producao/README.md). D01–D05 concluídas; D06–D10 permanecem abertas.
+Concluída em 08/11/2026; execução detalhada na [slice 11 — Preparação e entrada em produção](../11-producao/README.md). D01–D10 entregues com evidências e limitações registradas.
 
 Follow-up registrado em 28/10/2026: a S09 foi concluída para browser/desktop. O proprietário transferiu validação Android/iPhone, restart físico e HTTPS em aparelho para esta etapa. Não declarar suporte móvel antes dessas evidências.
 
@@ -16,7 +16,7 @@ Validar aparelhos reais, limites storage, OAuth/Resend/push reais, Neon replicat
 
 ## Critérios de aceite
 
-Fluxo completo campo-equipe testado; medição de <2s em cenário definido; plano operacional para meta 99,5%; restauração de backup exercitada; sem promessa de background sync garantido.
+Fluxo completo campo-equipe testado; plano operacional para meta 99,5%; backups disponíveis/retention registrados e procedimento de recuperação documentado. O proprietário retirou da D09 o gate de medição numérica <2s; não afirmar que a meta foi atingida. Por decisão do proprietário, nenhum restore destrutivo da VPS ou teste PITR Neon é gate desta etapa; registrar essa limitação sem prometer recuperação ainda não ensaiada. Sem promessa de background sync garantido.
 
 ## Testes
 
@@ -31,3 +31,7 @@ Seguir [memória](../../memory.md) e [arquitetura](../../architeture.md). Este a
 31/10/2026 — O04 e slice 10 encerradas por aceite do proprietário. Dependência de cadastro satisfeita; integração real no domínio final continua na slice 11.
 
 31/10/2026 — D01 entregou README/manual e guia VPS/Render com validação local isolada. Produção, recuperação no destino e aparelhos continuam sem validação nesta task. Próxima execução: D02.
+
+08/11/2026 — Auditoria da evolução registrou política semanal Hostinger/RTO aceitos e ensaios D05/D06 de retomada, saúde, rollback de imagem e fila offline preservada. Em D08 foram associados os SHA/runs atuais e reconhecidos os ensaios da janela/reboot. D09 recebeu baseline anterior de desenvolvimento/desktop/Preview; D10 recebeu consolidação parcial do release. Restore real, alertas, login/bootstrap/tenant em produção, matriz de aparelhos em produção e aceite do piloto continuam pendentes; veja os checklists D07–D10 para o detalhe e as limitações.
+
+Conclusão 08/11/2026: D07–D10 concluídas. O proprietário confirmou política de monitoramento, bootstrap e fluxos funcionais em Android, iPhone e PWA desktop. O piloto abriu na quarta-feira, 04/11/2026; um cliente usa Android, sem incidentes reportados desde a abertura. Novos deploys seguem CI aprovado e deploy; suporte é por WhatsApp diretamente com o proprietário. Simulação de quota/evicção, restore Hostinger/Neon, rollback compatível com schema e medição numérica de <2s foram retirados do escopo ou não validados; não se declara que foram testados nem se promete SLA.
