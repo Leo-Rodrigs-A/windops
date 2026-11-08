@@ -9,7 +9,7 @@ Cada nova slice fica em uma pasta `NN-nome/`, com um `README.md` que define resu
 ## Próxima slice preparada
 
 - [ ] [14 — Domínio principal e redirecionamento](14-dominio-principal/README.md): adicionar novo domínio à produção, torná-lo canônico e preservar o domínio antigo com redirecionamento permanente; o remetente de email permanece no domínio atual. Próxima: DOM01.
-- [ ] [11 — Preparação e entrada em produção](11-producao/README.md): D01–D09 concluídas (manual, hospedagem, preparação, acessos, infraestrutura, CI/CD, monitoramento, deploy/bootstrap e validação funcional relatada em produção). D10 permanece aberta para aceite explícito e liberação do piloto. Simulação de quota/evicção e medição p95 <2s foram retiradas do escopo D09 por decisão do proprietário. Próxima: D10.
+- [x] [11 — Preparação e entrada em produção](11-producao/README.md): D01–D10 concluídas. Piloto aberto em 04/11/2026; um cliente usa Android, sem incidentes reportados desde a abertura; suporte via WhatsApp com o proprietário. Quota/evicção e medição p95 <2s foram retiradas do escopo D09 por decisão do proprietário.
 
 ## Slice preparada
 

@@ -2,19 +2,17 @@
 
 ## Status
 
-Em andamento. D01–D09 concluídas; D10 aberta. Destino: Hostinger KVM1 no Brasil, Ubuntu 24.04.5, Docker/Compose e Neon Free. Custo informado: R$625 por 24 meses; sem despesas adicionais planejadas nem homologação permanente. Política Hostinger de dois snapshots semanais e meta de recuperação aceitas; a captura de 2026-11-08 06:20 mostrava um ponto disponível naquele momento. Nenhum backup foi restaurado; proprietário retirou testes de PITR Neon e rollback compatível com schema do escopo. Runbooks e política de monitoramento estão documentados. Os dois monitores HTTPS estão `Up`, o proprietário recebeu alerta de teste e a página pública é https://stats.uptimerobot.com/kwNQpc0mCF. Revisões manuais semanais de recursos hPanel e verificações de Electric/slot após retomada, reboot e deploy estão definidas; não há alertas automáticos para esses sinais. Proprietário confirma cenários funcionais D08/D09 aprovados em Android, iPhone e PWA desktop, usando as versões mais atuais disponíveis; números exatos não disponíveis. Simulação de quota/evicção e medição p95 <2s foram retiradas do escopo por decisão do proprietário, sem afirmar validação desses comportamentos/metas. Próxima: D10.
+Concluída em 08/11/2026. D01–D10 entregues. Destino: Hostinger KVM1 no Brasil, Ubuntu 24.04.5, Docker/Compose e Neon Free. Custo informado: R$625 por 24 meses; sem despesas adicionais planejadas nem homologação permanente. Política Hostinger de dois snapshots semanais e meta de recuperação aceitas; uma captura em 08/11 mostrava um ponto disponível. Nenhum backup foi restaurado; proprietário retirou testes de PITR Neon e rollback compatível com schema do escopo. Runbooks e política de monitoramento estão documentados. Os dois monitores HTTPS estão `Up`, o proprietário recebeu alerta de teste e a página pública é https://stats.uptimerobot.com/kwNQpc0mCF. Revisões manuais semanais de recursos hPanel e verificações de Electric/slot após retomada, reboot e deploy estão definidas; não há alertas automáticos para esses sinais. Proprietário confirma cenários funcionais D08/D09 aprovados em Android, iPhone e PWA desktop, usando as versões mais atuais disponíveis; números exatos não disponíveis. O piloto abriu em 04/11/2026; um cliente usa Android, sem incidentes reportados desde então; suporte ocorre por WhatsApp diretamente com o proprietário. Simulação de quota/evicção e medição p95 <2s foram retiradas do escopo, sem afirmar validação.
 
-- [ ] Slice concluída
+- [x] Slice concluída
 
 ## Resultado esperado
 
-Wind Ops disponível em HTTPS para o piloto, com desenvolvimento reproduzível, implantação rastreável, recuperação exercitada e manual que permita ao desenvolvedor trabalhar e operar a aplicação. D01 entregou o README e o guia de produção, com setup local ensaiado. Implantação remota continua nas próximas tarefas.
+Wind Ops disponível em HTTPS para o piloto, com desenvolvimento reproduzível, implantação rastreável, política/runbooks de recuperação documentados e manual que permita ao desenvolvedor trabalhar e operar a aplicação. O rollback de imagem foi ensaiado; restore Hostinger/Neon foi retirado do escopo. O proprietário confirmou que o cliente usa a produção desde 04/11/2026; D10 registra os detalhes operacionais e o acompanhamento.
 
 ## Base existente e lacunas
 
-Slices 01–09 entregaram produto e revisão no escopo documentado. A slice 10 está concluída: O04 encerrada por aceite do proprietário em 31/10/2026, com validações automatizadas já registradas e Google real confirmado. Não houve novo ensaio manual pelo agente.
-
-Há Dockerfiles API/web, Compose de produção, Caddy, CI, GHCR/deploy por SHA, migrações, roles locais e scripts SSH restritos. Esses arquivos são ponto de partida: produção/Neon, execução remota dos workflows, restore no destino, alertas e validação móvel ainda precisam de evidências. O exemplo de ambiente contém comentários antigos e a CI não chama explicitamente parks/issues. A ordem de provisionamento inicial de roles/schema/publicação/Electric precisa ser ensaiada.
+As slices 01–10 de produto foram encerradas; O04 terminou por aceite em 31/10/2026. Nesta slice, D01–D10 foram concluídas. VPS/Neon, CI/GHCR/deploy por SHA, migrações, bootstrap, auth/tenant, alertas HTTPS e validações funcionais em Android/iPhone/PWA desktop têm evidências em seus planos. Render está apenas documentado e não foi implantado. O proprietário confirmou que o piloto abriu em 04/11/2026, um cliente usa Android e não houve incidentes desde o lançamento. O suporte é por WhatsApp diretamente com o proprietário, responsável pela continuidade.
 
 ## Limites e decisões
 
@@ -39,18 +37,18 @@ Há Dockerfiles API/web, Compose de produção, Caddy, CI, GHCR/deploy por SHA, 
 | [x] [D07](07-operacao-recuperacao.md) | Backups, recuperação e monitoramento         | Codex; proprietário confirma metas e recebe alertas                           | D05 e D06 para ensaiar recuperação de release.                              |
 | [x] [D08](08-primeiro-deploy.md)      | Primeiro deploy e bootstrap do piloto        | Codex; proprietário identifica admin e acompanha login real                   | D05, D06, D07 e O04 da slice 10 concluída.                                  |
 | [x] [D09](09-validacao-campo.md)      | Validar aparelhos e fluxo de campo           | Proprietário executa em aparelhos; Codex prepara roteiro, acompanha e corrige | D08.                                                                        |
-| [] [D10](10-liberacao-piloto.md)      | Liberar piloto e entregar rotina de operação | Proprietário confirma liberação; Codex executa e registra                     | D01–D09 concluídas e O04 encerrada; escopo móvel explicitamente registrado. |
+| [x] [D10](10-liberacao-piloto.md)     | Liberar piloto e entregar rotina de operação | Proprietário confirma liberação; Codex executa e registra                     | D01–D09 concluídas e O04 encerrada; escopo móvel explicitamente registrado. |
 
 D01 começa sem aguardar contas. D03 e D04 avançaram em paralelo após D02; D03 prepara artefatos locais e está concluída. D05 comprovou banco/rede/replicação e reinício no destino sem depender de bootstrap; D06 prova a entrega; D07 prova recuperação/operação; D08 faz bootstrap e executa smoke autenticado, incluindo shape/isolamento, depois de D05–D07; D09 testa o uso real; D10 abre o piloto. O04 está satisfeita pelo encerramento da slice 10. O Google já aceito em dev não dispensa validar callback/origem no domínio final.
 
 ## Critérios de encerramento
 
-- [ ] D01–D10 entregues com evidências e responsáveis.
-- [ ] Manual ensinado na ordem projeto → setup do zero → rotina diária → produção, revisado após implantação.
-- [ ] Produção isolada do dev, HTTPS, auth/tenant, sync e notificações reais conferidos.
-- [ ] CI/deploy, inventário de backups e alertas conferidos no destino; rollback de release exercitado e limitações de recuperação documentadas. Restore Hostinger/Neon não é gate por decisão do proprietário, e não deve tocar nos dados de produção.
-- [ ] Aceite de cadastro encerrado e matriz de aparelhos concluída para o escopo explicitamente autorizado.
-- [ ] Liberação do piloto e operação acompanhada registradas, sem prometer SLA ou background sync garantido.
+- [x] D01–D10 entregues com evidências e responsáveis.
+- [x] Manual organizado na ordem projeto → setup do zero → rotina diária → produção e revisado para refletir o destino e o deploy observados; Render está identificado como alternativa não validada.
+- [x] Produção isolada do dev; HTTPS, auth/tenant, sync e notificações funcionais foram confirmados em produção pelo proprietário.
+- [x] CI/deploy, configuração de backups, alertas HTTPS e rollback de imagem registrados; restore Hostinger/Neon foi retirado do escopo e permanece não ensaiado.
+- [x] Aceite funcional do proprietário e plataformas efetivamente incluídas no piloto registrados; não prometer suporte além do Android utilizado pelo cliente.
+- [x] Liberação do piloto e acompanhamento reportado (nenhum incidente desde 04/11) registrados, sem prometer SLA ou background sync garantido.
 
 ## Referências consultadas no planejamento
 
@@ -71,6 +69,8 @@ Consulta oficial em 30/10/2026: [Hetzner Cloud](https://docs.hetzner.com/cloud/)
 08/11/2026 — Auditoria D07–D10 contra memória, slices anteriores, D02/D05/D06 e documentação: marcados em D07 a política de backup/RTO aceita, falha pré-rollout, rollback de imagem, checks manuais e preservação da fila; em D08, SHA/runs do release atual e ensaios de pausa/retomada/reboot; em D09, baseline histórico de Android dev, browser desktop, push Preview e fila offline; em D10, consolidação parcial do checklist técnico de CI/release, atualização do manual de deploy e observação da atualização saudável da PR #13. O proprietário esclareceu que os ensaios referidos foram reboot da VPS e rollback de imagens, sem restore de backup Hostinger ou Neon. Capturas depois confirmaram um backup semanal Hostinger disponível (2026-11-08 06:20) e janela Neon PITR de seis horas em `production`; nenhum restore foi executado e o proprietário retirou o teste Neon do escopo. Runbooks/protocolo SLO foram documentados; D07–D10 seguem abertas: esclarecer retenção Hostinger e configurar/testar alertas externos, auth/bootstrap/tenant em produção não foi validado, a matriz Android/iPhone de produção não existe e o piloto não foi aberto. Fontes e limites estão detalhados em cada task; D07 segue como próximo trabalho.
 
 08/11/2026 — D09 concluída com base no relato do proprietário de testes funcionais em produção aprovados no Android, iPhone e PWA desktop, nas versões mais atuais disponíveis. A estimativa de storage foi registrada como informação somente de leitura (12,7 MiB/2048 MiB, 0,6%, `persisted=true`). Por decisão do proprietário, simulação de quota/evicção e medição numérica p95 <2s foram retiradas dos critérios; esses comportamentos/metas não são declarados validados. D10 é a próxima tarefa e depende da decisão explícita do proprietário de abrir o piloto.
+
+08/11/2026 — D10 concluída: release checklist consolidado; README/guia e arquitetura atualizados para refletir o destino Hostinger, Render não validado, fluxo CI/deploy e limitações aceitas. O proprietário confirmou piloto aberto em 04/11/2026, um cliente usando Android, nenhum incidente desde a abertura, deploy após CI aprovado e suporte via WhatsApp diretamente com ele, responsável pela continuidade.
 
 08/11/2026 — D07 concluída após o proprietário aprovar a política manual de monitoramento: dois probes HTTPS UptimeRobot ativos com alerta de teste recebido; revisão semanal de CPU/RAM/disco no hPanel; verificação do Electric/slot após retomada, reboot e deploy; confirmação de sync no fluxo normal. Sem alertas automáticos de recursos/WAL/slot/sync ou aviso antecipado TLS. Testes de restore Neon e rollback compatível com schema removidos do escopo por decisão do proprietário. D08 passa a ser a próxima task.
 
