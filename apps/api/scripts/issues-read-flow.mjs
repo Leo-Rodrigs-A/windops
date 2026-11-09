@@ -165,8 +165,8 @@ try {
 
   await pool.query(
     `INSERT INTO public.parks(id, workspace_id, code, deactivated_at) VALUES
-       ($1, $2, 'P-01', NULL), ($3, $2, 'P-02', clock_timestamp()),
-       ($4, $5, 'P-01', NULL), ($6, $2, 'P-03', NULL)`,
+       ($1, $2, 'Parque 01', NULL), ($3, $2, 'Parque 02', clock_timestamp()),
+       ($4, $5, 'Parque 01', NULL), ($6, $2, 'Parque 03', NULL)`,
     [
       parkIds.active,
       ids.workspaceA,
@@ -1495,7 +1495,7 @@ try {
   const lifecycleTurbineNumbers = new Map();
   async function createLifecyclePark() {
     const result = await parks.createPark(headers(ids.admin), ids.workspaceA, {
-      code: `P-${++lifecycleCode}`,
+      code: `Parque ${++lifecycleCode}`,
     });
     assert.equal(result.status, 'ok');
     return result.value;
@@ -1504,7 +1504,7 @@ try {
     const turbineNumber = (lifecycleTurbineNumbers.get(park.id) ?? 0) + 1;
     lifecycleTurbineNumbers.set(park.id, turbineNumber);
     const result = await parks.createTurbine(headers(ids.admin), ids.workspaceA, park.id, {
-      code: `ZAC-${park.code.slice(2)}-${String(turbineNumber).padStart(2, '0')}`,
+      code: `ZAC-${park.code.slice(7)}-${String(turbineNumber).padStart(2, '0')}`,
     });
     assert.equal(result.status, 'ok');
     return result.value;
@@ -1642,7 +1642,7 @@ try {
     method: 'POST',
     url: `${root}/parks/${historicalPark.id}/turbines`,
     headers: headers(ids.admin),
-    payload: { code: `ZAC-${historicalPark.code.slice(2)}-99` },
+    payload: { code: `ZAC-${historicalPark.code.slice(7)}-99` },
   });
   await expectError(blockedChildCreate, 404, 'RESOURCE_NOT_FOUND');
   const restoreHistoricalPark = await app.inject({
@@ -1787,7 +1787,7 @@ try {
 
   const [turbineCreationRace, parkArchiveRace] = await Promise.all([
     parks.createTurbine(headers(ids.admin), ids.workspaceA, historicalPark.id, {
-      code: `ZAC-${historicalPark.code.slice(2)}-98`,
+      code: `ZAC-${historicalPark.code.slice(7)}-98`,
     }),
     parks.deletePark(
       headers(ids.admin),

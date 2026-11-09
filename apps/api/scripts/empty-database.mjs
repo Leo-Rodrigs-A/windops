@@ -153,7 +153,7 @@ try {
     );
     const membershipId = membership.rows[0].id;
     const park = await app.query(
-      `INSERT INTO public.parks(workspace_id, code) VALUES ($1, 'P-01') RETURNING id`,
+      `INSERT INTO public.parks(workspace_id, code) VALUES ($1, 'Parque 01') RETURNING id`,
       [workspaceId],
     );
     const turbine = await app.query(
@@ -162,7 +162,7 @@ try {
       [workspaceId, park.rows[0].id],
     );
     const secondPark = await app.query(
-      `INSERT INTO public.parks(workspace_id, code) VALUES ($1, 'P-02') RETURNING id`,
+      `INSERT INTO public.parks(workspace_id, code) VALUES ($1, 'Parque 02') RETURNING id`,
       [workspaceId],
     );
     const secondTurbine = await app.query(
@@ -628,7 +628,9 @@ try {
          WHERE p.id = $1 AND t.id = $2`,
         [preservedParkId, preservedTurbineId],
       );
-      assert.deepEqual(preservedCatalog.rows, [{ park_code: 'P-99', turbine_code: 'ZAC-99-99' }]);
+      assert.deepEqual(preservedCatalog.rows, [
+        { park_code: 'Parque 99', turbine_code: 'ZAC-99-99' },
+      ]);
       const normalizedCatalog = await verifyUpgrade.query(
         `SELECT p.code AS park_code, t.code AS turbine_code
          FROM public.parks p JOIN public.turbines t
@@ -638,7 +640,7 @@ try {
       );
       assert.deepEqual(
         normalizedCatalog.rows,
-        [{ park_code: 'P-01', turbine_code: 'ZAC-01-08' }],
+        [{ park_code: 'Parque 01', turbine_code: 'ZAC-01-08' }],
         'leading zeros normalize to the two-digit minimum and IDs remain stable',
       );
       const schema = await verifyUpgrade.query(

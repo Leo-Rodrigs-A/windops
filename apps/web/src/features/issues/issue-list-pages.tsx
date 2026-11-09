@@ -599,7 +599,7 @@ export function WorkspaceHomePage() {
                 <SelectContent>
                   {parks.map((park) => (
                     <SelectItem key={park.id} value={park.id}>
-                      Parque {park.code}
+                      {park.code}
                     </SelectItem>
                   ))}
                 </SelectContent>

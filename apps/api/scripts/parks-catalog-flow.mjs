@@ -123,11 +123,11 @@ try {
   );
 
   const parkValues = [
-    [parkIds[0], ids.workspaceA, 'P-01', '2026-01-03T00:00:00.000Z'],
-    [parkIds[1], ids.workspaceA, 'P-02', '2026-01-01T00:00:00.000Z'],
-    [parkIds[2], ids.workspaceA, 'P-03', '2026-01-04T00:00:00.000Z'],
-    [parkIds[3], ids.workspaceA, 'P-04', '2026-01-02T00:00:00.000Z'],
-    [parkIds[4], ids.workspaceB, 'P-01', '2026-01-01T00:00:00.000Z'],
+    [parkIds[0], ids.workspaceA, 'Parque 01', '2026-01-03T00:00:00.000Z'],
+    [parkIds[1], ids.workspaceA, 'Parque 02', '2026-01-01T00:00:00.000Z'],
+    [parkIds[2], ids.workspaceA, 'Parque 03', '2026-01-04T00:00:00.000Z'],
+    [parkIds[3], ids.workspaceA, 'Parque 04', '2026-01-02T00:00:00.000Z'],
+    [parkIds[4], ids.workspaceB, 'Parque 01', '2026-01-01T00:00:00.000Z'],
   ];
   for (const [parkId, workspaceId, code, createdAt] of parkValues)
     await pool.query(
@@ -203,7 +203,7 @@ try {
     assert.equal(page.statusCode, 200, page.body);
     assert.deepEqual(
       page.json().items.map(({ code }) => code),
-      ['P-02', 'P-04'],
+      ['Parque 02', 'Parque 04'],
     );
     assert.ok(page.json().nextCursor);
     const next = await app.inject({
@@ -213,18 +213,21 @@ try {
     assert.equal(next.statusCode, 200, next.body);
     assert.deepEqual(
       next.json().items.map(({ code }) => code),
-      ['P-01', 'P-03'],
+      ['Parque 01', 'Parque 03'],
     );
     assert.equal(next.json().nextCursor, null);
   }
 
-  const search = await app.inject({ url: `${root}/parks?search=p-0`, headers: headers(ids.tech) });
+  const search = await app.inject({
+    url: `${root}/parks?search=Parque%200`,
+    headers: headers(ids.tech),
+  });
   assert.deepEqual(
     search.json().items.map(({ code }) => code),
-    ['P-02', 'P-04', 'P-01', 'P-03'],
+    ['Parque 02', 'Parque 04', 'Parque 01', 'Parque 03'],
   );
   const literalSearch = await app.inject({
-    url: `${root}/parks?search=P-0_`,
+    url: `${root}/parks?search=Parque%200_`,
     headers: headers(ids.tech),
   });
   assert.equal(literalSearch.statusCode, 200, literalSearch.body);
@@ -255,7 +258,7 @@ try {
     method: 'PATCH',
     url: `${root}/parks/${parkIds[0]}`,
     headers: headers(ids.admin),
-    payload: { code: 'P-07', expectedRevision: 1 },
+    payload: { code: 'Parque 07', expectedRevision: 1 },
   });
   assert.equal(renamedSeedPark.statusCode, 200, renamedSeedPark.body);
   const cascadedTurbine = await app.inject({
@@ -346,7 +349,7 @@ try {
 
   const parksUrl = `${root}/parks`;
   await expectError(
-    await app.inject({ method: 'POST', url: parksUrl, payload: { code: 'P-91' } }),
+    await app.inject({ method: 'POST', url: parksUrl, payload: { code: 'Parque 91' } }),
     401,
     'AUTHENTICATION_REQUIRED',
   );
@@ -355,7 +358,7 @@ try {
       method: 'POST',
       url: parksUrl,
       headers: headers(ids.tech),
-      payload: { code: 'P-91' },
+      payload: { code: 'Parque 91' },
     }),
     403,
     'WORKSPACE_ACCESS_DENIED',
@@ -365,7 +368,7 @@ try {
       method: 'POST',
       url: parksUrl,
       headers: headers(ids.admin),
-      payload: { code: 'P-91', workspaceId: ids.workspaceB },
+      payload: { code: 'Parque 91', workspaceId: ids.workspaceB },
     }),
     400,
     'VALIDATION_ERROR',
@@ -375,7 +378,7 @@ try {
     method: 'POST',
     url: parksUrl,
     headers: headers(ids.admin),
-    payload: { code: 'P-91' },
+    payload: { code: 'Parque 91' },
   });
   assert.equal(createdPark.statusCode, 201, createdPark.body);
   assert.equal(createdPark.json().revision, 1);
@@ -387,13 +390,13 @@ try {
       method: 'POST',
       url: parksUrl,
       headers: headers(ids.admin),
-      payload: { code: 'P-92' },
+      payload: { code: 'Parque 92' },
     }),
     app.inject({
       method: 'POST',
       url: parksUrl,
       headers: headers(ids.admin),
-      payload: { code: 'P-92' },
+      payload: { code: 'Parque 92' },
     }),
   ]);
   assert.deepEqual(duplicateCreations.map((response) => response.statusCode).sort(), [201, 409]);
@@ -402,7 +405,7 @@ try {
       method: 'POST',
       url: parksUrl,
       headers: headers(ids.admin),
-      payload: { code: 'P-03' },
+      payload: { code: 'Parque 03' },
     }),
     409,
     'CATALOG_CODE_TAKEN',
@@ -413,7 +416,7 @@ try {
     method: 'PATCH',
     url: parkPath,
     headers: headers(ids.admin),
-    payload: { code: 'P-93', expectedRevision: 1 },
+    payload: { code: 'Parque 93', expectedRevision: 1 },
   });
   assert.equal(renamedPark.statusCode, 200, renamedPark.body);
   assert.equal(renamedPark.json().revision, 2);
@@ -423,7 +426,7 @@ try {
       method: 'PATCH',
       url: parkPath,
       headers: headers(ids.admin),
-      payload: { code: 'P-94', expectedRevision: 1 },
+      payload: { code: 'Parque 94', expectedRevision: 1 },
     }),
     409,
     'REVISION_CONFLICT',
@@ -433,7 +436,7 @@ try {
       method: 'PATCH',
       url: parkPath,
       headers: headers(ids.admin),
-      payload: { code: 'P-02', expectedRevision: 2 },
+      payload: { code: 'Parque 02', expectedRevision: 2 },
     }),
     409,
     'CATALOG_CODE_TAKEN',
@@ -443,13 +446,13 @@ try {
       method: 'PATCH',
       url: parkPath,
       headers: headers(ids.admin),
-      payload: { code: 'P-95', expectedRevision: 2 },
+      payload: { code: 'Parque 95', expectedRevision: 2 },
     }),
     app.inject({
       method: 'PATCH',
       url: parkPath,
       headers: headers(ids.admin),
-      payload: { code: 'P-96', expectedRevision: 2 },
+      payload: { code: 'Parque 96', expectedRevision: 2 },
     }),
   ]);
   assert.deepEqual(concurrentEdits.map((response) => response.statusCode).sort(), [200, 409]);
@@ -458,7 +461,7 @@ try {
     [ids.workspaceA, createdParkId],
   );
   assert.equal(parkAfterRace.rows[0].revision, 3);
-  const turbinePrefix = `ZAC-${parkAfterRace.rows[0].code.slice(2)}-`;
+  const turbinePrefix = `ZAC-${parkAfterRace.rows[0].code.slice(7)}-`;
 
   const turbinesUrl = `${parkPath}/turbines`;
   const createdTurbine = await app.inject({
@@ -570,7 +573,7 @@ try {
         method: 'POST',
         url: parksUrl,
         headers: headers(ids.admin),
-        payload: { code: 'P-97' },
+        payload: { code: 'Parque 97' },
       })
       .then((response) => {
         requestSettled = true;
@@ -588,7 +591,7 @@ try {
   }
   const revokedWrite = await pool.query(
     'SELECT 1 FROM public.parks WHERE workspace_id = $1 AND code = $2',
-    [ids.workspaceA, 'P-97'],
+    [ids.workspaceA, 'Parque 97'],
   );
   assert.equal(revokedWrite.rowCount, 0, 'revoked admin write leaves no catalog row');
 

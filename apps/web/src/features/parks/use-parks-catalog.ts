@@ -63,7 +63,9 @@ export function useParksCatalog({
       try {
         if (!online || !authenticated) {
           const cached = sortCatalogByCreation(
-            cachedParks().filter((park) => park.code.includes(search.trim().toUpperCase())),
+            cachedParks().filter((park) =>
+              park.code.toUpperCase().includes(search.trim().toUpperCase()),
+            ),
           );
           setParks(cached);
           setParkCursor(null);
@@ -90,7 +92,9 @@ export function useParksCatalog({
       } catch (error) {
         if (requestId !== parksRequest.current) return;
         const cached = sortCatalogByCreation(
-          cachedParks().filter((park) => park.code.includes(search.trim().toUpperCase())),
+          cachedParks().filter((park) =>
+            park.code.toUpperCase().includes(search.trim().toUpperCase()),
+          ),
         );
         if (cached.length) {
           setParks(cached);

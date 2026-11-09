@@ -24,21 +24,21 @@ export async function findNextParkCode(
   do {
     const page = await loadPage(cursor);
     for (const item of page.items) {
-      const match = /^P-(\d{2,6})$/.exec(item.code);
+      const match = /^Parque (\d{2,6})$/i.exec(item.code);
       if (match) highestNumber = Math.max(highestNumber, Number(match[1]));
     }
     cursor = page.nextCursor ?? undefined;
   } while (cursor);
   const nextNumber = highestNumber + 1;
   if (nextNumber > 999999) return null;
-  return `P-${String(nextNumber).padStart(2, '0')}`;
+  return `Parque ${String(nextNumber).padStart(2, '0')}`;
 }
 
 export async function findNextTurbineCode(
   parkCode: string,
   loadPage: (cursor?: string) => Promise<{ items: { code: string }[]; nextCursor: string | null }>,
 ) {
-  const parkMatch = /^P-(\d{2,6})$/.exec(parkCode);
+  const parkMatch = /^Parque (\d{2,6})$/i.exec(parkCode);
   if (!parkMatch) return null;
   const parkNumber = Number(parkMatch[1]);
   let cursor: string | undefined;

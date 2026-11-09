@@ -155,7 +155,7 @@ export function IssueLocationFilters({
             <SelectItem value="all">Todos os parques</SelectItem>
             {parks.map((park) => (
               <SelectItem key={park.id} value={park.id}>
-                Parque {park.code}
+                {park.code}
                 {park.deactivatedAt ? ' · Arquivado' : ''}
               </SelectItem>
             ))}
@@ -211,7 +211,7 @@ export function IssueListItem({
           <span className="flex w-full flex-wrap items-center gap-2">
             <span className="font-medium">
               {location
-                ? `Parque ${location.park} · Turbina ${location.turbine}`
+                ? `${location.park} · Turbina ${location.turbine}`
                 : 'Equipamento associado'}
             </span>
             <Badge

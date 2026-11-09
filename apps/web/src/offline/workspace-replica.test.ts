@@ -123,7 +123,7 @@ describe('réplica local Electric', () => {
     replica.start();
     await first.streams
       .get('parks')
-      ?.emit([insert(parkId, { workspace_id: partition.workspaceId, code: 'P-1' })]);
+      ?.emit([insert(parkId, { workspace_id: partition.workspaceId, code: 'Parque 01' })]);
     expect(store.isReplicaReady()).toBe(false);
     expect(store.listReplica('parks')).toHaveLength(0);
     replica.close();
@@ -157,20 +157,20 @@ describe('réplica local Electric', () => {
       [
         {
           key: parkId,
-          value: { id: parkId, workspace_id: scope.workspaceId, code: 'P-2' },
+          value: { id: parkId, workspace_id: scope.workspaceId, code: 'Parque 02' },
           headers: { operation: 'update' },
         } as Message,
       ],
       '1_1',
     );
-    expect(reopened.listReplica('parks')[0]).toMatchObject({ code: 'P-2' });
+    expect(reopened.listReplica('parks')[0]).toMatchObject({ code: 'Parque 02' });
     resumed.close();
 
     reopened.close();
     const afterRestart = await open(scope);
     expect(afterRestart.isReplicaReady()).toBe(true);
     expect(afterRestart.listReplica('issues')).toHaveLength(1);
-    expect(afterRestart.listReplica('parks')[0]).toMatchObject({ code: 'P-2' });
+    expect(afterRestart.listReplica('parks')[0]).toMatchObject({ code: 'Parque 02' });
     expect(afterRestart.getCheckpoint('parks')?.offset).toBe('1_1');
   });
 
@@ -202,7 +202,7 @@ describe('réplica local Electric', () => {
         snapshotComplete: true,
         updatedAt: new Date().toISOString(),
       },
-      snapshotRows: [{ id: parkId, workspaceId: scope.workspaceId, code: 'P-antigo' }],
+      snapshotRows: [{ id: parkId, workspaceId: scope.workspaceId, code: 'Parque antigo' }],
     };
     await store.applyReplicaBatch(initial);
     const fake = streamFactory();
@@ -210,13 +210,13 @@ describe('réplica local Electric', () => {
     replica.start();
     await fake.streams.get('parks')?.emit([control('must-refetch')]);
     expect(store.isReplicaReady()).toBe(false);
-    expect(store.listReplica('parks')).toMatchObject([{ code: 'P-antigo' }]);
+    expect(store.listReplica('parks')).toMatchObject([{ code: 'Parque antigo' }]);
     await fake.streams
       .get('parks')
-      ?.emit([insert(parkId, { workspace_id: scope.workspaceId, code: 'P-novo' })]);
-    expect(store.listReplica('parks')).toMatchObject([{ code: 'P-antigo' }]);
+      ?.emit([insert(parkId, { workspace_id: scope.workspaceId, code: 'Parque novo' })]);
+    expect(store.listReplica('parks')).toMatchObject([{ code: 'Parque antigo' }]);
     await fake.streams.get('parks')?.emit([control('up-to-date')], '2_0');
-    expect(store.listReplica('parks')).toMatchObject([{ code: 'P-novo' }]);
+    expect(store.listReplica('parks')).toMatchObject([{ code: 'Parque novo' }]);
     expect(store.getCheckpoint('parks')?.offset).toBe('2_0');
     replica.close();
   });

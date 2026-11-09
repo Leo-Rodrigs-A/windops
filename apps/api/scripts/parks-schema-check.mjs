@@ -125,17 +125,17 @@ try {
     await app.query('INSERT INTO public.parks(id, workspace_id, code) VALUES ($1, $2, $3)', [
       parkA,
       firstWorkspaceId,
-      'P01',
+      'Parque 01',
     ]);
     await app.query('INSERT INTO public.parks(id, workspace_id, code) VALUES ($1, $2, $3)', [
       parkB,
       second.rows[0].id,
-      'P01',
+      'Parque 01',
     ]);
     await expectSqlState(
       app.query('INSERT INTO public.parks(workspace_id, code) VALUES ($1, $2)', [
         firstWorkspaceId,
-        'P01',
+        'Parque 01',
       ]),
       '23505',
       'park codes must be unique within a workspace',
@@ -143,39 +143,42 @@ try {
     await expectSqlState(
       app.query('INSERT INTO public.parks(workspace_id, code) VALUES ($1, $2)', [
         firstWorkspaceId,
-        'P1',
+        'Parque 1',
       ]),
       '23514',
       'park codes must follow the canonical format',
     );
     await expectSqlState(
-      app.query('INSERT INTO public.parks(workspace_id, code) VALUES ($1, $2)', [missingId, 'P02']),
+      app.query('INSERT INTO public.parks(workspace_id, code) VALUES ($1, $2)', [
+        missingId,
+        'Parque 02',
+      ]),
       '23503',
       'parks must reference an existing workspace',
     );
 
     await app.query(
       'INSERT INTO public.turbines(id, workspace_id, park_id, code) VALUES ($1, $2, $3, $4)',
-      [turbineA, firstWorkspaceId, parkA, 'T01'],
+      [turbineA, firstWorkspaceId, parkA, 'ZAC-01-01'],
     );
     await expectSqlState(
       app.query('INSERT INTO public.turbines(workspace_id, park_id, code) VALUES ($1, $2, $3)', [
         firstWorkspaceId,
         parkA,
-        'T01',
+        'ZAC-01-01',
       ]),
       '23505',
       'turbine codes must be unique within a park',
     );
     await app.query(
       'INSERT INTO public.turbines(workspace_id, park_id, code) VALUES ($1, $2, $3)',
-      [second.rows[0].id, parkB, 'T01'],
+      [second.rows[0].id, parkB, 'ZAC-01-01'],
     );
     await expectSqlState(
       app.query('INSERT INTO public.turbines(workspace_id, park_id, code) VALUES ($1, $2, $3)', [
         second.rows[0].id,
         parkA,
-        'T02',
+        'ZAC-01-02',
       ]),
       '23503',
       'a turbine cannot reference a park owned by another workspace',
@@ -184,7 +187,7 @@ try {
       app.query('INSERT INTO public.turbines(workspace_id, park_id, code) VALUES ($1, $2, $3)', [
         firstWorkspaceId,
         parkA,
-        'T1',
+        'ZAC-1-01',
       ]),
       '23514',
       'turbine codes must follow the canonical format',
@@ -192,7 +195,7 @@ try {
     await expectSqlState(
       app.query('INSERT INTO public.parks(workspace_id, code, revision) VALUES ($1, $2, 0)', [
         firstWorkspaceId,
-        'P02',
+        'Parque 02',
       ]),
       '23514',
       'park revisions must be positive',
@@ -205,17 +208,19 @@ try {
       'the API role must not create tables',
     );
     await replication.query('SELECT id FROM public.workspaces LIMIT 1');
+    await replication.query('SELECT id FROM public.parks LIMIT 1');
+    await replication.query('SELECT id FROM public.turbines LIMIT 1');
     await expectSqlState(
-      replication.query('SELECT id FROM public.parks LIMIT 1'),
+      replication.query('SELECT id FROM public.issues LIMIT 1'),
       '42501',
-      'Electric must not read the parks catalog before authorized sync is implemented',
+      'Electric must not read the private issues table',
     );
     const publication = await app.query(
       `SELECT count(*)::int AS count FROM pg_publication_tables
        WHERE pubname = 'electric_publication_default' AND schemaname = 'public'
          AND tablename IN ('parks', 'turbines')`,
     );
-    assert.equal(publication.rows[0].count, 0, 'catalog tables must not be published to Electric');
+    assert.equal(publication.rows[0].count, 2, 'approved catalog tables are published to Electric');
   } finally {
     await Promise.all([app.end(), migration.end(), replication.end()]);
   }
@@ -284,7 +289,7 @@ try {
   }
 
   console.log(
-    'Parks schema verified: empty install, concurrent migration, tenant constraints, uniqueness, role grants, unpublished Electric tables, and upgrade preserving workspace/membership.',
+    'Parks schema verified: empty install, concurrent migration, tenant constraints, uniqueness, catalog Electric allowlist, private issues table, and upgrade preserving workspace/membership.',
   );
 } finally {
   if (emptyCreated) docker([...compose, 'dropdb', '--if-exists', '-U', 'windops', emptyDb]);
