@@ -15,7 +15,7 @@ export const parks = pgTable(
   {
     id: uuid('id').primaryKey().defaultRandom(),
     workspaceId: uuid('workspace_id').notNull(),
-    code: varchar('code', { length: 8 }).notNull(),
+    code: varchar('code', { length: 16 }).notNull(),
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
     revision: integer('revision').notNull().default(1),
@@ -25,7 +25,7 @@ export const parks = pgTable(
     uniqueIndex('parks_workspace_code_unique').on(table.workspaceId, table.code),
     uniqueIndex('parks_id_workspace_unique').on(table.id, table.workspaceId),
     index('parks_workspace_created_idx').on(table.workspaceId, table.createdAt, table.id),
-    check('parks_code_check', sql`${table.code} ~ '^P-[0-9]{2,6}$'`),
+    check('parks_code_check', sql`${table.code} ~ '^Parque [0-9]{2,6}$'`),
     check('parks_revision_check', sql`${table.revision} > 0`),
   ],
 );

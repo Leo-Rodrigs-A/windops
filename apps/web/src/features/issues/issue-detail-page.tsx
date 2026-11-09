@@ -96,7 +96,7 @@ export function IssueDetailPage() {
           Object.fromEntries(
             Object.entries(cached).map(([key, value]) => [
               key,
-              `Parque ${value.park} · Turbina ${value.turbine}`,
+              `${value.park} · Turbina ${value.turbine}`,
             ]),
           ),
         );
@@ -120,7 +120,7 @@ export function IssueDetailPage() {
               getPark(workspaceId, value.parkId),
               getTurbine(workspaceId, value.parkId, value.turbineId),
             ]);
-            return [key, `Parque ${park.code} · Turbina ${turbine.code}`] as const;
+            return [key, `${park.code} · Turbina ${turbine.code}`] as const;
           } catch {
             return [key, 'Equipamento não disponível'] as const;
           }
@@ -618,7 +618,7 @@ export function IssueDetailPage() {
                       )}
                       <span className="text-sm text-muted-foreground">
                         {location
-                          ? `Parque ${location.park.code} · Turbina ${location.turbine.code}`
+                          ? `${location.park.code} · Turbina ${location.turbine.code}`
                           : 'Equipamento associado'}
                       </span>
                     </div>

@@ -10,7 +10,7 @@ export async function verifyIssueQueries({ pool, app, ids, headers, membershipBy
     await pool.query('INSERT INTO parks(id, workspace_id, code) VALUES ($1,$2,$3)', [
       parks[i],
       workspace,
-      `P-90${i}`,
+      `Parque 90${i}`,
     ]);
     await pool.query('INSERT INTO turbines(id, workspace_id, park_id, code) VALUES ($1,$2,$3,$4)', [
       turbines[i],

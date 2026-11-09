@@ -124,11 +124,12 @@ export const workspaceDirectoryPageSchema = z
   })
   .strict();
 
-const parkCodeSchema = z
+const parkCodeSchema = z.string().regex(/^Parque [0-9]{2,6}$/, 'Use o formato Parque 01.');
+const parkInputCodeSchema = z
   .string()
   .trim()
-  .toUpperCase()
-  .regex(/^P-[0-9]{2,6}$/, 'Use o formato P-01.');
+  .regex(/^Parque [0-9]{2,6}$/i, 'Use o formato Parque 01.')
+  .transform((code) => `Parque ${code.slice(7)}`);
 const turbineCodeSchema = z
   .string()
   .trim()
@@ -168,9 +169,9 @@ export const parksQuerySchema = z
   })
   .strict();
 export const turbinesQuerySchema = parksQuerySchema;
-export const createParkSchema = z.object({ code: parkCodeSchema }).strict();
+export const createParkSchema = z.object({ code: parkInputCodeSchema }).strict();
 export const updateParkSchema = z
-  .object({ code: parkCodeSchema, expectedRevision: z.number().int().positive() })
+  .object({ code: parkInputCodeSchema, expectedRevision: z.number().int().positive() })
   .strict();
 export const createTurbineSchema = z.object({ code: turbineCodeSchema }).strict();
 export const updateTurbineSchema = z

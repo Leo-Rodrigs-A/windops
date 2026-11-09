@@ -160,10 +160,10 @@ export function ParksCatalogPage() {
             : await restorePark(workspaceId, park.id, command);
         setNotice(
           result.result === 'deleted'
-            ? `Parque ${result.code} excluído definitivamente.`
+            ? `${result.code} excluído definitivamente.`
             : result.result === 'archived'
-              ? `Parque ${result.park.code} arquivado. As turbinas continuam vinculadas.`
-              : `Parque ${result.park.code} restaurado. Turbinas arquivadas individualmente continuam desativadas.`,
+              ? `${result.park.code} arquivado. As turbinas continuam vinculadas.`
+              : `${result.park.code} restaurado. Turbinas arquivadas individualmente continuam desativadas.`,
         );
         if (result.result === 'deleted' && selectedParkId === park.id) setSelectedParkId('');
         else if (selectedParkId === park.id) reloadSelectedPark = true;
@@ -386,7 +386,7 @@ export function ParksCatalogPage() {
         const created = await createPark(workspaceId, { code: form.nextCode });
         setForm(null);
         setSelectedParkId(created.id);
-        setNotice(`Parque ${created.code} cadastrado.`);
+        setNotice(`${created.code} cadastrado.`);
         await loadParks(parksSearch);
       } else if (form.kind === 'create-turbine') {
         if (!form.nextCode) return;
@@ -479,10 +479,10 @@ export function ParksCatalogPage() {
           : '';
   const parkCodeNumber = form?.kind.endsWith('turbine')
     ? form.kind === 'edit-turbine' || form.kind === 'create-turbine'
-      ? form.park.code.slice(2)
+      ? form.park.code.slice(7)
       : ''
     : '';
-  const inputPrefix = form?.kind.endsWith('park') ? 'P-' : `ZAC-${parkCodeNumber}-`;
+  const inputPrefix = form?.kind.endsWith('park') ? 'Parque ' : `ZAC-${parkCodeNumber}-`;
   const isEditing = form?.kind.startsWith('edit') ?? false;
   const proposedCode =
     form?.kind === 'create-park' || form?.kind === 'create-turbine' ? form.nextCode : null;
@@ -605,7 +605,7 @@ export function ParksCatalogPage() {
                           <Trees aria-hidden="true" className="size-5" />
                         </span>
                         <span className="min-w-0 flex-1">
-                          <span className="block truncate font-medium">Parque {park.code}</span>
+                          <span className="block truncate font-medium">{park.code}</span>
                           <span className="block text-xs text-muted-foreground">
                             {park.deactivatedAt ? 'Arquivado' : 'Ativo'}
                           </span>
@@ -943,9 +943,9 @@ export function ParksCatalogPage() {
               {isEditing
                 ? 'A alteração será salva no workspace quando o servidor confirmar.'
                 : form?.kind === 'create-park'
-                  ? `O parque receberá o código ${proposedCode ?? 'calculando…'}. Confirme para continuar.`
+                  ? `O parque receberá o nome ${proposedCode ?? 'calculando…'}. Confirme para continuar.`
                   : form?.kind === 'create-turbine'
-                    ? `A turbina receberá o código ${proposedCode ?? 'calculando…'} no Parque ${form.park.code}. Confirme para continuar.`
+                    ? `A turbina receberá o código ${proposedCode ?? 'calculando…'} em ${form.park.code}. Confirme para continuar.`
                     : ''}
             </DialogDescription>
           </DialogHeader>
@@ -956,11 +956,17 @@ export function ParksCatalogPage() {
                 autoFocus
                 className="gap-2"
                 description={`Formato: ${inputPrefix}01 até ${inputPrefix}999999.`}
-                label={form?.kind === 'edit-park' ? 'Código do parque' : 'Código da turbina'}
+                label={form?.kind === 'edit-park' ? 'Nome do parque' : 'Código da turbina'}
                 maxLength={17}
-                onChange={(event) => setCode(event.target.value.toUpperCase())}
+                onChange={(event) =>
+                  setCode(
+                    form?.kind === 'edit-park'
+                      ? event.target.value
+                      : event.target.value.toUpperCase(),
+                  )
+                }
                 pattern={`${inputPrefix}[0-9]{2,6}`}
-                placeholder={form?.kind.endsWith('park') ? 'P-01' : `ZAC-${parkCodeNumber}-01`}
+                placeholder={form?.kind.endsWith('park') ? 'Parque 01' : `ZAC-${parkCodeNumber}-01`}
                 required
                 value={code}
               />

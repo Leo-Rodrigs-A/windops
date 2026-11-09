@@ -180,7 +180,7 @@ function escapeLike(value: string): string {
 
 function turbineCodeMatchesPark(turbineCode: string, parkCode: string): boolean {
   const turbineMatch = /^ZAC-(\d{2,6})-\d{2,6}$/.exec(turbineCode);
-  const parkMatch = /^P-(\d{2,6})$/.exec(parkCode);
+  const parkMatch = /^Parque (\d{2,6})$/.exec(parkCode);
   return Boolean(turbineMatch && parkMatch && Number(turbineMatch[1]) === Number(parkMatch[1]));
 }
 
@@ -397,7 +397,7 @@ export function createParksCatalogService(
         if (row.code !== input.code) {
           await client.query(
             `UPDATE public.turbines
-             SET code = 'ZAC-' || substring($3 FROM 3) || '-' || (regexp_match(code, '^ZAC-[0-9]{2,6}-([0-9]{2,6})$'))[1],
+             SET code = 'ZAC-' || (regexp_match($3, '^Parque ([0-9]{2,6})$'))[1] || '-' || (regexp_match(code, '^ZAC-[0-9]{2,6}-([0-9]{2,6})$'))[1],
                  revision = revision + 1, updated_at = clock_timestamp()
              WHERE workspace_id = $1 AND park_id = $2`,
             [workspaceId, parkId, input.code],

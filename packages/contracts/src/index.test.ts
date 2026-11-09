@@ -110,14 +110,14 @@ it('requires invitation responses to omit raw tokens and include delivery state'
 });
 
 it('normalizes park and turbine codes and rejects malformed or forged fields', () => {
-  expect(createParkSchema.parse({ code: ' p-01 ' })).toEqual({ code: 'P-01' });
+  expect(createParkSchema.parse({ code: ' parque 01 ' })).toEqual({ code: 'Parque 01' });
   expect(createTurbineSchema.parse({ code: 'zac-01-000123' })).toEqual({ code: 'ZAC-01-000123' });
-  for (const code of ['P1', 'P1234567', 'T01', 'P-1', 'P０１']) {
+  for (const code of ['Parque 1', 'Parque 1234567', 'T01', 'P-01', 'Parque ０１']) {
     expect(createParkSchema.safeParse({ code }).success).toBe(false);
   }
   expect(createTurbineSchema.safeParse({ code: 't1' }).success).toBe(false);
   expect(createTurbineSchema.safeParse({ code: 'ZAC-02-01' }).success).toBe(true);
-  expect(createParkSchema.safeParse({ code: 'P-01', workspaceId: randomUUID() }).success).toBe(
+  expect(createParkSchema.safeParse({ code: 'Parque 01', workspaceId: randomUUID() }).success).toBe(
     false,
   );
 });
@@ -128,7 +128,7 @@ it('validates catalog DTOs, pagination, and optimistic revisions', () => {
   const park = {
     id: parkId,
     workspaceId: randomUUID(),
-    code: 'P-01',
+    code: 'Parque 01',
     createdAt: timestamp,
     updatedAt: timestamp,
     revision: 1,
@@ -137,8 +137,10 @@ it('validates catalog DTOs, pagination, and optimistic revisions', () => {
   expect(parkSchema.safeParse(park).success).toBe(true);
   expect(turbineSchema.safeParse({ ...park, parkId, code: 'ZAC-01-01' }).success).toBe(true);
   expect(parkSchema.safeParse({ ...park, revision: 0 }).success).toBe(false);
-  expect(updateParkSchema.safeParse({ code: 'P-02', expectedRevision: 1 }).success).toBe(true);
-  expect(updateParkSchema.safeParse({ code: 'P-02', expectedRevision: 0 }).success).toBe(false);
+  expect(updateParkSchema.safeParse({ code: 'Parque 02', expectedRevision: 1 }).success).toBe(true);
+  expect(updateParkSchema.safeParse({ code: 'Parque 02', expectedRevision: 0 }).success).toBe(
+    false,
+  );
   expect(updateTurbineSchema.safeParse({ code: 'ZAC-01-02', expectedRevision: 1 }).success).toBe(
     true,
   );
@@ -158,7 +160,12 @@ it('validates catalog DTOs, pagination, and optimistic revisions', () => {
   expect(parksQuerySchema.safeParse({ limit: 101 }).success).toBe(false);
   expect(parksQuerySchema.safeParse({ search: 'x'.repeat(101) }).success).toBe(false);
   expect(parksQuerySchema.safeParse({ workspaceId: randomUUID() }).success).toBe(false);
-  const deletedPark = { result: 'deleted', id: parkId, workspaceId: randomUUID(), code: 'P-01' };
+  const deletedPark = {
+    result: 'deleted',
+    id: parkId,
+    workspaceId: randomUUID(),
+    code: 'Parque 01',
+  };
   expect(parkLifecycleResultSchema.safeParse(deletedPark).success).toBe(true);
   expect(parkLifecycleResultSchema.safeParse({ ...deletedPark, result: 'archived' }).success).toBe(
     false,

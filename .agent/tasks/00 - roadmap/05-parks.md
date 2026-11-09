@@ -8,7 +8,7 @@ Execução detalhada nas slices [03 — Parques e turbinas](../03-parques-turbin
 
 ## Objetivo e escopo
 
-Cadastros de parques `P-01` e turbinas `ZAC-01-04` vinculadas ao parque, administrados por admin. Catálogos locais preparados.
+Cadastros de parques `Parque 01` e turbinas `ZAC-01-04` vinculadas ao parque, administrados por admin. Catálogos locais preparados.
 
 ## Dependências
 
@@ -24,7 +24,7 @@ Permissões, unicidade, relações entre tenants, exclusão/arquivamento conform
 
 Lifecycle integrado a issues foi implementado na [slice 04](../04-registro-atendimento/README.md), especialmente I06, e revalidado na I08; I01 registrou as regras em 26/10/2026. Catálogo offline permanece na etapa 07.
 
-Atualização de nomenclatura/ordem — 08/11/2026: a [slice 16](../16-codigos-e-wind-report/README.md) migra códigos legados para `P-<parque>` e `ZAC-<parque>-<turbina>`, gera novos códigos nesse padrão e ordena catálogo pela criação em API, réplica e fallback. `pnpm check`, upgrade/migration e integração de catálogo passaram em ambiente descartável; sem alteração direta ou deploy em produção. Ensaio manual offline/reconexão não realizado.
+Atualização de nomenclatura/ordem — 08/11/2026: a [slice 16](../16-codigos-e-wind-report/README.md) migra parques `P-<parque>` para `Parque <número>`, mantém turbinas `ZAC-<parque>-<turbina>` e ordena catálogo pela criação em API, réplica e fallback. `pnpm check`, `pnpm db:empty-check`, integrações de parks/issues e `drizzle-kit check` passaram em ambientes descartáveis. Nenhuma alteração ou deploy em produção; ensaio manual offline/reconexão não realizado.
 
 ## Referências e atualização
 

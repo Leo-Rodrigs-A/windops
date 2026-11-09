@@ -17,11 +17,11 @@ Cada nova slice fica em uma pasta `NN-nome/`, com um `README.md` que define resu
 
 - Slice 14 planejada em 05/11/2026: domínio principal e redirecionamento do domínio antigo, com DNS, TLS, Caddy, origem/auth/OAuth, deploy e validação ponta a ponta. Troca de remetente/provedor de email excluída e reservada para slice futura.
 - Slice 15 concluída em 08/11/2026: substituir a turbina outlined pela Brisa filled em todos os pontos da marca; ver [BR01](15-identidade-visual/01-icone-brisa.md).
-- Slice 16 concluída em 08/11/2026: novos códigos `P-01`/`ZAC-01-04`, ordenação de catálogo pela criação e nome Wind Report; validações em [C01–C04](16-codigos-e-wind-report/README.md).
+- Slice 16 concluída em 08/11/2026 após ajuste de nomenclatura para `Parque 01`; C05 validou migration e superfícies junto aos códigos ZAC. Consulte [C05](16-codigos-e-wind-report/05-nomes-legiveis-parques.md).
 
 ## Slices concluídas mais recentes
 
-- [x] [16 — Códigos de equipamentos e Wind Report](16-codigos-e-wind-report/README.md): C01–C04 concluídas em 08/11/2026. `pnpm check`, instalação/upgrade e integração do catálogo passaram; ensaio manual PWA offline/reconexão não realizado.
+- [x] [16 — Códigos de equipamentos e Wind Report](16-codigos-e-wind-report/README.md): C01–C05 concluídas em 08/11/2026. Migration `0015`, `pnpm check`, instalação/upgrade e integrações de catálogo/issues passaram; sem aplicação em produção.
 
 - [x] [15 — Identidade visual](15-identidade-visual/README.md): símbolo Brisa filled adaptado às cores do sistema e aplicado aos usos do site, favicon, PWA e Apple touch icon; `pnpm check` passou em 08/11/2026.
 
@@ -37,7 +37,7 @@ Cada nova slice fica em uma pasta `NN-nome/`, com um `README.md` que define resu
 
 - [x] [08 — Filtros e histórico de consulta](08-consultas-historico/README.md): filtros P/T nas três listas, paginação por demanda, projeção e retenção segura de histórico.
 
-Última slice concluída: [16 — Códigos de equipamentos e Wind Report](16-codigos-e-wind-report/README.md). A revisão técnica anterior entregou: R01A removeu query e fragmento dos logs automáticos; R02 atualizou documentação e tornou explícita a composição de auditoria/notificações; R03 centralizou transações em issues/parks e classificou erros por constraint; R04 segregou interfaces de workspaces e fortaleceu as fronteiras de módulos; R05 extraiu policies de Issues e preservou receipts; R06 separou módulos e rotas por feature com aceite manual confirmado; R07 separou a persistência, reconciliação e fila offline mantendo a transação; R08 revalidou os fluxos e fechou a matriz A01–A13. Limites de produção continuam explícitos.
+Última slice concluída: [16 — Códigos de equipamentos e Wind Report](16-codigos-e-wind-report/README.md), C01–C05. A revisão técnica anterior entregou: R01A removeu query e fragmento dos logs automáticos; R02 atualizou documentação e tornou explícita a composição de auditoria/notificações; R03 centralizou transações em issues/parks e classificou erros por constraint; R04 segregou interfaces de workspaces e fortaleceu as fronteiras de módulos; R05 extraiu policies de Issues e preservou receipts; R06 separou módulos e rotas por feature com aceite manual confirmado; R07 separou a persistência, reconciliação e fila offline mantendo a transação; R08 revalidou os fluxos e fechou a matriz A01–A13. Limites de produção continuam explícitos.
 
 - [x] [07 — Campainha e Web Push](07-notificacoes/README.md): N01–N06 concluídas em 28/10/2026; outbox, campainha, worker, interface/PWA, push real confirmado pelo proprietário e validação integrada. Android/iPhone instalados e produção permanecem no roadmap 11.
 
