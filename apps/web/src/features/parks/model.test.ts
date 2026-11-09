@@ -1,25 +1,37 @@
 import { describe, expect, it, vi } from 'vitest';
 import { ApiRequestError } from '../../lib/auth-api';
-import { findNextCatalogCode, getApiErrorMessage } from './model';
+import { findNextParkCode, findNextTurbineCode, getApiErrorMessage } from './model';
 
 describe('catalog model', () => {
   it('scans every cursor page and chooses the next code within the prefix', async () => {
     const loadPage = vi
       .fn()
-      .mockResolvedValueOnce({ items: [{ code: 'P002' }, { code: 'OTHER99' }], nextCursor: 'next' })
-      .mockResolvedValueOnce({ items: [{ code: 'P010' }, { code: 'P004' }], nextCursor: null });
+      .mockResolvedValueOnce({ items: [{ code: 'P-02' }, { code: 'OTHER99' }], nextCursor: 'next' })
+      .mockResolvedValueOnce({ items: [{ code: 'P-10' }, { code: 'P-04' }], nextCursor: null });
 
-    await expect(findNextCatalogCode('P', loadPage)).resolves.toBe('P011');
+    await expect(findNextParkCode(loadPage)).resolves.toBe('P-11');
     expect(loadPage).toHaveBeenNthCalledWith(1, undefined);
     expect(loadPage).toHaveBeenNthCalledWith(2, 'next');
   });
 
   it('preserves the lower bound, minimum padding, and maximum code limit', async () => {
     await expect(
-      findNextCatalogCode('T', async () => ({ items: [], nextCursor: null })),
-    ).resolves.toBe('T001');
+      findNextTurbineCode('P-01', async () => ({ items: [], nextCursor: null })),
+    ).resolves.toBe('ZAC-01-01');
     await expect(
-      findNextCatalogCode('T', async () => ({ items: [{ code: 'T999999' }], nextCursor: null })),
+      findNextTurbineCode('P-01', async () => ({
+        items: [{ code: 'ZAC-01-999999' }],
+        nextCursor: null,
+      })),
+    ).resolves.toBeNull();
+    await expect(
+      findNextTurbineCode('P-02', async () => ({
+        items: [{ code: 'ZAC-01-08' }, { code: 'ZAC-02-03' }],
+        nextCursor: null,
+      })),
+    ).resolves.toBe('ZAC-02-04');
+    await expect(
+      findNextTurbineCode('invalid', async () => ({ items: [], nextCursor: null })),
     ).resolves.toBeNull();
   });
 

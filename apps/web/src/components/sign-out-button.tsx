@@ -101,7 +101,7 @@ export function SignOutButton({ iconOnly = false }: { iconOnly?: boolean }) {
           </DialogHeader>
           <DialogFooter>
             <Button onClick={() => setDialogOpen(false)} variant="outline">
-              Continuar no Wind Ops
+              Continuar no Wind Report
             </Button>
             <Button
               disabled={busy}

@@ -56,7 +56,7 @@ export function createIdentityProvider(
       sendResetPassword: async ({ user, url }) => {
         await emailSender.send({
           to: user.email,
-          subject: 'Redefina sua senha do Wind Ops',
+          subject: 'Redefina sua senha do Wind Report',
           text: `Use este link para redefinir sua senha: ${url}\n\nSe você não solicitou a redefinição, ignore esta mensagem.`,
         });
       },
@@ -142,7 +142,7 @@ export function createIdentityProvider(
       sendVerificationEmail: async ({ user, url }) => {
         await emailSender.send({
           to: user.email,
-          subject: 'Confirme seu e-mail no Wind Ops',
+          subject: 'Confirme seu e-mail no Wind Report',
           text: `Confirme seu endereço de e-mail: ${url}`,
         });
       },
@@ -240,7 +240,7 @@ export function createIdentityProvider(
       }
       await emailSender.send({
         to: normalized,
-        subject: 'Confirme seu e-mail para criar sua conta Wind Ops',
+        subject: 'Confirme seu e-mail para criar sua conta Wind Report',
         text: `Confirme seu e-mail e escolha seu nome e senha: ${new URL(`/cadastro/confirmar#token=${encodeURIComponent(token)}`, appOrigin).href}\n\nO link expira em 30 minutos.`,
       });
     },

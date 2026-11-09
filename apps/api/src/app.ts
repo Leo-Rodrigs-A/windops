@@ -62,7 +62,7 @@ export function buildApp(options: {
   app.setValidatorCompiler(validatorCompiler);
   app.setSerializerCompiler(serializerCompiler);
   app.register(swagger, {
-    openapi: { info: { title: 'Wind Ops API', version: '0.1.0' } },
+    openapi: { info: { title: 'Wind Report API', version: '0.1.0' } },
     transform: jsonSchemaTransform,
   });
   app.setErrorHandler<FastifyError>((error, request, reply) => {

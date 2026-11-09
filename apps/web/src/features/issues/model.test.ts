@@ -58,8 +58,8 @@ function createStore(filter: StatusFilter = 'all') {
     listIssues: () => [projection],
     listReplica: (table: string) =>
       table === 'parks'
-        ? [{ id: 'park-1', code: 'P001' }]
-        : [{ id: 'turbine-1', parkId: 'park-1', code: 'T001' }],
+        ? [{ id: 'park-1', code: 'P-01' }]
+        : [{ id: 'turbine-1', parkId: 'park-1', code: 'ZAC-01-01' }],
   } as unknown as LocalIssueStore;
   return { store, filter };
 }
@@ -77,7 +77,7 @@ describe('issue feature view model', () => {
   it('resolves replica identifiers to catalog labels', () => {
     const { store } = createStore();
     expect(localLocations(store)).toEqual({
-      'park-1:turbine-1': { park: 'P001', turbine: 'T001' },
+      'park-1:turbine-1': { park: 'P-01', turbine: 'ZAC-01-01' },
     });
   });
 

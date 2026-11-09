@@ -27,9 +27,9 @@ export function AccessLayout({
         className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(ellipse_at_20%_15%,rgb(21_93_252_/_0.2),transparent_42%),radial-gradient(ellipse_at_80%_75%,rgb(6_182_212_/_0.08),transparent_36%)]"
       />
       <header className="mx-auto flex w-full max-w-7xl items-center justify-between">
-        <Link aria-label="Wind Ops, início" className="inline-flex items-center gap-2" to="/">
+        <Link aria-label="Wind Report, início" className="inline-flex items-center gap-2" to="/">
           <TowerMark className="size-6" />
-          <span className="font-semibold tracking-tight">Wind Ops</span>
+          <span className="font-semibold tracking-tight">Wind Report</span>
         </Link>
         <div className="flex items-center gap-2">
           <ThemeToggle />
@@ -53,7 +53,7 @@ export function AccessLayout({
                 <span className="size-2 rounded-full bg-blue-400" />
                 Registro de campo
               </div>
-              <span className="text-xs text-muted-foreground">Wind Ops</span>
+              <span className="text-xs text-muted-foreground">Wind Report</span>
             </div>
             <div aria-hidden="true" className="grid grid-cols-[0.8fr_1.2fr] gap-3">
               <div className="space-y-3 rounded-lg border border-border bg-background/70 p-3">

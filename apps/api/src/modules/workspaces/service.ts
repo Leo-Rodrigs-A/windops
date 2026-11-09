@@ -122,8 +122,8 @@ async function deliverInvitation(
   try {
     await emailSender.send({
       to: invitation.email,
-      subject: 'Convite para o Wind Ops',
-      text: `Você foi convidado para entrar no workspace do Wind Ops.\n\nAbra este link para continuar: ${link.toString()}\n\nO convite expira em 48 horas. Se você não esperava este convite, ignore esta mensagem.`,
+      subject: 'Convite para o Wind Report',
+      text: `Você foi convidado para entrar no workspace do Wind Report.\n\nAbra este link para continuar: ${link.toString()}\n\nO convite expira em 48 horas. Se você não esperava este convite, ignore esta mensagem.`,
     });
   } catch {
     await pool.query(

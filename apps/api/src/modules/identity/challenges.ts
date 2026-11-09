@@ -307,7 +307,7 @@ export class LoginChallengeService {
     try {
       await this.emailSender.send({
         to: email,
-        subject: 'Seu código de acesso ao Wind Ops',
+        subject: 'Seu código de acesso ao Wind Report',
         text: `Seu código de acesso é ${code}. Ele expira em 15 minutos. Se você não solicitou este código, ignore esta mensagem.`,
       });
     } catch {

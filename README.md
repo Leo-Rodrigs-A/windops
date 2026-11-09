@@ -1,6 +1,6 @@
-# Wind Ops
+# Wind Report
 
-Wind Ops ajuda equipes de manutenção a registrar e atender problemas nos elevadores de torres eólicas, inclusive durante visitas sem internet. Em vez de lembrar dos problemas para transcrevê-los depois em uma planilha, o técnico registra o chamado no local; a aplicação guarda a alteração no dispositivo e a envia quando a conexão retorna.
+Wind Report ajuda equipes de manutenção a registrar e atender problemas nos elevadores de torres eólicas, inclusive durante visitas sem internet. Em vez de lembrar dos problemas para transcrevê-los depois em uma planilha, o técnico registra o chamado no local; a aplicação guarda a alteração no dispositivo e a envia quando a conexão retorna.
 
 O fluxo é: **visitar o parque → registrar o problema → sincronizar → atender → consultar o histórico**. A interface está em português e funciona como PWA, uma aplicação web que pode ser instalada pelo navegador.
 

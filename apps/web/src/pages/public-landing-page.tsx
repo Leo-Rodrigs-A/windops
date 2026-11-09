@@ -35,19 +35,19 @@ const issues = [
   {
     state: 'Pendente',
     title: 'Elevador não inicia a subida',
-    place: 'Ventos do Norte · Turbina T-08',
+    place: 'Ventos do Norte · Turbina ZAC-01-08',
     color: 'amber',
   },
   {
     state: 'Em andamento',
     title: 'Ruído durante a subida',
-    place: 'Ventos do Norte · Turbina T-09',
+    place: 'Ventos do Norte · Turbina ZAC-01-09',
     color: 'blue',
   },
   {
     state: 'Concluída',
     title: 'Porta não fecha corretamente',
-    place: 'Sul · Turbina T-03',
+    place: 'Sul · Turbina ZAC-02-03',
     color: 'green',
   },
 ];
@@ -134,9 +134,9 @@ export function PublicLandingPage() {
       />
       <div className="mx-auto max-w-6xl">
         <header className="flex items-center justify-between py-5 sm:py-6">
-          <Link aria-label="Wind Ops, início" className="inline-flex items-center gap-2" to="/">
+          <Link aria-label="Wind Report, início" className="inline-flex items-center gap-2" to="/">
             <TowerMark className="size-5" />
-            <span className="text-sm font-semibold tracking-tight">Wind Ops</span>
+            <span className="text-sm font-semibold tracking-tight">Wind Report</span>
           </Link>
           <div className="flex items-center gap-2">
             <ThemeToggle />
@@ -174,8 +174,8 @@ export function PublicLandingPage() {
               O registro começa <span className="text-brand">no campo.</span>
             </h1>
             <p className="max-w-xl text-base leading-relaxed text-muted-foreground sm:text-lg">
-              Wind Ops organiza o registro e o acompanhamento de problemas nos elevadores de torres
-              eólicas, conectando o trabalho de campo à equipe de operação.
+              Wind Report organiza o registro e o acompanhamento de problemas nos elevadores de
+              torres eólicas, conectando o trabalho de campo à equipe de operação.
             </p>
             {orphan ? (
               <Card className="max-w-xl bg-card/80">
@@ -322,7 +322,7 @@ export function PublicLandingPage() {
                 <div className="grid grid-cols-2 gap-3">
                   {[
                     ['Parque', 'Ventos do Norte'],
-                    ['Turbina', 'Turbina T-08'],
+                    ['Turbina', 'Turbina ZAC-01-08'],
                   ].map(([label, value]) => (
                     <div key={label}>
                       <p className="mb-1.5 text-[10px] text-muted-foreground">{label}</p>
@@ -367,12 +367,12 @@ export function PublicLandingPage() {
                 </span>
                 <div className="-mr-3 rounded-lg border border-border bg-muted p-3">
                   <p className="flex items-center gap-2 text-xs font-medium">
-                    <TowerMark className="size-3" /> Wind Ops{' '}
+                    <TowerMark className="size-3" /> Wind Report{' '}
                     <span className="ml-auto text-muted-foreground">agora</span>
                   </p>
                   <p className="mt-2 text-xs font-semibold">Novo chamado · Ventos do Norte</p>
                   <p className="mt-1 text-[10px] text-muted-foreground">
-                    Turbina T-08 · Elevador não inicia a subida
+                    Turbina ZAC-01-08 · Elevador não inicia a subida
                   </p>
                 </div>
               </CardContent>
@@ -421,7 +421,7 @@ export function PublicLandingPage() {
                     <Wind className="size-4 text-brand" /> Parques e turbinas
                   </div>
                   <p className="mt-1 text-xs text-muted-foreground">
-                    Ventos do Norte · Turbina T-08
+                    Ventos do Norte · Turbina ZAC-01-08
                   </p>
                 </div>
               </div>
@@ -482,12 +482,14 @@ export function PublicLandingPage() {
                   <span className="rounded-full bg-muted px-3 py-1 text-[10px]">
                     Ventos do Norte
                   </span>
-                  <span className="rounded-full bg-muted px-3 py-1 text-[10px]">Turbina T-08</span>
+                  <span className="rounded-full bg-muted px-3 py-1 text-[10px]">
+                    Turbina ZAC-01-08
+                  </span>
                 </div>
                 <div className="flex items-start gap-3 border-t border-border pt-4">
                   <ClipboardList className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
                   <div className="min-w-0 flex-1">
-                    <p className="text-xs font-medium">Ventos do Norte · Turbina T-08</p>
+                    <p className="text-xs font-medium">Ventos do Norte · Turbina ZAC-01-08</p>
                     <p className="mt-1 text-xs">Elevador não inicia a subida</p>
                   </div>
                   <span className="rounded-full bg-amber-400/10 px-2 py-1 text-[10px] text-amber-300">
@@ -518,7 +520,7 @@ export function PublicLandingPage() {
               ],
               [
                 'Posso instalar no meu dispositivo?',
-                'O Wind Ops pode ser instalado pelo navegador como PWA em dispositivos compatíveis.',
+                'O Wind Report pode ser instalado pelo navegador como PWA em dispositivos compatíveis.',
               ],
             ].map(([question, answer]) => (
               <details className="group border-t border-border py-4" key={question}>
@@ -558,7 +560,7 @@ export function PublicLandingPage() {
         </section>
 
         <footer className="flex flex-col gap-2 border-t border-border py-5 text-[10px] text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
-          <span>Wind Ops · Operação em campo</span>
+          <span>Wind Report · Operação em campo</span>
           <span>Desenvolvido para equipes de manutenção eólica</span>
         </footer>
       </div>

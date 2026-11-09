@@ -58,7 +58,7 @@ export function WorkspaceHomePage() {
                 <p className="mb-2 text-sm text-muted-foreground">
                   {context.workspace.name} / Visão geral
                 </p>
-                <h1 className="text-3xl font-semibold tracking-tight">Bem-vindo ao Wind Ops</h1>
+                <h1 className="text-3xl font-semibold tracking-tight">Bem-vindo ao Wind Report</h1>
                 <p className="mt-2 text-muted-foreground">
                   A base de acesso da sua operação está pronta.
                 </p>
@@ -122,7 +122,7 @@ export function WorkspaceHomePage() {
         <main className="mx-auto flex min-h-dvh max-w-xl flex-col gap-6 bg-background px-5 py-6 text-foreground">
           <header className="flex items-center justify-between gap-3">
             <Link
-              aria-label="Wind Ops, início"
+              aria-label="Wind Report, início"
               className="inline-flex min-w-0 items-center gap-2"
               to="/app"
             >
@@ -133,7 +133,7 @@ export function WorkspaceHomePage() {
           </header>
           <section>
             <p className="text-sm text-muted-foreground">Visão geral</p>
-            <h1 className="mt-1 text-2xl font-semibold tracking-tight">Bem-vindo ao Wind Ops</h1>
+            <h1 className="mt-1 text-2xl font-semibold tracking-tight">Bem-vindo ao Wind Report</h1>
           </section>
           <Card className="border-blue-400/10 bg-[radial-gradient(ellipse_at_85%_10%,rgb(37_99_235_/_0.14),transparent_42%),var(--card)]">
             <CardHeader>
@@ -191,7 +191,7 @@ export function NoWorkspacePage() {
           <CardTitle className="text-2xl">Sua conta ainda não está vinculada</CardTitle>
           <CardDescription className="leading-relaxed">
             A autenticação foi concluída, mas esta conta não possui membership ativa em um workspace
-            Wind Ops.
+            Wind Report.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-5">
@@ -296,7 +296,7 @@ export function InvitationAcceptPage() {
             <Check aria-hidden="true" className="size-5" />
           </span>
           <div>
-            <p className="text-sm text-muted-foreground">Wind Ops / Equipe</p>
+            <p className="text-sm text-muted-foreground">Wind Report / Equipe</p>
             <CardTitle className="mt-2 text-2xl">Aceitar convite</CardTitle>
             <CardDescription className="mt-2 leading-relaxed">
               Entre com o endereço que recebeu o convite. A confirmação por e-mail da sessão

@@ -36,7 +36,7 @@ export function WorkspaceSidebarLayout({
         <SidebarHeader className="gap-4 p-4">
           <div className="flex items-center gap-3 px-2 py-1">
             <TowerMark className="size-5 shrink-0" />
-            <span className="truncate text-sm font-semibold">Wind Ops</span>
+            <span className="truncate text-sm font-semibold">Wind Report</span>
           </div>
           <div className="min-w-0 px-2">
             <p className="text-xs text-muted-foreground">Workspace</p>

@@ -27,6 +27,7 @@ import { Textarea } from '../../components/ui/textarea';
 import { workspaceNavigationItems } from '../../components/ui/workspace-navigation';
 import { WorkspaceSidebarLayout } from '../../components/ui/workspace-sidebar';
 import { ApiRequestError } from '../../lib/auth-api';
+import { sortCatalogByCreation } from '../../lib/catalog-order';
 import { getIssues, lifecycleIssue } from '../../lib/issues-api';
 import { getPark, getParks, getParkTurbines, getTurbine } from '../../lib/workspace-api';
 import type { LocalIssueStore } from '../../offline/local-issue-store';
@@ -237,9 +238,10 @@ export function WorkspaceHomePage() {
       const all = offlineWorkspace.store
         .listReplica('parks')
         .filter((park) => park.deactivatedAt == null) as unknown as Park[];
-      setParks(all);
+      const ordered = sortCatalogByCreation(all);
+      setParks(ordered);
       setParkId((current) =>
-        all.some((park) => park.id === current) ? current : (all[0]?.id ?? ''),
+        ordered.some((park) => park.id === current) ? current : (ordered[0]?.id ?? ''),
       );
       setCatalogLoading(false);
       if (!offlineWorkspace.ready)
@@ -255,9 +257,10 @@ export function WorkspaceHomePage() {
         all.push(...page.items.filter((park) => park.deactivatedAt === null));
         cursor = page.nextCursor ?? undefined;
       } while (cursor);
-      setParks(all);
+      const ordered = sortCatalogByCreation(all);
+      setParks(ordered);
       setParkId((current) =>
-        all.some((park) => park.id === current) ? current : (all[0]?.id ?? ''),
+        ordered.some((park) => park.id === current) ? current : (ordered[0]?.id ?? ''),
       );
       if (all.length === 0) setCreateError('Não há parques ativos para registrar um chamado.');
     } catch (error) {
@@ -265,8 +268,9 @@ export function WorkspaceHomePage() {
         ?.listReplica('parks')
         .filter((park) => park.deactivatedAt == null) as unknown as Park[] | undefined;
       if (cached?.length) {
-        setParks(cached);
-        setParkId(cached[0]?.id ?? '');
+        const ordered = sortCatalogByCreation(cached);
+        setParks(ordered);
+        setParkId(ordered[0]?.id ?? '');
       } else setCreateError(issueErrorMessage(error, 'carregar os equipamentos disponíveis'));
     } finally {
       setCatalogLoading(false);
@@ -289,8 +293,9 @@ export function WorkspaceHomePage() {
         .filter(
           (turbine) => turbine.parkId === parkId && turbine.deactivatedAt == null,
         ) as unknown as Turbine[];
-      setTurbines(all);
-      setTurbineId(all[0]?.id ?? '');
+      const ordered = sortCatalogByCreation(all);
+      setTurbines(ordered);
+      setTurbineId(ordered[0]?.id ?? '');
       setCatalogLoading(false);
       if (all.length === 0) setCreateError('Não há turbinas ativas salvas neste parque.');
       return;
@@ -308,8 +313,9 @@ export function WorkspaceHomePage() {
           cursor = page.nextCursor ?? undefined;
         } while (cursor);
         if (active) {
-          setTurbines(all);
-          setTurbineId(all[0]?.id ?? '');
+          const ordered = sortCatalogByCreation(all);
+          setTurbines(ordered);
+          setTurbineId(ordered[0]?.id ?? '');
           if (all.length === 0)
             setCreateError('Este parque não tem turbinas ativas para novos chamados.');
         }
@@ -321,8 +327,9 @@ export function WorkspaceHomePage() {
               (turbine) => turbine.parkId === parkId && turbine.deactivatedAt == null,
             ) as unknown as Turbine[] | undefined;
           if (cached?.length) {
-            setTurbines(cached);
-            setTurbineId(cached[0]?.id ?? '');
+            const ordered = sortCatalogByCreation(cached);
+            setTurbines(ordered);
+            setTurbineId(ordered[0]?.id ?? '');
           } else setCreateError(issueErrorMessage(error, 'carregar as turbinas'));
         }
       } finally {

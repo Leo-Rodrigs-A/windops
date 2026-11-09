@@ -1,7 +1,7 @@
 {
   "id": "/app",
-  "name": "Wind Ops",
-  "short_name": "Wind Ops",
+  "name": "Wind Report",
+  "short_name": "Wind Report",
   "description": "Registro e acompanhamento de operações de parques eólicos.",
   "start_url": "/app",
   "scope": "/",

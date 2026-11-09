@@ -1,4 +1,4 @@
-# Working on Wind Ops
+# Working on Wind Report
 
 Read .agent/architeture.md and .agent/memory.md before changes. Follow .agent/tasks/README.md: .agent/tasks/00 - roadmap contains the original product roadmap, while numbered slice folders contain executable task plans. Pick the relevant task, respect its dependencies, and update its checkboxes, slice index and evidence when finished. Writing a plan does not complete implementation. Create detailed tasks progressively, not the entire backlog at once.
 

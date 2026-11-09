@@ -153,21 +153,21 @@ try {
     );
     const membershipId = membership.rows[0].id;
     const park = await app.query(
-      `INSERT INTO public.parks(workspace_id, code) VALUES ($1, 'P01') RETURNING id`,
+      `INSERT INTO public.parks(workspace_id, code) VALUES ($1, 'P-01') RETURNING id`,
       [workspaceId],
     );
     const turbine = await app.query(
       `INSERT INTO public.turbines(workspace_id, park_id, code)
-       VALUES ($1, $2, 'T01') RETURNING id`,
+       VALUES ($1, $2, 'ZAC-01-01') RETURNING id`,
       [workspaceId, park.rows[0].id],
     );
     const secondPark = await app.query(
-      `INSERT INTO public.parks(workspace_id, code) VALUES ($1, 'P02') RETURNING id`,
+      `INSERT INTO public.parks(workspace_id, code) VALUES ($1, 'P-02') RETURNING id`,
       [workspaceId],
     );
     const secondTurbine = await app.query(
       `INSERT INTO public.turbines(workspace_id, park_id, code)
-       VALUES ($1, $2, 'T01') RETURNING id`,
+       VALUES ($1, $2, 'ZAC-02-01') RETURNING id`,
       [workspaceId, secondPark.rows[0].id],
     );
     const issue = await app.query(
@@ -503,6 +503,8 @@ try {
     let preservedUserId;
     let preservedParkId;
     let preservedTurbineId;
+    let normalizedParkId;
+    let normalizedTurbineId;
     try {
       const inserted = await upgradeApp.query(
         `INSERT INTO public.workspaces(name) VALUES ('I02 preserved workspace') RETURNING id`,
@@ -529,10 +531,73 @@ try {
         [preservedWorkspaceId, preservedParkId],
       );
       preservedTurbineId = turbine.rows[0].id;
+      const leadingZeroPark = await upgradeApp.query(
+        `INSERT INTO public.parks(workspace_id, code) VALUES ($1, 'P001') RETURNING id`,
+        [preservedWorkspaceId],
+      );
+      normalizedParkId = leadingZeroPark.rows[0].id;
+      const leadingZeroTurbine = await upgradeApp.query(
+        `INSERT INTO public.turbines(workspace_id, park_id, code)
+         VALUES ($1, $2, 'T008') RETURNING id`,
+        [preservedWorkspaceId, normalizedParkId],
+      );
+      normalizedTurbineId = leadingZeroTurbine.rows[0].id;
+      await upgradeApp.query(`INSERT INTO public.parks(workspace_id, code) VALUES ($1, 'P099')`, [
+        preservedWorkspaceId,
+      ]);
+      await upgradeApp.query(
+        `INSERT INTO public.turbines(workspace_id, park_id, code) VALUES ($1, $2, 'T099')`,
+        [preservedWorkspaceId, preservedParkId],
+      );
     } finally {
       await upgradeApp.end();
     }
 
+    await assert.rejects(
+      async () => runFullMigration(upgradeDatabase),
+      /Command failed/,
+      'park code normalization collision must abort the migration',
+    );
+    const collisionProbe = new Pool({
+      connectionString: connectionFor('DATABASE_URL', upgradeDatabase),
+      max: 1,
+    });
+    try {
+      const unchanged = await collisionProbe.query(`SELECT code FROM public.parks WHERE id = $1`, [
+        preservedParkId,
+      ]);
+      assert.equal(unchanged.rows[0].code, 'P99', 'failed migration leaves park codes unchanged');
+      await collisionProbe.query(
+        `DELETE FROM public.parks WHERE workspace_id = $1 AND code = 'P099'`,
+        [preservedWorkspaceId],
+      );
+    } finally {
+      await collisionProbe.end();
+    }
+    await assert.rejects(
+      async () => runFullMigration(upgradeDatabase),
+      /Command failed/,
+      'turbine code normalization collision must abort the migration',
+    );
+    const turbineCollisionProbe = new Pool({
+      connectionString: connectionFor('DATABASE_URL', upgradeDatabase),
+      max: 1,
+    });
+    try {
+      const unchanged = await turbineCollisionProbe.query(
+        `SELECT p.code AS park_code, t.code AS turbine_code
+         FROM public.parks p JOIN public.turbines t ON t.park_id = p.id
+         WHERE t.id = $1`,
+        [preservedTurbineId],
+      );
+      assert.deepEqual(unchanged.rows, [{ park_code: 'P99', turbine_code: 'T99' }]);
+      await turbineCollisionProbe.query(
+        `DELETE FROM public.turbines WHERE workspace_id = $1 AND code = 'T099'`,
+        [preservedWorkspaceId],
+      );
+    } finally {
+      await turbineCollisionProbe.end();
+    }
     await Promise.all([runFullMigration(upgradeDatabase), runFullMigration(upgradeDatabase)]);
     provision(upgradeDatabase);
     const verifyUpgrade = new Pool({
@@ -563,7 +628,19 @@ try {
          WHERE p.id = $1 AND t.id = $2`,
         [preservedParkId, preservedTurbineId],
       );
-      assert.deepEqual(preservedCatalog.rows, [{ park_code: 'P99', turbine_code: 'T99' }]);
+      assert.deepEqual(preservedCatalog.rows, [{ park_code: 'P-99', turbine_code: 'ZAC-99-99' }]);
+      const normalizedCatalog = await verifyUpgrade.query(
+        `SELECT p.code AS park_code, t.code AS turbine_code
+         FROM public.parks p JOIN public.turbines t
+           ON t.park_id = p.id AND t.workspace_id = p.workspace_id
+         WHERE p.id = $1 AND t.id = $2`,
+        [normalizedParkId, normalizedTurbineId],
+      );
+      assert.deepEqual(
+        normalizedCatalog.rows,
+        [{ park_code: 'P-01', turbine_code: 'ZAC-01-08' }],
+        'leading zeros normalize to the two-digit minimum and IDs remain stable',
+      );
       const schema = await verifyUpgrade.query(
         `SELECT to_regclass('public.auth_users') AS users, to_regclass('public.workspace_members') AS members`,
       );
