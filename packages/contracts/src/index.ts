@@ -124,18 +124,22 @@ export const workspaceDirectoryPageSchema = z
   })
   .strict();
 
-const catalogCodeSchema = (prefix: 'P' | 'T') =>
-  z
-    .string()
-    .trim()
-    .toUpperCase()
-    .regex(new RegExp(`^${prefix}[0-9]{2,6}$`), `Use o formato ${prefix}01.`);
+const parkCodeSchema = z
+  .string()
+  .trim()
+  .toUpperCase()
+  .regex(/^P-[0-9]{2,6}$/, 'Use o formato P-01.');
+const turbineCodeSchema = z
+  .string()
+  .trim()
+  .toUpperCase()
+  .regex(/^ZAC-[0-9]{2,6}-[0-9]{2,6}$/, 'Use o formato ZAC-01-01.');
 
 export const parkSchema = z
   .object({
     id: z.uuid(),
     workspaceId: z.uuid(),
-    code: catalogCodeSchema('P'),
+    code: parkCodeSchema,
     createdAt: z.iso.datetime(),
     updatedAt: z.iso.datetime(),
     revision: z.number().int().positive(),
@@ -147,7 +151,7 @@ export const turbineSchema = z
     id: z.uuid(),
     workspaceId: z.uuid(),
     parkId: z.uuid(),
-    code: catalogCodeSchema('T'),
+    code: turbineCodeSchema,
     createdAt: z.iso.datetime(),
     updatedAt: z.iso.datetime(),
     revision: z.number().int().positive(),
@@ -164,13 +168,13 @@ export const parksQuerySchema = z
   })
   .strict();
 export const turbinesQuerySchema = parksQuerySchema;
-export const createParkSchema = z.object({ code: catalogCodeSchema('P') }).strict();
+export const createParkSchema = z.object({ code: parkCodeSchema }).strict();
 export const updateParkSchema = z
-  .object({ code: catalogCodeSchema('P'), expectedRevision: z.number().int().positive() })
+  .object({ code: parkCodeSchema, expectedRevision: z.number().int().positive() })
   .strict();
-export const createTurbineSchema = z.object({ code: catalogCodeSchema('T') }).strict();
+export const createTurbineSchema = z.object({ code: turbineCodeSchema }).strict();
 export const updateTurbineSchema = z
-  .object({ code: catalogCodeSchema('T'), expectedRevision: z.number().int().positive() })
+  .object({ code: turbineCodeSchema, expectedRevision: z.number().int().positive() })
   .strict();
 export const equipmentLifecycleCommandSchema = z
   .object({ commandId: z.uuid(), expectedRevision: z.number().int().positive() })
@@ -180,7 +184,7 @@ export const deletedParkSchema = z
     result: z.literal('deleted'),
     id: z.uuid(),
     workspaceId: z.uuid(),
-    code: catalogCodeSchema('P'),
+    code: parkCodeSchema,
   })
   .strict();
 export const archivedParkSchema = z
@@ -200,7 +204,7 @@ export const deletedTurbineSchema = z
     id: z.uuid(),
     workspaceId: z.uuid(),
     parkId: z.uuid(),
-    code: catalogCodeSchema('T'),
+    code: turbineCodeSchema,
   })
   .strict();
 export const archivedTurbineSchema = z

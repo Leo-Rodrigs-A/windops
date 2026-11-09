@@ -123,28 +123,27 @@ try {
   );
 
   const parkValues = [
-    [parkIds[0], ids.workspaceA, 'P01'],
-    [parkIds[1], ids.workspaceA, 'P02'],
-    [parkIds[2], ids.workspaceA, 'P03'],
-    [parkIds[3], ids.workspaceA, 'P04'],
-    [parkIds[4], ids.workspaceB, 'P01'],
+    [parkIds[0], ids.workspaceA, 'P-01', '2026-01-03T00:00:00.000Z'],
+    [parkIds[1], ids.workspaceA, 'P-02', '2026-01-01T00:00:00.000Z'],
+    [parkIds[2], ids.workspaceA, 'P-03', '2026-01-04T00:00:00.000Z'],
+    [parkIds[3], ids.workspaceA, 'P-04', '2026-01-02T00:00:00.000Z'],
+    [parkIds[4], ids.workspaceB, 'P-01', '2026-01-01T00:00:00.000Z'],
   ];
-  for (const [parkId, workspaceId, code] of parkValues)
-    await pool.query('INSERT INTO public.parks(id, workspace_id, code) VALUES ($1, $2, $3)', [
-      parkId,
-      workspaceId,
-      code,
-    ]);
-  const turbineValues = [
-    [turbineIds[0], ids.workspaceA, parkIds[0], 'T01'],
-    [turbineIds[1], ids.workspaceA, parkIds[0], 'T02'],
-    [turbineIds[2], ids.workspaceA, parkIds[0], 'T03'],
-    [turbineIds[3], ids.workspaceB, parkIds[4], 'T01'],
-  ];
-  for (const [turbineId, workspaceId, parkId, code] of turbineValues)
+  for (const [parkId, workspaceId, code, createdAt] of parkValues)
     await pool.query(
-      `INSERT INTO public.turbines(id, workspace_id, park_id, code) VALUES ($1, $2, $3, $4)`,
-      [turbineId, workspaceId, parkId, code],
+      'INSERT INTO public.parks(id, workspace_id, code, created_at) VALUES ($1, $2, $3, $4)',
+      [parkId, workspaceId, code, createdAt],
+    );
+  const turbineValues = [
+    [turbineIds[0], ids.workspaceA, parkIds[0], 'ZAC-01-01', '2026-01-02T00:00:00.000Z'],
+    [turbineIds[1], ids.workspaceA, parkIds[0], 'ZAC-01-02', '2026-01-03T00:00:00.000Z'],
+    [turbineIds[2], ids.workspaceA, parkIds[0], 'ZAC-01-03', '2026-01-01T00:00:00.000Z'],
+    [turbineIds[3], ids.workspaceB, parkIds[4], 'ZAC-01-01', '2026-01-01T00:00:00.000Z'],
+  ];
+  for (const [turbineId, workspaceId, parkId, code, createdAt] of turbineValues)
+    await pool.query(
+      `INSERT INTO public.turbines(id, workspace_id, park_id, code, created_at) VALUES ($1, $2, $3, $4, $5)`,
+      [turbineId, workspaceId, parkId, code, createdAt],
     );
 
   const knownUsers = new Map(userRows.map((user) => [user.id, user]));
@@ -204,7 +203,7 @@ try {
     assert.equal(page.statusCode, 200, page.body);
     assert.deepEqual(
       page.json().items.map(({ code }) => code),
-      ['P01', 'P02'],
+      ['P-02', 'P-04'],
     );
     assert.ok(page.json().nextCursor);
     const next = await app.inject({
@@ -214,18 +213,18 @@ try {
     assert.equal(next.statusCode, 200, next.body);
     assert.deepEqual(
       next.json().items.map(({ code }) => code),
-      ['P03', 'P04'],
+      ['P-01', 'P-03'],
     );
     assert.equal(next.json().nextCursor, null);
   }
 
-  const search = await app.inject({ url: `${root}/parks?search=p0`, headers: headers(ids.tech) });
+  const search = await app.inject({ url: `${root}/parks?search=p-0`, headers: headers(ids.tech) });
   assert.deepEqual(
     search.json().items.map(({ code }) => code),
-    ['P01', 'P02', 'P03', 'P04'],
+    ['P-02', 'P-04', 'P-01', 'P-03'],
   );
   const literalSearch = await app.inject({
-    url: `${root}/parks?search=P0_`,
+    url: `${root}/parks?search=P-0_`,
     headers: headers(ids.tech),
   });
   assert.equal(literalSearch.statusCode, 200, literalSearch.body);
@@ -242,7 +241,7 @@ try {
   });
   assert.deepEqual(
     turbinePage.json().items.map(({ code }) => code),
-    ['T01', 'T02'],
+    ['ZAC-01-03', 'ZAC-01-01'],
   );
   const turbineNext = await app.inject({
     url: `${root}/parks/${parkIds[0]}/turbines?limit=2&cursor=${turbinePage.json().nextCursor}`,
@@ -250,8 +249,22 @@ try {
   });
   assert.deepEqual(
     turbineNext.json().items.map(({ code }) => code),
-    ['T03'],
+    ['ZAC-01-02'],
   );
+  const renamedSeedPark = await app.inject({
+    method: 'PATCH',
+    url: `${root}/parks/${parkIds[0]}`,
+    headers: headers(ids.admin),
+    payload: { code: 'P-07', expectedRevision: 1 },
+  });
+  assert.equal(renamedSeedPark.statusCode, 200, renamedSeedPark.body);
+  const cascadedTurbine = await app.inject({
+    url: `${root}/parks/${parkIds[0]}/turbines/${turbineIds[0]}`,
+    headers: headers(ids.tech),
+  });
+  assert.equal(cascadedTurbine.statusCode, 200, cascadedTurbine.body);
+  assert.equal(cascadedTurbine.json().code, 'ZAC-07-01');
+  assert.equal(cascadedTurbine.json().revision, 2);
   const locationTransaction = await pool.connect();
   try {
     await locationTransaction.query('BEGIN');
@@ -333,7 +346,7 @@ try {
 
   const parksUrl = `${root}/parks`;
   await expectError(
-    await app.inject({ method: 'POST', url: parksUrl, payload: { code: 'P91' } }),
+    await app.inject({ method: 'POST', url: parksUrl, payload: { code: 'P-91' } }),
     401,
     'AUTHENTICATION_REQUIRED',
   );
@@ -342,7 +355,7 @@ try {
       method: 'POST',
       url: parksUrl,
       headers: headers(ids.tech),
-      payload: { code: 'P91' },
+      payload: { code: 'P-91' },
     }),
     403,
     'WORKSPACE_ACCESS_DENIED',
@@ -352,7 +365,7 @@ try {
       method: 'POST',
       url: parksUrl,
       headers: headers(ids.admin),
-      payload: { code: 'P91', workspaceId: ids.workspaceB },
+      payload: { code: 'P-91', workspaceId: ids.workspaceB },
     }),
     400,
     'VALIDATION_ERROR',
@@ -362,7 +375,7 @@ try {
     method: 'POST',
     url: parksUrl,
     headers: headers(ids.admin),
-    payload: { code: 'P91' },
+    payload: { code: 'P-91' },
   });
   assert.equal(createdPark.statusCode, 201, createdPark.body);
   assert.equal(createdPark.json().revision, 1);
@@ -374,13 +387,13 @@ try {
       method: 'POST',
       url: parksUrl,
       headers: headers(ids.admin),
-      payload: { code: 'P92' },
+      payload: { code: 'P-92' },
     }),
     app.inject({
       method: 'POST',
       url: parksUrl,
       headers: headers(ids.admin),
-      payload: { code: 'P92' },
+      payload: { code: 'P-92' },
     }),
   ]);
   assert.deepEqual(duplicateCreations.map((response) => response.statusCode).sort(), [201, 409]);
@@ -389,7 +402,7 @@ try {
       method: 'POST',
       url: parksUrl,
       headers: headers(ids.admin),
-      payload: { code: 'P01' },
+      payload: { code: 'P-03' },
     }),
     409,
     'CATALOG_CODE_TAKEN',
@@ -400,7 +413,7 @@ try {
     method: 'PATCH',
     url: parkPath,
     headers: headers(ids.admin),
-    payload: { code: 'P93', expectedRevision: 1 },
+    payload: { code: 'P-93', expectedRevision: 1 },
   });
   assert.equal(renamedPark.statusCode, 200, renamedPark.body);
   assert.equal(renamedPark.json().revision, 2);
@@ -410,7 +423,7 @@ try {
       method: 'PATCH',
       url: parkPath,
       headers: headers(ids.admin),
-      payload: { code: 'P94', expectedRevision: 1 },
+      payload: { code: 'P-94', expectedRevision: 1 },
     }),
     409,
     'REVISION_CONFLICT',
@@ -420,7 +433,7 @@ try {
       method: 'PATCH',
       url: parkPath,
       headers: headers(ids.admin),
-      payload: { code: 'P02', expectedRevision: 2 },
+      payload: { code: 'P-02', expectedRevision: 2 },
     }),
     409,
     'CATALOG_CODE_TAKEN',
@@ -430,28 +443,29 @@ try {
       method: 'PATCH',
       url: parkPath,
       headers: headers(ids.admin),
-      payload: { code: 'P95', expectedRevision: 2 },
+      payload: { code: 'P-95', expectedRevision: 2 },
     }),
     app.inject({
       method: 'PATCH',
       url: parkPath,
       headers: headers(ids.admin),
-      payload: { code: 'P96', expectedRevision: 2 },
+      payload: { code: 'P-96', expectedRevision: 2 },
     }),
   ]);
   assert.deepEqual(concurrentEdits.map((response) => response.statusCode).sort(), [200, 409]);
   const parkAfterRace = await pool.query(
-    'SELECT revision FROM public.parks WHERE workspace_id = $1 AND id = $2',
+    'SELECT revision, code FROM public.parks WHERE workspace_id = $1 AND id = $2',
     [ids.workspaceA, createdParkId],
   );
   assert.equal(parkAfterRace.rows[0].revision, 3);
+  const turbinePrefix = `ZAC-${parkAfterRace.rows[0].code.slice(2)}-`;
 
   const turbinesUrl = `${parkPath}/turbines`;
   const createdTurbine = await app.inject({
     method: 'POST',
     url: turbinesUrl,
     headers: headers(ids.admin),
-    payload: { code: 'T91' },
+    payload: { code: `${turbinePrefix}91` },
   });
   assert.equal(createdTurbine.statusCode, 201, createdTurbine.body);
   assert.equal(createdTurbine.json().revision, 1);
@@ -461,7 +475,7 @@ try {
       method: 'POST',
       url: `${root}/parks/${parkIds[4]}/turbines`,
       headers: headers(ids.admin),
-      payload: { code: 'T92' },
+      payload: { code: 'ZAC-02-92' },
     }),
     404,
     'RESOURCE_NOT_FOUND',
@@ -471,7 +485,7 @@ try {
       method: 'POST',
       url: turbinesUrl,
       headers: headers(ids.admin),
-      payload: { code: 'T91' },
+      payload: { code: `${turbinePrefix}91` },
     }),
     409,
     'CATALOG_CODE_TAKEN',
@@ -481,17 +495,27 @@ try {
     method: 'PATCH',
     url: turbinePath,
     headers: headers(ids.admin),
-    payload: { code: 'T93', expectedRevision: 1 },
+    payload: { code: `${turbinePrefix}93`, expectedRevision: 1 },
   });
   assert.equal(renamedTurbine.statusCode, 200, renamedTurbine.body);
   assert.equal(renamedTurbine.json().revision, 2);
   assert.equal(renamedTurbine.json().parkId, createdParkId);
   await expectError(
     await app.inject({
+      method: 'POST',
+      url: turbinesUrl,
+      headers: headers(ids.admin),
+      payload: { code: 'ZAC-01-99' },
+    }),
+    400,
+    'INVALID_CATALOG_CODE',
+  );
+  await expectError(
+    await app.inject({
       method: 'PATCH',
       url: turbinePath,
       headers: headers(ids.admin),
-      payload: { code: 'T94', expectedRevision: 1 },
+      payload: { code: `${turbinePrefix}94`, expectedRevision: 1 },
     }),
     409,
     'REVISION_CONFLICT',
@@ -501,7 +525,7 @@ try {
       method: 'PATCH',
       url: turbinePath,
       headers: headers(ids.admin),
-      payload: { code: 'T94', expectedRevision: 2, parkId: parkIds[0] },
+      payload: { code: 'ZAC-01-94', expectedRevision: 2, parkId: parkIds[0] },
     }),
     400,
     'VALIDATION_ERROR',
@@ -546,7 +570,7 @@ try {
         method: 'POST',
         url: parksUrl,
         headers: headers(ids.admin),
-        payload: { code: 'P97' },
+        payload: { code: 'P-97' },
       })
       .then((response) => {
         requestSettled = true;
@@ -564,7 +588,7 @@ try {
   }
   const revokedWrite = await pool.query(
     'SELECT 1 FROM public.parks WHERE workspace_id = $1 AND code = $2',
-    [ids.workspaceA, 'P97'],
+    [ids.workspaceA, 'P-97'],
   );
   assert.equal(revokedWrite.rowCount, 0, 'revoked admin write leaves no catalog row');
 

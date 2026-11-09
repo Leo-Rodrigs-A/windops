@@ -48,6 +48,7 @@ function respondWriteError(
     | 'forbidden'
     | 'not_found'
     | 'conflict'
+    | 'invalid_code'
     | 'revision_conflict'
     | 'idempotency_conflict'
     | 'open_issues'
@@ -58,6 +59,7 @@ function respondWriteError(
     forbidden: [403, 'WORKSPACE_ACCESS_DENIED', 'Workspace access denied.'],
     not_found: [404, 'RESOURCE_NOT_FOUND', 'Resource not found.'],
     conflict: [409, 'CATALOG_CODE_TAKEN', 'A catalog code already exists in this scope.'],
+    invalid_code: [400, 'INVALID_CATALOG_CODE', 'The turbine code does not match the park.'],
     revision_conflict: [409, 'REVISION_CONFLICT', 'The catalog record changed. Reload and retry.'],
     idempotency_conflict: [
       409,

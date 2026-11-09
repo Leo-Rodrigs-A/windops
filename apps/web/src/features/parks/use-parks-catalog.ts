@@ -1,6 +1,7 @@
 import { type Park, parkSchema, type Turbine, turbineSchema } from '@windops/contracts';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { ApiRequestError } from '../../lib/auth-api';
+import { sortCatalogByCreation } from '../../lib/catalog-order';
 import { getPark, getParks, getParkTurbines } from '../../lib/workspace-api';
 import type { LocalIssueStore } from '../../offline/local-issue-store';
 import { getApiErrorMessage } from './model';
@@ -61,8 +62,8 @@ export function useParksCatalog({
       setParksError('');
       try {
         if (!online || !authenticated) {
-          const cached = cachedParks().filter((park) =>
-            park.code.includes(search.trim().toUpperCase()),
+          const cached = sortCatalogByCreation(
+            cachedParks().filter((park) => park.code.includes(search.trim().toUpperCase())),
           );
           setParks(cached);
           setParkCursor(null);
@@ -77,7 +78,9 @@ export function useParksCatalog({
           ...(cursor ? { cursor } : {}),
         });
         if (requestId !== parksRequest.current) return;
-        setParks((previous) => (append ? [...previous, ...page.items] : page.items));
+        setParks((previous) =>
+          sortCatalogByCreation(append ? [...previous, ...page.items] : page.items),
+        );
         setParkCursor(page.nextCursor);
         setSelectedParkId((previous) => {
           if (previous && (append || page.items.some((park) => park.id === previous)))
@@ -86,8 +89,8 @@ export function useParksCatalog({
         });
       } catch (error) {
         if (requestId !== parksRequest.current) return;
-        const cached = cachedParks().filter((park) =>
-          park.code.includes(search.trim().toUpperCase()),
+        const cached = sortCatalogByCreation(
+          cachedParks().filter((park) => park.code.includes(search.trim().toUpperCase())),
         );
         if (cached.length) {
           setParks(cached);
@@ -120,8 +123,10 @@ export function useParksCatalog({
       try {
         if (!online || !authenticated) {
           const park = cachedParks().find((item) => item.id === parkId) ?? null;
-          const cached = cachedTurbines(parkId).filter((item) =>
-            item.code.includes(search.trim().toUpperCase()),
+          const cached = sortCatalogByCreation(
+            cachedTurbines(parkId).filter((item) =>
+              item.code.includes(search.trim().toUpperCase()),
+            ),
           );
           setSelectedPark(park);
           setTurbines(cached);
@@ -139,12 +144,14 @@ export function useParksCatalog({
         ]);
         if (requestId !== detailRequest.current) return;
         setSelectedPark(park);
-        setTurbines((previous) => (append ? [...previous, ...page.items] : page.items));
+        setTurbines((previous) =>
+          sortCatalogByCreation(append ? [...previous, ...page.items] : page.items),
+        );
         setTurbineCursor(page.nextCursor);
       } catch (error) {
         if (requestId !== detailRequest.current) return;
         const park = cachedParks().find((item) => item.id === parkId) ?? null;
-        const cached = cachedTurbines(parkId);
+        const cached = sortCatalogByCreation(cachedTurbines(parkId));
         if (park) {
           setSelectedPark(park);
           setTurbines(cached);

@@ -30,7 +30,7 @@ self.addEventListener('fetch', event => { const request = event.request; const u
 self.addEventListener('push', event => {
   let payload = {};
   try { payload = event.data ? event.data.json() : {}; } catch {}
-  const title = typeof payload.title === 'string' ? payload.title.slice(0, 80) : 'Wind Ops';
+  const title = typeof payload.title === 'string' ? payload.title.slice(0, 80) : 'Wind Report';
   const body = typeof payload.body === 'string' ? payload.body.slice(0, 180) : 'Você tem um novo aviso.';
   const eventId = typeof payload.eventId === 'string' ? payload.eventId : '';
   event.waitUntil(self.registration.showNotification(title, {

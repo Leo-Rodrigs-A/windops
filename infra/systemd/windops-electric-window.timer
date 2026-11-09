@@ -1,5 +1,5 @@
 [Unit]
-Description=Start and stop Wind Ops Electric on the local sync window
+Description=Start and stop Wind Report Electric on the local sync window
 
 [Timer]
 OnBootSec=2min

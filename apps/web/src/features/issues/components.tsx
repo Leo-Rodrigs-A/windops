@@ -14,6 +14,7 @@ import {
 } from '../../components/ui/select';
 import { SidebarTrigger } from '../../components/ui/sidebar';
 import { WorkspaceSystemActions } from '../../components/workspace-system-actions';
+import { sortCatalogByCreation } from '../../lib/catalog-order';
 import { getParks, getParkTurbines } from '../../lib/workspace-api';
 import type { LocalIssueStore } from '../../offline/local-issue-store';
 import {
@@ -52,7 +53,7 @@ export function IssueLocationFilters({
   useEffect(() => {
     let active = true;
     if (!online && store) {
-      setParks(store.listReplica('parks') as unknown as Park[]);
+      setParks(sortCatalogByCreation(store.listReplica('parks') as unknown as Park[]));
       setLoading(false);
       return () => {
         active = false;
@@ -72,9 +73,10 @@ export function IssueLocationFilters({
           all.push(...page.items);
           cursor = page.nextCursor ?? undefined;
         } while (cursor);
-        if (active) setParks(all);
+        if (active) setParks(sortCatalogByCreation(all));
       } catch {
-        if (active) setParks((store?.listReplica('parks') as unknown as Park[]) ?? []);
+        if (active)
+          setParks(sortCatalogByCreation((store?.listReplica('parks') as unknown as Park[]) ?? []));
       } finally {
         if (active) setLoading(false);
       }
@@ -93,9 +95,11 @@ export function IssueLocationFilters({
     }
     if (!online && store) {
       setTurbines(
-        store
-          .listReplica('turbines')
-          .filter((row) => row.parkId === parkId) as unknown as Turbine[],
+        sortCatalogByCreation(
+          store
+            .listReplica('turbines')
+            .filter((row) => row.parkId === parkId) as unknown as Turbine[],
+        ),
       );
       return () => {
         active = false;
@@ -119,13 +123,15 @@ export function IssueLocationFilters({
           all.push(...page.items);
           cursor = page.nextCursor ?? undefined;
         } while (cursor);
-        if (active) setTurbines(all);
+        if (active) setTurbines(sortCatalogByCreation(all));
       } catch {
         if (active)
           setTurbines(
-            (store
-              ?.listReplica('turbines')
-              .filter((row) => row.parkId === parkId) as unknown as Turbine[]) ?? [],
+            sortCatalogByCreation(
+              (store
+                ?.listReplica('turbines')
+                .filter((row) => row.parkId === parkId) as unknown as Turbine[]) ?? [],
+            ),
           );
       }
     })();

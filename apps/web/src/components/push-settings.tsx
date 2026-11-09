@@ -12,7 +12,7 @@ function pushFailureMessage(cause: unknown) {
   const message = cause instanceof Error ? cause.message : '';
   if (/registration failed - push service error/i.test(message)) {
     if (/electron/i.test(navigator.userAgent))
-      return 'O navegador integrado usado nesta sessão não disponibiliza um serviço de push compatível. Abra o Wind Ops em um navegador padrão para ativar notificações.';
+      return 'O navegador integrado usado nesta sessão não disponibiliza um serviço de push compatível. Abra o Wind Report em um navegador padrão para ativar notificações.';
     return 'O navegador não conseguiu se registrar no serviço de push. Confira a conexão e tente novamente em outro navegador compatível.';
   }
   return message || 'Não foi possível atualizar as notificações neste aparelho.';

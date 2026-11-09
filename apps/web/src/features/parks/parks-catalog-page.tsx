@@ -59,7 +59,7 @@ import {
   updateTurbine,
 } from '../../lib/workspace-api';
 import { useOfflineWorkspace } from '../../offline/offline-workspace-context';
-import { findNextCatalogCode, getApiErrorMessage } from './model';
+import { findNextParkCode, findNextTurbineCode, getApiErrorMessage } from './model';
 import { useParksCatalog } from './use-parks-catalog';
 
 const catalogNavigation: WorkspaceNavigationItem[] = [...workspaceNavigationItems];
@@ -218,14 +218,14 @@ export function ParksCatalogPage() {
   }
 
   async function suggestParkCode() {
-    return findNextCatalogCode('P', (cursor) =>
+    return findNextParkCode((cursor) =>
       getParks(workspaceId, { limit: 100, ...(cursor ? { cursor } : {}) }),
     );
   }
 
-  async function suggestTurbineCode(parkId: string) {
-    return findNextCatalogCode('T', (cursor) =>
-      getParkTurbines(workspaceId, parkId, { limit: 100, ...(cursor ? { cursor } : {}) }),
+  async function suggestTurbineCode(park: Park) {
+    return findNextTurbineCode(park.code, (cursor) =>
+      getParkTurbines(workspaceId, park.id, { limit: 100, ...(cursor ? { cursor } : {}) }),
     );
   }
 
@@ -260,7 +260,7 @@ export function ParksCatalogPage() {
     const generation = formGeneration.current;
     setFormBusy(true);
     try {
-      const nextCode = await suggestTurbineCode(park.id);
+      const nextCode = await suggestTurbineCode(park);
       if (generation !== formGeneration.current) return;
       setForm((current) =>
         current?.kind === 'create-turbine' && current.park.id === park.id
@@ -436,7 +436,7 @@ export function ParksCatalogPage() {
             const nextCode =
               form.kind === 'create-park'
                 ? await suggestParkCode()
-                : await suggestTurbineCode(form.park.id);
+                : await suggestTurbineCode(form.park);
             setForm((current) =>
               current?.kind === form.kind ? { ...current, nextCode } : current,
             );
@@ -477,7 +477,12 @@ export function ParksCatalogPage() {
         : form?.kind === 'edit-turbine'
           ? 'Editar turbina'
           : '';
-  const inputPrefix = form?.kind.endsWith('park') ? 'P' : 'T';
+  const parkCodeNumber = form?.kind.endsWith('turbine')
+    ? form.kind === 'edit-turbine' || form.kind === 'create-turbine'
+      ? form.park.code.slice(2)
+      : ''
+    : '';
+  const inputPrefix = form?.kind.endsWith('park') ? 'P-' : `ZAC-${parkCodeNumber}-`;
   const isEditing = form?.kind.startsWith('edit') ?? false;
   const proposedCode =
     form?.kind === 'create-park' || form?.kind === 'create-turbine' ? form.nextCode : null;
@@ -952,10 +957,10 @@ export function ParksCatalogPage() {
                 className="gap-2"
                 description={`Formato: ${inputPrefix}01 até ${inputPrefix}999999.`}
                 label={form?.kind === 'edit-park' ? 'Código do parque' : 'Código da turbina'}
-                maxLength={7}
+                maxLength={17}
                 onChange={(event) => setCode(event.target.value.toUpperCase())}
                 pattern={`${inputPrefix}[0-9]{2,6}`}
-                placeholder={inputPrefix === 'P' ? 'P01' : 'T01'}
+                placeholder={form?.kind.endsWith('park') ? 'P-01' : `ZAC-${parkCodeNumber}-01`}
                 required
                 value={code}
               />

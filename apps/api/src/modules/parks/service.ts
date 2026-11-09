@@ -52,6 +52,7 @@ export type CatalogWriteResult<T> =
   | { status: 'forbidden' }
   | { status: 'not_found' }
   | { status: 'conflict' }
+  | { status: 'invalid_code' }
   | { status: 'revision_conflict' }
   | { status: 'idempotency_conflict' }
   | { status: 'open_issues' }
@@ -177,17 +178,23 @@ function escapeLike(value: string): string {
   return value.replace(/[\\%_]/g, '\\$&');
 }
 
+function turbineCodeMatchesPark(turbineCode: string, parkCode: string): boolean {
+  const turbineMatch = /^ZAC-(\d{2,6})-\d{2,6}$/.exec(turbineCode);
+  const parkMatch = /^P-(\d{2,6})$/.exec(parkCode);
+  return Boolean(turbineMatch && parkMatch && Number(turbineMatch[1]) === Number(parkMatch[1]));
+}
+
 async function getCursor(
   executor: Pool | PoolClient,
   table: 'parks' | 'turbines',
   workspaceId: string,
   cursor: string,
   parkId?: string,
-): Promise<{ code: string; id: string } | null> {
+): Promise<{ createdAt: Date; id: string } | null> {
   const parkFilter = table === 'turbines' ? 'AND park_id = $3' : '';
   const values = table === 'turbines' ? [workspaceId, cursor, parkId] : [workspaceId, cursor];
-  const result = await executor.query<{ code: string; id: string }>(
-    `SELECT code, id FROM public.${table}
+  const result = await executor.query<{ createdAt: Date; id: string }>(
+    `SELECT created_at AS "createdAt", id FROM public.${table}
      WHERE workspace_id = $1 AND id = $2 ${parkFilter}
      LIMIT 1`,
     values,
@@ -277,10 +284,10 @@ export function createParksCatalogService(
          FROM public.parks
          WHERE workspace_id = $1
            AND ($2::text IS NULL OR code ILIKE $2 ESCAPE E'\\\\')
-           AND ($3::text IS NULL OR (code, id) > ($3::text, $4::uuid))
-         ORDER BY code ASC, id ASC
+           AND ($3::timestamptz IS NULL OR (created_at, id) > ($3::timestamptz, $4::uuid))
+         ORDER BY created_at ASC, id ASC
          LIMIT $5`,
-        [workspaceId, search, cursor?.code ?? null, cursor?.id ?? null, query.limit + 1],
+        [workspaceId, search, cursor?.createdAt ?? null, cursor?.id ?? null, query.limit + 1],
       );
       const hasMore = result.rows.length > query.limit;
       const rows = hasMore ? result.rows.slice(0, query.limit) : result.rows;
@@ -316,10 +323,17 @@ export function createParksCatalogService(
          FROM public.turbines
          WHERE workspace_id = $1 AND park_id = $2
            AND ($3::text IS NULL OR code ILIKE $3 ESCAPE E'\\\\')
-           AND ($4::text IS NULL OR (code, id) > ($4::text, $5::uuid))
-         ORDER BY code ASC, id ASC
+           AND ($4::timestamptz IS NULL OR (created_at, id) > ($4::timestamptz, $5::uuid))
+         ORDER BY created_at ASC, id ASC
          LIMIT $6`,
-        [workspaceId, parkId, search, cursor?.code ?? null, cursor?.id ?? null, query.limit + 1],
+        [
+          workspaceId,
+          parkId,
+          search,
+          cursor?.createdAt ?? null,
+          cursor?.id ?? null,
+          query.limit + 1,
+        ],
       );
       const hasMore = result.rows.length > query.limit;
       const rows = hasMore ? result.rows.slice(0, query.limit) : result.rows;
@@ -355,14 +369,22 @@ export function createParksCatalogService(
 
     updatePark(headers, workspaceId, parkId, input) {
       return withAdminTransaction(headers, workspaceId, async (client) => {
-        const current = await client.query<{ revision: number }>(
-          `SELECT revision FROM public.parks
+        const current = await client.query<{ revision: number; code: string }>(
+          `SELECT revision, code FROM public.parks
            WHERE workspace_id = $1 AND id = $2 FOR UPDATE`,
           [workspaceId, parkId],
         );
         const row = current.rows[0];
         if (!row) return { status: 'not_found' };
         if (row.revision !== input.expectedRevision) return { status: 'revision_conflict' };
+        if (row.code !== input.code) {
+          await client.query(
+            `SELECT id FROM public.turbines
+             WHERE workspace_id = $1 AND park_id = $2
+             ORDER BY id FOR UPDATE`,
+            [workspaceId, parkId],
+          );
+        }
         const result = await client.query<ParkRow>(
           `UPDATE public.parks
            SET code = $3, revision = revision + 1, updated_at = clock_timestamp()
@@ -372,18 +394,29 @@ export function createParksCatalogService(
         );
         const updated = result.rows[0];
         if (!updated) throw new Error('Park update returned no row.');
+        if (row.code !== input.code) {
+          await client.query(
+            `UPDATE public.turbines
+             SET code = 'ZAC-' || substring($3 FROM 3) || '-' || (regexp_match(code, '^ZAC-[0-9]{2,6}-([0-9]{2,6})$'))[1],
+                 revision = revision + 1, updated_at = clock_timestamp()
+             WHERE workspace_id = $1 AND park_id = $2`,
+            [workspaceId, parkId, input.code],
+          );
+        }
         return { status: 'ok', value: toPark(updated) };
       });
     },
 
     createTurbine(headers, workspaceId, parkId, input) {
       return withAdminTransaction(headers, workspaceId, async (client) => {
-        const park = await client.query<{ id: string }>(
-          `SELECT id FROM public.parks
-           WHERE workspace_id = $1 AND id = $2 AND deactivated_at IS NULL`,
+        const park = await client.query<{ id: string; code: string }>(
+          `SELECT id, code FROM public.parks
+           WHERE workspace_id = $1 AND id = $2 AND deactivated_at IS NULL FOR SHARE`,
           [workspaceId, parkId],
         );
-        if (!park.rows[0]) return { status: 'not_found' };
+        const parent = park.rows[0];
+        if (!parent) return { status: 'not_found' };
+        if (!turbineCodeMatchesPark(input.code, parent.code)) return { status: 'invalid_code' };
         const result = await client.query<TurbineRow>(
           `INSERT INTO public.turbines (workspace_id, park_id, code)
            VALUES ($1, $2, $3) RETURNING ${turbineColumns}`,
@@ -397,6 +430,14 @@ export function createParksCatalogService(
 
     updateTurbine(headers, workspaceId, parkId, turbineId, input) {
       return withAdminTransaction(headers, workspaceId, async (client) => {
+        const park = await client.query<{ code: string }>(
+          `SELECT code FROM public.parks
+           WHERE workspace_id = $1 AND id = $2 FOR SHARE`,
+          [workspaceId, parkId],
+        );
+        const parent = park.rows[0];
+        if (!parent) return { status: 'not_found' };
+        if (!turbineCodeMatchesPark(input.code, parent.code)) return { status: 'invalid_code' };
         const current = await client.query<{ revision: number }>(
           `SELECT revision FROM public.turbines
            WHERE workspace_id = $1 AND park_id = $2 AND id = $3 FOR UPDATE`,

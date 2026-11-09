@@ -2,7 +2,7 @@
 
 ## Contexto e prioridades
 
-Engenheiros visitam parques sem internet, encontram problemas nos elevadores e frequentemente não têm materiais para resolver. Hoje dependem de lembrar de transcrever para planilhas. Wind Ops deve salvar na visita e sincronizar depois, sem transcrição. Piloto texto apenas, PWA Android/iPhone, offline por algumas horas. Aproximadamente 12 usuários, 8 parques e 8 turbinas por parque; quantidades configuráveis.
+Engenheiros visitam parques sem internet, encontram problemas nos elevadores e frequentemente não têm materiais para resolver. Hoje dependem de lembrar de transcrever para planilhas. Wind Report deve salvar na visita e sincronizar depois, sem transcrição. Piloto texto apenas, PWA Android/iPhone, offline por algumas horas. Aproximadamente 12 usuários, 8 parques e 8 turbinas por parque; quantidades configuráveis.
 
 Idioma inicial pt-BR. Layout mobile e design system são referências do proprietário em arquivos `.pen` do Pencil/pen.dev, mantidos em uma pasta local do Windows fora do repositório. Não copiar nem commitar esses arquivos; usá-los somente como guia para implementar o frontend. Não inventar telas definitivas. Não criar site com serviços externos. Repositório alvo /home/leodevanda/proj-pessoais/windops, Ubuntu-24.04.
 
@@ -118,7 +118,7 @@ P05 concluída em 26/10/2026: `/parques` fornece catálogo, edição administrat
 
 P06 e slice 03 concluídas em 26/10/2026: catálogo, workspaces e autenticação passaram em integrações PostgreSQL descartáveis; instalação vazia, upgrade preservando workspace, restart, restore, permissões e PostgreSQL/Electric também passaram. Biome, boundaries, typechecks, builds API/web e 18 testes Vitest passaram. `pnpm check` permaneceu sem saída por 30s e foi interrompido, sem declarar sucesso. Proprietário confirmou no navegador normal do dev e em Android físico que admin cria/edita parque e turbina e técnico consulta sem editar. Servidores temporários API:3002 e Vite:5175 foram encerrados; portproxy e regra `WindOps Android 5175` removidos pelo proprietário e verificados ausentes, com a porta LAN 5175 fechada. iPhone não validado. Nenhum dado operacional foi alterado pelas integrações. Roadmap 05 continua parcialmente atendido pelo lifecycle integrado a issues e catálogo offline pendentes.
 
-E01 concluída: proprietário indicou uma conta dev preexistente e verificada, sem membership. Bootstrap SQL aplicado no PostgreSQL local persistente `windops`, criando workspace “Wind Ops” e vínculo `admin` ativo, confirmado por consulta. Conta pessoal/UUIDs não reproduzidos. `AUTH_ENABLED=true` habilitado somente no `.env` local ignorado pelo Git; API regular em 3000, Vite em 5173 e Mailpit em 8025. Proprietário confirmou login pela origem `localhost`; consulta confirmou sessão autenticada e membership admin. `127.0.0.1` permanece fora da origem confiável configurada. Portas temporárias 3005/5175 fechadas.
+E01 concluída: proprietário indicou uma conta dev preexistente e verificada, sem membership. Bootstrap SQL aplicado no PostgreSQL local persistente `windops`, criando workspace “Wind Report” e vínculo `admin` ativo, confirmado por consulta. Conta pessoal/UUIDs não reproduzidos. `AUTH_ENABLED=true` habilitado somente no `.env` local ignorado pelo Git; API regular em 3000, Vite em 5173 e Mailpit em 8025. Proprietário confirmou login pela origem `localhost`; consulta confirmou sessão autenticada e membership admin. `127.0.0.1` permanece fora da origem confiável configurada. Portas temporárias 3005/5175 fechadas.
 
 E02 concluída: contratos e tabela `workspace_invitations` modelados com SHA-256 do token, validade de 48h, estados de entrega, unicidade ativa e FKs tenant. A migração `0002_workspace_invitations` foi validada em banco descartável na E02 e aplicada ao dev persistente durante E04. Sem acesso/publicação Electric. `pnpm check`, `drizzle-kit check` e integração de workspaces passaram; fixture aplicou `0002` sobre workspace/membership preexistentes em banco descartável, reaplicou migrações e verificou constraints/grants.
 
@@ -316,7 +316,7 @@ Q05 — 30/10/2026: validação automatizada executada (`pnpm check`, 57 testes/
 - `pnpm check` passou (Biome/boundaries, typecheck, 17 arquivos/86 testes e builds); o CSS compilado inclui as variáveis zinc-800/900/950. Sem commit ou push. Evidência em [T01](tasks/13-superficies-dark/01-tokens-superficies.md).
 
 
-Correção durante Q05: erro de hooks reportado no Vite com hashes distintos. React/React DOM instalados em 19.3.1, hooks do ThemeProvider corretos. Hipótese: worker de Preview compartilhando origem e cacheando módulos dev. Bootstrap dev agora remove o registro do worker Wind Ops antes de importar React, sem apagar IndexedDB; registro PWA restrito a produção e cache restrito aos assets do build. Dedupe React/React DOM e meta mobile-web-app-capable adicionados. pnpm check passou (57 testes/builds); confirmação no navegador do proprietário ainda pendente, inclusive HMR.
+Correção durante Q05: erro de hooks reportado no Vite com hashes distintos. React/React DOM instalados em 19.3.1, hooks do ThemeProvider corretos. Hipótese: worker de Preview compartilhando origem e cacheando módulos dev. Bootstrap dev agora remove o registro do worker Wind Report antes de importar React, sem apagar IndexedDB; registro PWA restrito a produção e cache restrito aos assets do build. Dedupe React/React DOM e meta mobile-web-app-capable adicionados. pnpm check passou (57 testes/builds); confirmação no navegador do proprietário ainda pendente, inclusive HMR.
 
 
 ## Slice 09 planejada — 30/10/2026
@@ -580,3 +580,9 @@ DOM05 e slice 14 concluídas — 08/11/2026: proprietário confirmou “tudo val
 ## Identidade visual — 08/11/2026
 
 - BR01 concluída: proprietário forneceu `/mnt/c/Users/leo-a/Downloads/brisa.svg`, ícone Brisa filled. Aplicado ao `TowerMark` em landing/acesso/home/workspace; SVGs de favicon claro/escuro e PWA, PNGs 192/512 e Apple touch icon regenerados. O símbolo inline herda `text-brand`; favicon usa os tokens visuais `#1d4ed8` claro e `#93c5fd` escuro; PWA usa a mesma paleta nos respectivos temas. Composição quadrada centralizada com margem segura para máscara. `pnpm check` passou (86 testes, 17 arquivos, build); PNG de 512 px inspecionado. Sem ensaio manual em aparelho.
+
+## Códigos de equipamentos e nome do produto — 08/11/2026
+
+- Slice 16 em andamento: nomenclatura desejada e implementada no código `P-01` para parques e `ZAC-01-04` para turbinas (parque e sequência). Migration `0014_wind_report_equipment_codes` preserva IDs/relações, converte códigos antigos, incrementa revision e detecta colisões antes do backfill. Renomear parque propaga o prefixo às turbinas dentro da transação; códigos manuais de turbina precisam corresponder ao parque.
+- Listas e paginação de parques/turbinas usam `created_at ASC, id ASC`; leitura de réplica/fallback também ordena explicitamente, para manter ordem estável offline. Marca pública e nome instalado do PWA passam a Wind Report. IDs técnicos `windops` continuam para compatibilidade.
+- `pnpm check`, `pnpm db:empty-check` e `pnpm test:parks-integration` passaram em 08/11/2026; detalhes e limite do ensaio PWA offline/reconexão estão em C04. Nenhuma migration foi aplicada e nenhum deploy ocorreu em produção.

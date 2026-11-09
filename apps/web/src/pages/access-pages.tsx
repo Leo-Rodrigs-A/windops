@@ -158,7 +158,7 @@ export function SignInPage() {
       eyebrow="Acesso à operação"
       formDescription="Use sua senha ou uma conta Google. Toda nova entrada exige confirmação por e-mail."
       formTitle="Acesse sua conta"
-      heading="Entrar no Wind Ops"
+      heading="Entrar no Wind Report"
     >
       {googleError && (
         <Feedback
@@ -390,7 +390,7 @@ function AccountSetupForm({ google }: { google: boolean }) {
 
   return (
     <AccessLayout
-      description="Depois de confirmar sua identidade, escolha como será reconhecido no Wind Ops e defina uma senha para usar junto ao Google."
+      description="Depois de confirmar sua identidade, escolha como será reconhecido no Wind Report e defina uma senha para usar junto ao Google."
       eyebrow="Concluir cadastro"
       formDescription="Use uma senha com pelo menos 12 caracteres."
       formTitle="Seus dados de acesso"

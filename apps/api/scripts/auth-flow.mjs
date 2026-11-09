@@ -190,7 +190,7 @@ function googleIdToken(nonce) {
     sub: googleProfile.sub,
     email: googleProfile.email,
     email_verified: googleProfile.emailVerified,
-    name: 'Wind Ops OAuth Test',
+    name: 'Wind Report OAuth Test',
     nonce,
     iat: Math.floor(Date.now() / 1000),
     exp: Math.floor(Date.now() / 1000) + 300,
@@ -271,7 +271,7 @@ async function signIn(service, inputPassword = password) {
   );
   return {
     cookie: cookieFrom(response),
-    message: await waitForMail('Seu código de acesso ao Wind Ops'),
+    message: await waitForMail('Seu código de acesso ao Wind Report'),
   };
 }
 
@@ -292,7 +292,7 @@ try {
   assert.equal(bypassSignup.statusCode, 403, 'direct Better Auth signup must stay blocked');
   const signup = await call(app, 'POST', '/api/auth/signup/email', { email: email.toUpperCase() });
   assert.equal(signup.statusCode, 200, signup.body);
-  const signupMail = await waitForMail('Confirme seu e-mail para criar sua conta Wind Ops');
+  const signupMail = await waitForMail('Confirme seu e-mail para criar sua conta Wind Report');
   const signupToken = parseSignupToken(signupMail);
   const completedSignup = await call(app, 'POST', '/api/auth/signup/complete', {
     token: signupToken,
@@ -333,7 +333,7 @@ try {
   const expiringStart = await call(app, 'POST', '/api/auth/signup/email', { email: expiringEmail });
   assert.equal(expiringStart.statusCode, 200);
   const expiringMail = await waitForMail(
-    'Confirme seu e-mail para criar sua conta Wind Ops',
+    'Confirme seu e-mail para criar sua conta Wind Report',
     expiringEmail,
   );
   const expiringToken = parseSignupToken(expiringMail);
@@ -377,7 +377,7 @@ try {
     'pending_email_second_step',
     'a linked Google login must still require the email second step',
   );
-  const linkedGoogleOtp = parseCode(await waitForMail('Seu código de acesso ao Wind Ops'));
+  const linkedGoogleOtp = parseCode(await waitForMail('Seu código de acesso ao Wind Report'));
   const linkedGoogleVerified = await call(
     app,
     'POST',
@@ -470,7 +470,7 @@ try {
   assert.equal(googleFirstAccount.rows.length, 1, 'Google onboarding must add a credential');
   assert.equal(googleFirstAccount.rows[0].name, 'Google First Account');
   const googleFirstOtp = parseCode(
-    await waitForMail('Seu código de acesso ao Wind Ops', googleFirstEmail),
+    await waitForMail('Seu código de acesso ao Wind Report', googleFirstEmail),
   );
   assert.equal(
     (
@@ -501,7 +501,7 @@ try {
   assert.deepEqual(passwordLoginAfterGoogle.json(), { status: 'pending_email_second_step' });
   const passwordLoginCookie = cookieFrom(passwordLoginAfterGoogle);
   const passwordLoginOtp = parseCode(
-    await waitForMail('Seu código de acesso ao Wind Ops', googleFirstEmail),
+    await waitForMail('Seu código de acesso ao Wind Report', googleFirstEmail),
   );
   assert.equal(
     (
@@ -624,7 +624,7 @@ try {
   );
   const resent = await call(app, 'POST', '/api/auth/second-step/resend', {}, cookie);
   assert.equal(resent.statusCode, 200, 'resend should work after its cooldown');
-  const resentMessage = await waitForMail('Seu código de acesso ao Wind Ops');
+  const resentMessage = await waitForMail('Seu código de acesso ao Wind Report');
   const firstResentCode = parseCode(resentMessage);
   assert.notEqual(firstResentCode, initialCode, 'resend must rotate the code');
   const oldCode = await call(
@@ -653,7 +653,7 @@ try {
   );
   const secondResend = await call(app, 'POST', '/api/auth/second-step/resend', {}, cookie);
   assert.equal(secondResend.statusCode, 200);
-  const code = parseCode(await waitForMail('Seu código de acesso ao Wind Ops'));
+  const code = parseCode(await waitForMail('Seu código de acesso ao Wind Report'));
   assert.notEqual(code, firstResentCode, 'each resend must rotate the challenge');
   await pool.query(
     `UPDATE public.auth_login_challenges
@@ -719,7 +719,7 @@ try {
     redirectTo: origin,
   });
   assert.equal(resetRequest.statusCode, 200);
-  const resetUrl = parseResetLink(await waitForMail('Redefina sua senha do Wind Ops'));
+  const resetUrl = parseResetLink(await waitForMail('Redefina sua senha do Wind Report'));
   const resetCallback = await app.inject({
     method: 'GET',
     url: `${resetUrl.pathname}${resetUrl.search}`,

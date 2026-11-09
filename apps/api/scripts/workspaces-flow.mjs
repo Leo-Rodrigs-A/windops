@@ -982,10 +982,10 @@ try {
   sendViaMailpit = true;
   const mailpitInvite = await createInvitation(pendingUser.email);
   assert.equal(mailpitInvite.statusCode, 201, mailpitInvite.body);
-  const invitationEmail = await waitForMail('Convite para o Wind Ops', pendingUser.email);
+  const invitationEmail = await waitForMail('Convite para o Wind Report', pendingUser.email);
   const postOtpInviteToken = extractInvitationToken(invitationEmail);
   await identity.challenges.issueForNewSession(pendingSession.id, pendingUser.email);
-  const otpEmail = await waitForMail('Seu código de acesso ao Wind Ops', pendingUser.email);
+  const otpEmail = await waitForMail('Seu código de acesso ao Wind Report', pendingUser.email);
   const otp = (otpEmail.Text ?? '').match(/\b\d{8}\b/)?.[0];
   assert.ok(otp, 'the Mailpit second-step message must include its code');
   await identity.challenges.verify(pendingSession.id, otp);
@@ -999,7 +999,7 @@ try {
 
   const expiryTestInvite = await createInvitation(pendingUser.email);
   assert.equal(expiryTestInvite.statusCode, 201, expiryTestInvite.body);
-  const expiryEmail = await waitForMail('Convite para o Wind Ops', pendingUser.email);
+  const expiryEmail = await waitForMail('Convite para o Wind Report', pendingUser.email);
   const expiryTestToken = extractInvitationToken(expiryEmail);
   await pool.query(
     `UPDATE public.workspace_invitations SET expires_at = clock_timestamp() WHERE id = $1`,

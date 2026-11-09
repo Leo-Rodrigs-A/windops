@@ -45,7 +45,7 @@ function writeSmokePage() {
     pagePath,
     `<!doctype html>
 <html lang="pt-BR"><meta charset="utf-8"><meta name="viewport" content="width=device-width">
-<title>Teste local Google OAuth — Wind Ops</title>
+<title>Teste local Google OAuth — Wind Report</title>
 <main style="font:16px system-ui;max-width:36rem;margin:3rem auto;padding:1rem">
   <h1>Teste local do Google OAuth</h1>
   <p>Esta página é temporária e existe apenas durante o teste local.</p>

@@ -6,7 +6,7 @@ const base = {
   DATABASE_URL: 'postgresql://localhost/windops',
   ELECTRIC_URL: 'http://localhost:3001',
   ELECTRIC_SECRET: 'development',
-  EMAIL_FROM: 'Wind Ops <test@example.com>',
+  EMAIL_FROM: 'Wind Report <test@example.com>',
   SMTP_URL: 'smtp://localhost:1025',
 };
 it('validates database without exposing values', () => {
