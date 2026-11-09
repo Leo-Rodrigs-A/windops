@@ -165,8 +165,8 @@ try {
 
   await pool.query(
     `INSERT INTO public.parks(id, workspace_id, code, deactivated_at) VALUES
-       ($1, $2, 'P01', NULL), ($3, $2, 'P02', clock_timestamp()),
-       ($4, $5, 'P01', NULL), ($6, $2, 'P03', NULL)`,
+       ($1, $2, 'P-01', NULL), ($3, $2, 'P-02', clock_timestamp()),
+       ($4, $5, 'P-01', NULL), ($6, $2, 'P-03', NULL)`,
     [
       parkIds.active,
       ids.workspaceA,
@@ -178,8 +178,8 @@ try {
   );
   await pool.query(
     `INSERT INTO public.turbines(id, workspace_id, park_id, code, deactivated_at) VALUES
-       ($1, $2, $3, 'T01', NULL), ($4, $2, $5, 'T01', clock_timestamp()),
-       ($6, $7, $8, 'T01', NULL), ($9, $2, $10, 'T01', NULL)`,
+       ($1, $2, $3, 'ZAC-01-01', NULL), ($4, $2, $5, 'ZAC-02-01', clock_timestamp()),
+       ($6, $7, $8, 'ZAC-01-01', NULL), ($9, $2, $10, 'ZAC-03-01', NULL)`,
     [
       turbineIds.active,
       ids.workspaceA,
@@ -1492,16 +1492,19 @@ try {
   );
 
   let lifecycleCode = 880000;
+  const lifecycleTurbineNumbers = new Map();
   async function createLifecyclePark() {
     const result = await parks.createPark(headers(ids.admin), ids.workspaceA, {
-      code: `P${++lifecycleCode}`,
+      code: `P-${++lifecycleCode}`,
     });
     assert.equal(result.status, 'ok');
     return result.value;
   }
-  async function createLifecycleTurbine(parkId) {
-    const result = await parks.createTurbine(headers(ids.admin), ids.workspaceA, parkId, {
-      code: `T${++lifecycleCode}`,
+  async function createLifecycleTurbine(park) {
+    const turbineNumber = (lifecycleTurbineNumbers.get(park.id) ?? 0) + 1;
+    lifecycleTurbineNumbers.set(park.id, turbineNumber);
+    const result = await parks.createTurbine(headers(ids.admin), ids.workspaceA, park.id, {
+      code: `ZAC-${park.code.slice(2)}-${String(turbineNumber).padStart(2, '0')}`,
     });
     assert.equal(result.status, 'ok');
     return result.value;
@@ -1527,8 +1530,8 @@ try {
   }
 
   const emptyPark = await createLifecyclePark();
-  const emptyFirstTurbine = await createLifecycleTurbine(emptyPark.id);
-  const emptySecondTurbine = await createLifecycleTurbine(emptyPark.id);
+  const emptyFirstTurbine = await createLifecycleTurbine(emptyPark);
+  const emptySecondTurbine = await createLifecycleTurbine(emptyPark);
   const emptyTurbineDelete = {
     commandId: randomUUID(),
     expectedRevision: emptyFirstTurbine.revision,
@@ -1571,8 +1574,8 @@ try {
   assert.equal(orphanCount.rows[0].count, 0);
 
   const historicalPark = await createLifecyclePark();
-  const individuallyArchived = await createLifecycleTurbine(historicalPark.id);
-  const stillActive = await createLifecycleTurbine(historicalPark.id);
+  const individuallyArchived = await createLifecycleTurbine(historicalPark);
+  const stillActive = await createLifecycleTurbine(historicalPark);
   await createMovedIssue(
     historicalPark.id,
     individuallyArchived.id,
@@ -1639,7 +1642,7 @@ try {
     method: 'POST',
     url: `${root}/parks/${historicalPark.id}/turbines`,
     headers: headers(ids.admin),
-    payload: { code: `T${++lifecycleCode}` },
+    payload: { code: `ZAC-${historicalPark.code.slice(2)}-99` },
   });
   await expectError(blockedChildCreate, 404, 'RESOURCE_NOT_FOUND');
   const restoreHistoricalPark = await app.inject({
@@ -1715,7 +1718,7 @@ try {
   );
 
   const concurrentCreatePark = await createLifecyclePark();
-  const concurrentCreateTurbine = await createLifecycleTurbine(concurrentCreatePark.id);
+  const concurrentCreateTurbine = await createLifecycleTurbine(concurrentCreatePark);
   const concurrentIssueId = randomUUID();
   const [raceIssueCreate, raceTurbineDelete] = await Promise.all([
     issues.createIssue(headers(ids.admin), ids.workspaceA, {
@@ -1742,7 +1745,7 @@ try {
   }
 
   const concurrentMovePark = await createLifecyclePark();
-  const concurrentMoveTurbine = await createLifecycleTurbine(concurrentMovePark.id);
+  const concurrentMoveTurbine = await createLifecycleTurbine(concurrentMovePark);
   const concurrentMoveIssueId = await createMovedIssue(
     concurrentMovePark.id,
     concurrentMoveTurbine.id,
@@ -1784,7 +1787,7 @@ try {
 
   const [turbineCreationRace, parkArchiveRace] = await Promise.all([
     parks.createTurbine(headers(ids.admin), ids.workspaceA, historicalPark.id, {
-      code: `T${++lifecycleCode}`,
+      code: `ZAC-${historicalPark.code.slice(2)}-98`,
     }),
     parks.deletePark(
       headers(ids.admin),
