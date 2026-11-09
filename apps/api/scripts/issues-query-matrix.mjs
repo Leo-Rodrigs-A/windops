@@ -10,12 +10,14 @@ export async function verifyIssueQueries({ pool, app, ids, headers, membershipBy
     await pool.query('INSERT INTO parks(id, workspace_id, code) VALUES ($1,$2,$3)', [
       parks[i],
       workspace,
-      `P90${i}`,
+      `P-90${i}`,
     ]);
-    await pool.query(
-      "INSERT INTO turbines(id, workspace_id, park_id, code) VALUES ($1,$2,$3,'T01')",
-      [turbines[i], workspace, parks[i]],
-    );
+    await pool.query('INSERT INTO turbines(id, workspace_id, park_id, code) VALUES ($1,$2,$3,$4)', [
+      turbines[i],
+      workspace,
+      parks[i],
+      `ZAC-90${i}-01`,
+    ]);
   }
   const fixture = [];
   for (let i = 0; i < 128; i++) {
